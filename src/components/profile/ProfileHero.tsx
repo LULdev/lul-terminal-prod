@@ -183,16 +183,34 @@ export function ProfileHero({ user, isOwn = false, showCoins = true, onNavigateG
             )}
           </div>
 
-          <div className="flex-1 min-w-0 space-y-2">
-            <div className="flex flex-wrap items-center gap-2">
-              <h2 className="text-xl sm:text-2xl font-bold text-white truncate tracking-tight">{user.displayName}</h2>
-              <VerifiedBadge verified={user.verified} />
+          <div className="flex-1 min-w-0 space-y-2.5">
+            <div className="flex flex-wrap items-center gap-2.5 sm:gap-3">
+              <h2
+                className={`profile-display-name text-2xl sm:text-3xl md:text-4xl font-bold truncate tracking-tight ${
+                  user.role === 'admin' ? 'profile-display-name--admin' : ''
+                }`}
+              >
+                {user.displayName}
+              </h2>
+              <VerifiedBadge verified={user.verified} size={22} animated />
               {user.role === 'vip' && (
-                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded border border-amber-500/35 bg-amber-500/10 text-[8px] font-mono text-amber-300 uppercase">
-                  <Crown size={10} /> VIP
+                <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg border border-amber-500/35 bg-amber-500/10 text-[10px] font-mono text-amber-300 uppercase">
+                  <Crown size={12} /> VIP
                 </span>
               )}
-              {user.role !== 'user' && user.role !== 'vip' && (
+              {user.role === 'bot' && (
+                <span className="profile-bot-badge" title="System bot">
+                  <Bot size={13} aria-hidden />
+                  <span>BOT</span>
+                </span>
+              )}
+              {user.role === 'admin' && (
+                <span className="profile-admin-badge" title="Administrator">
+                  <Shield size={13} aria-hidden />
+                  <span>Admin</span>
+                </span>
+              )}
+              {user.role !== 'user' && user.role !== 'vip' && user.role !== 'bot' && user.role !== 'admin' && (
                 <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-[8px] font-mono uppercase ${ROLE_BADGE[user.role]}`}>
                   {ROLE_LABELS[user.role]}
                 </span>
@@ -200,9 +218,9 @@ export function ProfileHero({ user, isOwn = false, showCoins = true, onNavigateG
             </div>
 
             {user.role === 'admin' ? (
-              <AdminUsername username={user.username} className="text-[11px]" />
+              <AdminUsername username={user.username} size="lg" />
             ) : (
-              <p className="text-[10px] font-mono text-slate-500">@{user.username}</p>
+              <p className="text-sm sm:text-base font-medium text-slate-400 tracking-tight">@{user.username}</p>
             )}
 
             {(custom.customTitle || custom.tagline) && (

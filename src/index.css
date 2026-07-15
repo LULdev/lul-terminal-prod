@@ -328,20 +328,191 @@ html, body, #root {
   background: rgba(129, 140, 248, 0.75);
 }
 
-/* —— Admin username —— */
+/* —— Admin username (clean sans, animated gradient) —— */
 .admin-username-style {
-  background: linear-gradient(90deg, #c084fc, #f472b6, #60a5fa, #c084fc);
-  background-size: 300% auto;
+  display: inline-block;
+  font-family:
+    'Segoe UI',
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    'Inter',
+    'Helvetica Neue',
+    Arial,
+    sans-serif;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  line-height: 1.25;
+  background: linear-gradient(
+    105deg,
+    #e9d5ff 0%,
+    #c084fc 22%,
+    #f0abfc 45%,
+    #67e8f9 68%,
+    #a78bfa 88%,
+    #e9d5ff 100%
+  );
+  background-size: 280% auto;
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
-  animation: admin-name-shine 4s linear infinite;
-  text-shadow: 0 0 24px rgba(192, 132, 252, 0.35);
-  font-weight: 700;
-  letter-spacing: 0.04em;
+  animation: admin-name-shine 5s linear infinite;
+  filter: drop-shadow(0 0 10px rgba(192, 132, 252, 0.35));
+}
+.admin-username-style--sm {
+  font-size: 0.75rem;
+}
+.admin-username-style--md {
+  font-size: 0.9rem;
+}
+.admin-username-style--lg {
+  font-size: 1.05rem;
+}
+@media (min-width: 640px) {
+  .admin-username-style--lg {
+    font-size: 1.2rem;
+  }
 }
 @keyframes admin-name-shine {
-  to { background-position: 300% center; }
+  to {
+    background-position: 280% center;
+  }
+}
+
+/* Profile display name */
+.profile-display-name {
+  color: #f8fafc;
+  font-family:
+    'Segoe UI',
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    'Inter',
+    'Helvetica Neue',
+    Arial,
+    sans-serif;
+  letter-spacing: -0.03em;
+  text-shadow: 0 1px 24px rgba(15, 23, 42, 0.8);
+}
+.profile-display-name--admin {
+  background: linear-gradient(100deg, #ffffff 0%, #e9d5ff 40%, #c4b5fd 70%, #f5d0fe 100%);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: profile-name-shimmer 7s ease-in-out infinite alternate;
+  filter: drop-shadow(0 0 18px rgba(167, 139, 250, 0.25));
+}
+@keyframes profile-name-shimmer {
+  0% {
+    background-position: 0% center;
+  }
+  100% {
+    background-position: 100% center;
+  }
+}
+
+/* Verified badge glow */
+.verified-badge--glow {
+  color: #38bdf8;
+  filter: drop-shadow(0 0 6px rgba(56, 189, 248, 0.55));
+  animation: verified-badge-pulse 2.4s ease-in-out infinite;
+}
+.verified-badge--glow .verified-badge__icon {
+  filter: drop-shadow(0 0 4px rgba(125, 211, 252, 0.65));
+}
+@keyframes verified-badge-pulse {
+  0%,
+  100% {
+    filter: drop-shadow(0 0 4px rgba(56, 189, 248, 0.4));
+    transform: scale(1);
+  }
+  50% {
+    filter: drop-shadow(0 0 12px rgba(56, 189, 248, 0.75));
+    transform: scale(1.06);
+  }
+}
+
+/* Profile role badges */
+.profile-bot-badge,
+.profile-admin-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.3rem 0.65rem;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  line-height: 1;
+}
+.profile-bot-badge {
+  color: #e0f2fe;
+  border: 1px solid rgba(56, 189, 248, 0.55);
+  background: linear-gradient(135deg, rgba(14, 165, 233, 0.35), rgba(56, 189, 248, 0.12) 50%, rgba(15, 23, 42, 0.8));
+  box-shadow:
+    0 0 0 1px rgba(56, 189, 248, 0.12) inset,
+    0 0 16px rgba(14, 165, 233, 0.35);
+  animation: profile-bot-badge-pulse 2.2s ease-in-out infinite;
+}
+.profile-bot-badge svg {
+  animation: profile-bot-icon-spin 6s linear infinite;
+}
+.profile-admin-badge {
+  color: #ede9fe;
+  border: 1px solid rgba(167, 139, 250, 0.5);
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.35), rgba(91, 33, 182, 0.15) 55%, rgba(15, 23, 42, 0.85));
+  box-shadow:
+    0 0 0 1px rgba(167, 139, 250, 0.12) inset,
+    0 0 14px rgba(139, 92, 246, 0.3);
+  animation: profile-admin-badge-glow 2.8s ease-in-out infinite;
+}
+@keyframes profile-bot-badge-pulse {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 1px rgba(56, 189, 248, 0.12) inset,
+      0 0 12px rgba(14, 165, 233, 0.3);
+  }
+  50% {
+    box-shadow:
+      0 0 0 1px rgba(125, 211, 252, 0.25) inset,
+      0 0 22px rgba(56, 189, 248, 0.55);
+  }
+}
+@keyframes profile-bot-icon-spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+@keyframes profile-admin-badge-glow {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 1px rgba(167, 139, 250, 0.1) inset,
+      0 0 10px rgba(139, 92, 246, 0.25);
+  }
+  50% {
+    box-shadow:
+      0 0 0 1px rgba(196, 181, 253, 0.25) inset,
+      0 0 20px rgba(167, 139, 250, 0.45);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .admin-username-style,
+  .profile-display-name--admin,
+  .verified-badge--glow,
+  .profile-bot-badge,
+  .profile-bot-badge svg,
+  .profile-admin-badge,
+  .chat-role-badge--bot {
+    animation: none !important;
+  }
 }
 
 /* —— Admin shoutbox monitor —— */
@@ -395,10 +566,37 @@ html, body, #root {
   box-shadow: 0 0 8px rgba(245, 158, 11, 0.15);
 }
 .chat-role-badge--bot {
-  color: #7dd3fc;
-  background: rgba(14, 165, 233, 0.14);
-  border-color: rgba(56, 189, 248, 0.4);
-  box-shadow: 0 0 8px rgba(56, 189, 248, 0.15);
+  color: #e0f2fe;
+  background: linear-gradient(
+    120deg,
+    rgba(14, 165, 233, 0.35),
+    rgba(56, 189, 248, 0.12),
+    rgba(14, 165, 233, 0.28)
+  );
+  background-size: 200% 100%;
+  border-color: rgba(56, 189, 248, 0.55);
+  box-shadow:
+    0 0 8px rgba(56, 189, 248, 0.25),
+    0 0 0 1px rgba(56, 189, 248, 0.1) inset;
+  animation: chat-bot-badge-flow 2.4s ease-in-out infinite;
+}
+.chat-role-badge--bot svg {
+  animation: profile-bot-icon-spin 5s linear infinite;
+}
+@keyframes chat-bot-badge-flow {
+  0%,
+  100% {
+    background-position: 0% 50%;
+    box-shadow:
+      0 0 6px rgba(56, 189, 248, 0.2),
+      0 0 0 1px rgba(56, 189, 248, 0.08) inset;
+  }
+  50% {
+    background-position: 100% 50%;
+    box-shadow:
+      0 0 14px rgba(56, 189, 248, 0.45),
+      0 0 0 1px rgba(125, 211, 252, 0.2) inset;
+  }
 }
 .chat-role-badge--verified {
   color: #7dd3fc;
