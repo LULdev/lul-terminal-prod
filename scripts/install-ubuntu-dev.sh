@@ -12,7 +12,7 @@
 # Environment overrides:
 #   LUL_TERMINAL_DIR=~/apps/lul-terminal
 #   LUL_TERMINAL_BRANCH=main
-#   LUL_TERMINAL_REPO=https://github.com/LULdev/lul-terminal.git
+#   LUL_TERMINAL_REPO=https://github.com/LULdev/lul-terminal-prod.git
 #   LUL_INSTALL_ONLY=1          # install deps, skip npm run dev
 #   LUL_FULL_SEED=1             # run all seed:* scripts
 #   LUL_NO_SEED=1               # skip seed:auth
@@ -21,7 +21,7 @@
 set -euo pipefail
 
 readonly SCRIPT_NAME="install-ubuntu-dev.sh"
-readonly DEFAULT_REPO="https://github.com/LULdev/lul-terminal.git"
+readonly DEFAULT_REPO="https://github.com/LULdev/lul-terminal-prod.git"
 readonly DEFAULT_BRANCH="main"
 readonly DEFAULT_DIR="${HOME}/lul-terminal"
 readonly MIN_NODE_MAJOR=18

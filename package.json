@@ -5,11 +5,11 @@
   "description": "Self-hosted community platform: auth, arcade, paste, image host, tools & admin",
   "repository": {
     "type": "git",
-    "url": "https://github.com/LULdev/lul-terminal.git"
+    "url": "https://github.com/LULdev/lul-terminal-prod.git"
   },
-  "homepage": "https://github.com/LULdev/lul-terminal#readme",
+  "homepage": "https://github.com/LULdev/lul-terminal-prod#readme",
   "bugs": {
-    "url": "https://github.com/LULdev/lul-terminal/issues"
+    "url": "https://github.com/LULdev/lul-terminal-prod/issues"
   },
   "license": "Apache-2.0",
   "engines": {

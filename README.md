@@ -8,7 +8,7 @@ Self-hosted community platform: authentication, arcade games, profiles, paste & 
 
 **Stack:** React 19 · Vite · Express · SQLite (auth) · JSON file stores · Docker
 
-**Repository:** [github.com/LULdev/lul-terminal](https://github.com/LULdev/lul-terminal)
+**Repository:** [github.com/LULdev/lul-terminal-prod](https://github.com/LULdev/lul-terminal-prod)
 
 ---
 
@@ -109,8 +109,8 @@ npm -v
 One command deploys a full production instance on any server with Docker.
 
 ```bash
-git clone https://github.com/LULdev/lul-terminal.git
-cd lul-terminal
+git clone https://github.com/LULdev/lul-terminal-prod.git
+cd lul-terminal-prod
 
 # Optional but recommended for production
 cp .env.example .env
@@ -168,8 +168,8 @@ docker compose --profile with-redis up -d --build
 ## Local development
 
 ```bash
-git clone https://github.com/LULdev/lul-terminal.git
-cd lul-terminal
+git clone https://github.com/LULdev/lul-terminal-prod.git
+cd lul-terminal-prod
 npm install
 cp .env.example .env          # Windows: copy .env.example .env
 

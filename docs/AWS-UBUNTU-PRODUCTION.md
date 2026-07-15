@@ -17,8 +17,8 @@ Open ports: `22`, `80`, `443` (and optionally `3000` only for debugging).
 ## 2A. Docker (recommended)
 
 ```bash
-git clone https://github.com/LULdev/lul-terminal.git
-cd lul-terminal
+git clone https://github.com/LULdev/lul-terminal-prod.git
+cd lul-terminal-prod
 cp .env.example .env
 nano .env   # set NODE_ENV=production, TRUST_PROXY=1, PUBLIC_BASE_URL, SEED_ADMIN_PASSWORD, PREMIUM_VAULT_KEY
 
@@ -31,7 +31,7 @@ Put nginx or Caddy in front for TLS; proxy to `127.0.0.1:3000`.
 ## 2B. PM2 (without Docker)
 
 ```bash
-git clone https://github.com/LULdev/lul-terminal.git && cd lul-terminal
+git clone https://github.com/LULdev/lul-terminal-prod.git && cd lul-terminal-prod
 cp .env.example .env && nano .env
 npm install
 npm run build
