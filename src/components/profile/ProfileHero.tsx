@@ -171,7 +171,7 @@ export function ProfileHero({ user, isOwn = false, showCoins = true, onNavigateG
             <img
               src={safeAvatarUrl(user.avatarUrl, user.username)}
               alt={user.displayName}
-              className="h-24 w-24 sm:h-28 sm:w-28 rounded-2xl border-2 border-[#0c0d12] object-cover shadow-2xl"
+              className="h-24 w-24 sm:w-[calc(var(--spacing)*45)] sm:h-[calc(var(--spacing)*54)] rounded-2xl border-2 border-[#0c0d12] object-cover shadow-2xl"
             />
             <span className="absolute -top-2 -right-2 text-lg drop-shadow-lg">{custom.favoriteEmoji}</span>
             {user.role !== 'user' && (
