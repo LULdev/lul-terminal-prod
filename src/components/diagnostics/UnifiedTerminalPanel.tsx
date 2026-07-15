@@ -14,6 +14,8 @@ import {
   ChatGatedError,
   ChatRateLimitError,
   fetchLobbyMessages,
+  isBotCongratsMessage,
+  playBotCongratsSound,
   playChatNotification,
   sendLobbyMessage,
   type ChatMessage,
@@ -181,11 +183,15 @@ export function UnifiedTerminalPanel({
   const applyDisplayWindow = useCallback((incoming: ChatMessage[], playNotify: boolean) => {
     if (!incoming.length) return;
     let played = false;
+    let congrats = false;
     setMessages((prev) => {
       const byId = new Map<string, ChatMessage>();
       for (const m of prev) byId.set(m.id, m);
       for (const m of incoming) {
-        if (!knownIdsRef.current.has(m.id)) played = true;
+        if (!knownIdsRef.current.has(m.id)) {
+          played = true;
+          if (isBotCongratsMessage(m)) congrats = true;
+        }
         byId.set(m.id, m);
         knownIdsRef.current.add(m.id);
       }
@@ -194,14 +200,33 @@ export function UnifiedTerminalPanel({
       knownIdsRef.current = new Set(slice.map((m) => m.id));
       return slice;
     });
-    if (playNotify && played) playChatNotification(isMutedRef.current);
+    if (!playNotify || !played) return;
+    if (congrats) {
+      playBotCongratsSound(isMutedRef.current);
+    } else {
+      playChatNotification(isMutedRef.current);
+    }
   }, []);
 
-  const replaceDisplayWindow = useCallback((incoming: ChatMessage[]) => {
+  const replaceDisplayWindow = useCallback((incoming: ChatMessage[], playNotify = false) => {
+    let congrats = false;
+    let anyNew = false;
+    if (playNotify) {
+      for (const m of incoming) {
+        if (!knownIdsRef.current.has(m.id)) {
+          anyNew = true;
+          if (isBotCongratsMessage(m)) congrats = true;
+        }
+      }
+    }
     const slice = incoming.slice(-DISPLAY_LIMIT);
     knownIdsRef.current = new Set(slice.map((m) => m.id));
     hadMessagesRef.current = slice.length > 0;
     if (mountedRef.current) setMessages(slice);
+    if (playNotify && anyNew) {
+      if (congrats) playBotCongratsSound(isMutedRef.current);
+      else playChatNotification(isMutedRef.current);
+    }
   }, []);
 
   const loadMessages = useCallback(async (initial = false) => {
@@ -225,7 +250,7 @@ export function UnifiedTerminalPanel({
       if (!initial && lobbyChanged) {
         const full = await fetchLobbyMessages({ since: 0, limit: DISPLAY_LIMIT });
         if (gen !== loadGenRef.current || !mountedRef.current) return;
-        replaceDisplayWindow(full.messages);
+        replaceDisplayWindow(full.messages, true);
         lobbyUpdatedAtRef.current = full.updatedAt;
         const maxTs = full.messages.reduce((n, m) => Math.max(n, m.createdAt), 0);
         if (maxTs > lastTsRef.current) lastTsRef.current = maxTs;
