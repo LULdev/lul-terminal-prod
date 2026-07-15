@@ -19,6 +19,53 @@
   </head>
   <body>
     <div id="root"></div>
+    <!--
+      crypto.randomUUID is missing on some non-secure HTTP origins (e.g. http://IP:port).
+      Polyfill early so app code and injected page scripts do not throw.
+    -->
+    <script>
+      (function () {
+        try {
+          var c = typeof globalThis !== 'undefined' ? globalThis.crypto : null;
+          if (!c || typeof c.randomUUID === 'function') return;
+          var uuid = function () {
+            var bytes = new Uint8Array(16);
+            if (typeof c.getRandomValues === 'function') {
+              c.getRandomValues(bytes);
+            } else {
+              for (var i = 0; i < 16; i++) bytes[i] = (Math.random() * 256) | 0;
+            }
+            bytes[6] = (bytes[6] & 0x0f) | 0x40;
+            bytes[8] = (bytes[8] & 0x3f) | 0x80;
+            var hex = Array.prototype.map
+              .call(bytes, function (b) {
+                return (b + 0x100).toString(16).slice(1);
+              })
+              .join('');
+            return (
+              hex.slice(0, 8) +
+              '-' +
+              hex.slice(8, 12) +
+              '-' +
+              hex.slice(12, 16) +
+              '-' +
+              hex.slice(16, 20) +
+              '-' +
+              hex.slice(20)
+            );
+          };
+          try {
+            Object.defineProperty(c, 'randomUUID', {
+              value: uuid,
+              configurable: true,
+              writable: true,
+            });
+          } catch (_) {
+            c.randomUUID = uuid;
+          }
+        } catch (_) { /* ignore */ }
+      })();
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
