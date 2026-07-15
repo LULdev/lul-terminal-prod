@@ -328,7 +328,7 @@ export default function App() {
   });
 
   // CRT scanlines active state
-  const [isCrtEnabled, setIsCrtEnabled] = useState(true);
+  const [isCrtEnabled, setIsCrtEnabled] = useState(false);
 
   const [scale, setScale] = useState(1);
   const viewportRef = useRef<HTMLDivElement>(null);
