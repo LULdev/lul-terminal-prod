@@ -120,8 +120,6 @@ export const SidebarNav = memo(function SidebarNav({ activeTab, onTabClick, hudP
       </div>
 
       {hudPanel}
-
-      <UserBar onNavigate={onTabClick} />
     </nav>
   );
 });
