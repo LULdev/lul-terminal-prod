@@ -728,12 +728,12 @@ a.bot-mention-username:focus-visible {
   margin: 4px 0 0;
 }
 .shoutbox-segment-link {
-  color: #67e8f9;
+  color: #164177;
+  text-underline-offset: 3px;
   text-decoration: underline;
-  text-underline-offset: 2px;
 }
 .shoutbox-segment-link:hover {
-  color: #a5f3fc;
+  color: #1e5a9e;
 }
 .shoutbox-segment-cmd {
   color: #c4b5fd;
