@@ -1,0 +1,52 @@
+# LUL Terminal — one-command deploy
+#
+#   cp .env.example .env   # optional: set SEED_ADMIN_PASSWORD, secrets
+#   docker compose up -d --build
+#
+# First start auto-creates the Administrator account.
+# Credentials: docker compose exec lul-terminal cat data/auth/admin-credentials.json
+#
+# Optional Redis profile:
+#   docker compose --profile with-redis up -d --build
+#   Set REDIS_URL=redis://redis:6379 in .env
+
+services:
+  lul-terminal:
+    build: .
+    container_name: lul-terminal
+    restart: unless-stopped
+    ports:
+      - "${PORT:-3000}:3000"
+    # Optional: copy .env.example → .env before starting
+    # env_file: [.env]
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+    volumes:
+      # Persist users, pastes, images, vault secrets, etc.
+      - lul-data:/app/data
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
+
+  redis:
+    image: redis:7-alpine
+    container_name: lul-redis
+    profiles: [with-redis]
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis-data:/data
+
+volumes:
+  lul-data:
+  redis-data:

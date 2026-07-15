@@ -1,0 +1,6 @@
+{
+  "name": "LUL Terminal",
+  "description": "An interactive, scroll-free retro terminal with lived statistics and a cursor-grabbing easter egg.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,1023 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;550;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+}
+
+/* Scroll-free viewport layout constraints */
+html, body, #root {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  max-height: 100dvh;
+  overflow: hidden !important; /* Force scrollbars to never appear */
+  background-color: #1b1f2b;
+  color: #cad3f5;
+  font-family: var(--font-mono);
+  user-select: none;
+}
+
+/* CRT Screen with Professional blue-gray tint overlay */
+.crt-screen {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background-color: #11131b;
+}
+
+.crt-effect::after {
+  content: " ";
+  display: block;
+  position: absolute;
+  top: 0; left: 0; bottom: 0; right: 0;
+  background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.15) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03));
+  z-index: 999;
+  background-size: 100% 4px, 6px 100%;
+  pointer-events: none;
+}
+
+/* Subtle crt flicker anim */
+@keyframes crt-flicker {
+  0% { opacity: 0.985; }
+  50% { opacity: 0.995; }
+  100% { opacity: 0.982; }
+}
+
+.crt-flicker {
+  opacity: 1;
+}
+
+/* Trap button modern restyling from theme (fusing indigo glows) */
+.trap-button {
+  background: linear-gradient(135deg, #1e1b4b, #311042);
+  color: #a5b4fc;
+  font-family: var(--font-mono);
+  font-size: 16px;
+  font-weight: 700;
+  padding: 12px 36px;
+  border-radius: 6px;
+  border: 1px solid #6366f1;
+  box-shadow: 0 0 15px rgba(99, 102, 241, 0.22), inset 0 0 8px rgba(99, 102, 241, 0.15);
+  text-shadow: 0 0 5px rgba(165, 180, 252, 0.5);
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+  position: relative;
+  overflow: hidden;
+}
+
+.trap-button:hover:not(:disabled) {
+  border-color: #818cf8;
+  box-shadow: 0 0 20px rgba(99, 102, 241, 0.45);
+  transform: translateY(-1px);
+}
+
+.trap-button:active:not(:disabled) {
+  transform: scale(0.96);
+  box-shadow: 0 0 5px rgba(99, 102, 241, 0.5);
+}
+
+.trap-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* GrabZone & Arm physics layouts of the monster claw */
+.grab-zone-wrapper {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 420px;
+  pointer-events: none;
+  z-index: 40;
+}
+
+.grab-zone {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.grab-zone__danger {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(92%, 780px);
+  height: 100%;
+  pointer-events: auto;
+}
+
+/* Active monster states positions */
+.grabber {
+  position: absolute;
+  bottom: -20px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 200px;
+  height: 220px;
+  transition: bottom 0.12s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.grabber--stalking {
+  bottom: 8px;
+}
+
+.grabber--grabbing {
+  bottom: 35px;
+}
+
+.grabber--grabbed {
+  bottom: 55px;
+}
+
+.grabber--shaka {
+  bottom: 0;
+}
+
+/* Arm structures and assets matching professional colors */
+.grabber__body {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 110px;
+  height: 45px;
+  background-color: #0d0f14;
+  border-radius: 20px 20px 0 0;
+  border: 2px solid #6366f1;
+  box-shadow: 0 0 15px rgba(99, 102, 241, 0.3);
+  z-index: 2;
+}
+
+.grabber__face {
+  position: absolute;
+  bottom: 30px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 70px;
+  height: 70px;
+  z-index: 3;
+  animation: head-bob 3.5s infinite ease-in-out;
+}
+
+@keyframes head-bob {
+  0%, 100% { transform: translate(-50%, 0); }
+  50% { transform: translate(-50%, -4px); }
+}
+
+.grabber__arm-wrapper {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  margin-left: -20px;
+  width: 40px;
+  height: 170px;
+  transform-origin: bottom center;
+  z-index: 1;
+  transition: transform 0.04s ease-out;
+}
+
+.grabber__arm {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, #11131c, #1e1b4b, #11131c);
+  border: 2px solid #818cf8;
+  border-radius: 20px;
+  transition: height 0.3s cubic-bezier(0.19, 1, 0.22, 1);
+}
+
+.grabber--extended .grabber__arm-wrapper {
+  height: 310px;
+}
+
+.grabber__hand {
+  position: absolute;
+  top: -35px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 80px;
+  height: 80px;
+  cursor: pointer;
+  z-index: 4;
+  transition: transform 0.1s;
+}
+
+.grabber__hand::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 200px;
+  height: 200px;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+}
+
+.grabber__hand:hover {
+  transform: translateX(-50%) scale(1.12);
+}
+
+/* Custom virtual container dimensions for window frame */
+.terminal-window {
+  border: 1px solid rgba(148, 163, 184, 0.15);
+  border-radius: 8px;
+  background: bg-slate-900/40;
+  box-shadow: 0 15px 45px rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(12px);
+}
+
+.custom-cursor-grabbed {
+  cursor: none !important;
+}
+
+#terminal-header {
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+#terminal-header button {
+  min-height: 40px;
+}
+
+/* Uniform 11px text inside the scaled terminal canvas */
+#scaled-terminal-sandbox {
+  font-size: 11px;
+}
+#scaled-terminal-sandbox .text-\[7px\],
+#scaled-terminal-sandbox .text-\[8px\],
+#scaled-terminal-sandbox .text-\[9px\],
+#scaled-terminal-sandbox .text-\[10px\],
+#scaled-terminal-sandbox .text-\[11px\],
+#scaled-terminal-sandbox .text-xs,
+#scaled-terminal-sandbox .text-sm,
+#scaled-terminal-sandbox input,
+#scaled-terminal-sandbox button {
+  font-size: 11px;
+}
+#scaled-terminal-sandbox .text-xl {
+  font-size: 13px;
+}
+
+/* Diagnostics terminal panel: uniform 9px */
+#scaled-terminal-sandbox #terminal-diagnostics,
+#scaled-terminal-sandbox #terminal-diagnostics *:not(svg):not(path):not(circle):not(line) {
+  font-size: 9px !important;
+}
+
+/* Screen shake animation for unrecognized commands */
+@keyframes screen-shake {
+  0% { transform: translate(0, 0) rotate(0deg); }
+  10% { transform: translate(-8px, -5px) rotate(-1deg); }
+  20% { transform: translate(7px, 6px) rotate(1deg); }
+  30% { transform: translate(-9px, 4px) rotate(-0.5deg); }
+  40% { transform: translate(6px, -7px) rotate(1deg); }
+  50% { transform: translate(-5px, 8px) rotate(-1deg); }
+  60% { transform: translate(8px, -4px) rotate(0.5deg); }
+  70% { transform: translate(-6px, 6px) rotate(-1deg); }
+  80% { transform: translate(5px, -5px) rotate(1deg); }
+  90% { transform: translate(-4px, -6px) rotate(-0.5deg); }
+  100% { transform: translate(0, 0) rotate(0deg); }
+}
+
+.screen-shake-effect {
+  animation: screen-shake 0.4s ease-in-out;
+}
+
+/* Scrollbar styling for retro logs terminal info flow panel */
+.overflow-y-auto::-webkit-scrollbar {
+  width: 4px;
+}
+.overflow-y-auto::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.15);
+}
+.overflow-y-auto::-webkit-scrollbar-thumb {
+  background: rgba(99, 102, 241, 0.35);
+  border-radius: 2px;
+}
+
+/* Change Log — dedicated scroll area */
+.changelog-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(99, 102, 241, 0.55) rgba(0, 0, 0, 0.2);
+  scroll-behavior: auto;
+  overflow-anchor: auto;
+}
+.changelog-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+.changelog-scroll::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.6);
+  border-radius: 4px;
+  margin: 4px 0;
+}
+.changelog-scroll::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, rgba(99, 102, 241, 0.6), rgba(129, 140, 248, 0.4));
+  border-radius: 4px;
+  border: 1px solid rgba(99, 102, 241, 0.2);
+}
+.changelog-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(129, 140, 248, 0.75);
+}
+
+/* —— Admin username —— */
+.admin-username-style {
+  background: linear-gradient(90deg, #c084fc, #f472b6, #60a5fa, #c084fc);
+  background-size: 300% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: admin-name-shine 4s linear infinite;
+  text-shadow: 0 0 24px rgba(192, 132, 252, 0.35);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+@keyframes admin-name-shine {
+  to { background-position: 300% center; }
+}
+
+/* —— Admin shoutbox monitor —— */
+.shoutbox-admin-hero {
+  box-shadow: 0 8px 32px rgba(217, 70, 239, 0.06);
+}
+.shoutbox-admin-stat {
+  transition: border-color 0.2s, transform 0.2s;
+}
+.shoutbox-admin-stat:hover {
+  border-color: rgba(148, 163, 184, 0.35);
+}
+.shoutbox-admin-card {
+  backdrop-filter: blur(4px);
+}
+.shoutbox-admin-scroll::-webkit-scrollbar {
+  width: 5px;
+}
+.shoutbox-admin-scroll::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.25);
+  border-radius: 4px;
+}
+
+/* —— Chat role badges (shoutbox user chips) —— */
+.chat-role-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 1px 4px;
+  border-radius: 3px;
+  border: 1px solid transparent;
+  font-family: ui-monospace, monospace;
+  font-size: 6px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  line-height: 1.2;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+.chat-role-badge--admin {
+  color: #ddd6fe;
+  background: rgba(139, 92, 246, 0.18);
+  border-color: rgba(167, 139, 250, 0.45);
+  box-shadow: 0 0 8px rgba(139, 92, 246, 0.2);
+}
+.chat-role-badge--vip {
+  color: #fcd34d;
+  background: rgba(245, 158, 11, 0.14);
+  border-color: rgba(251, 191, 36, 0.4);
+  box-shadow: 0 0 8px rgba(245, 158, 11, 0.15);
+}
+.chat-role-badge--bot {
+  color: #7dd3fc;
+  background: rgba(14, 165, 233, 0.14);
+  border-color: rgba(56, 189, 248, 0.4);
+  box-shadow: 0 0 8px rgba(56, 189, 248, 0.15);
+}
+.chat-role-badge--verified {
+  color: #7dd3fc;
+  background: rgba(14, 165, 233, 0.1);
+  border-color: rgba(56, 189, 248, 0.35);
+}
+
+/* —— Bot username & messages —— */
+.bot-username-style {
+  color: #38bdf8;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-shadow: 0 0 12px rgba(56, 189, 248, 0.45);
+}
+.bot-message-row {
+  background: linear-gradient(90deg, rgba(14, 165, 233, 0.08), transparent);
+  border-left: 2px solid rgba(56, 189, 248, 0.45);
+  padding: 2px 4px 2px 6px;
+  margin-left: -4px;
+  border-radius: 0 4px 4px 0;
+}
+.terminal-boot-sticky {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: rgba(10, 10, 15, 0.92);
+  backdrop-filter: blur(4px);
+  padding-bottom: 2px;
+  margin-bottom: 2px;
+}
+.shoutbox-pinned {
+  background: linear-gradient(180deg, rgba(99, 102, 241, 0.12), rgba(15, 23, 42, 0.4));
+  border: 1px solid rgba(99, 102, 241, 0.25);
+  border-radius: 4px;
+  padding: 4px 6px;
+}
+.shoutbox-history-divider {
+  border-top: 1px dashed rgba(100, 116, 139, 0.45);
+  margin: 4px 0;
+}
+.shoutbox-segment-link {
+  color: #67e8f9;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.shoutbox-segment-link:hover {
+  color: #a5f3fc;
+}
+.shoutbox-segment-cmd {
+  color: #c4b5fd;
+  font-weight: 600;
+}
+.chat-user-chip {
+  cursor: pointer;
+}
+.chat-user-chip:focus-visible {
+  outline: 1px solid rgba(217, 70, 239, 0.45);
+  outline-offset: 1px;
+}
+.chat-user-context-menu {
+  animation: chat-menu-in 0.12s ease-out;
+}
+@keyframes chat-menu-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* —— Achievement tiers —— */
+.achievement-tier-bronze {
+  border-color: rgba(180, 120, 60, 0.45);
+  background: linear-gradient(145deg, rgba(120, 80, 40, 0.2), rgba(15, 15, 20, 0.9));
+  box-shadow: 0 0 12px rgba(180, 120, 60, 0.12);
+}
+.achievement-tier-silver {
+  border-color: rgba(180, 190, 210, 0.4);
+  background: linear-gradient(145deg, rgba(140, 150, 170, 0.18), rgba(15, 15, 20, 0.9));
+  box-shadow: 0 0 14px rgba(200, 210, 230, 0.1);
+}
+.achievement-tier-gold {
+  border-color: rgba(245, 200, 80, 0.45);
+  background: linear-gradient(145deg, rgba(200, 150, 40, 0.22), rgba(15, 12, 8, 0.92));
+  box-shadow: 0 0 18px rgba(245, 200, 80, 0.15);
+}
+.achievement-tier-plasma {
+  border-color: rgba(56, 189, 248, 0.5);
+  background: linear-gradient(145deg, rgba(14, 165, 233, 0.2), rgba(88, 28, 135, 0.15));
+  box-shadow: 0 0 22px rgba(56, 189, 248, 0.2);
+  animation: plasma-pulse 3s ease-in-out infinite;
+}
+.achievement-tier-mythic {
+  border-color: rgba(251, 191, 36, 0.55);
+  background: linear-gradient(145deg, rgba(245, 158, 11, 0.25), rgba(124, 58, 237, 0.2));
+  box-shadow: 0 0 28px rgba(251, 191, 36, 0.25);
+}
+.achievement-tier-admin {
+  border-color: rgba(167, 139, 250, 0.6);
+  background: linear-gradient(145deg, rgba(109, 40, 217, 0.35), rgba(15, 23, 42, 0.95));
+  box-shadow: 0 0 32px rgba(139, 92, 246, 0.35), inset 0 0 20px rgba(167, 139, 250, 0.08);
+}
+@keyframes plasma-pulse {
+  0%, 100% { box-shadow: 0 0 18px rgba(56, 189, 248, 0.15); }
+  50% { box-shadow: 0 0 28px rgba(56, 189, 248, 0.35); }
+}
+
+/* —— Achievement difficulty badges —— */
+.achievement-diff-trivial {
+  border-color: rgba(148, 163, 184, 0.35);
+  background: rgba(51, 65, 85, 0.35);
+  color: #94a3b8;
+}
+.achievement-diff-easy {
+  border-color: rgba(52, 211, 153, 0.35);
+  background: rgba(6, 78, 59, 0.3);
+  color: #6ee7b7;
+}
+.achievement-diff-medium {
+  border-color: rgba(56, 189, 248, 0.35);
+  background: rgba(12, 74, 110, 0.3);
+  color: #7dd3fc;
+}
+.achievement-diff-hard {
+  border-color: rgba(251, 146, 60, 0.4);
+  background: rgba(124, 45, 18, 0.3);
+  color: #fdba74;
+}
+.achievement-diff-legendary {
+  border-color: rgba(244, 114, 182, 0.4);
+  background: rgba(131, 24, 67, 0.3);
+  color: #f9a8d4;
+}
+.achievement-diff-exclusive {
+  border-color: rgba(167, 139, 250, 0.45);
+  background: rgba(76, 29, 149, 0.35);
+  color: #c4b5fd;
+}
+.achievement-card-unlocked:hover {
+  transform: translateY(-2px) scale(1.02);
+}
+.achievement-shimmer::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(105deg, transparent 40%, rgba(255, 255, 255, 0.12) 50%, transparent 60%);
+  animation: achievement-sweep 2.5s ease-in-out infinite;
+}
+@keyframes achievement-sweep {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+.achievement-icon-float {
+  display: inline-block;
+  animation: achievement-float 2.5s ease-in-out infinite;
+}
+@keyframes achievement-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
+}
+.achievement-notify-pop {
+  animation: achievement-pop 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@keyframes achievement-pop {
+  from { opacity: 0; transform: scale(0.85) translateY(12px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+.achievement-notify-glow {
+  animation: achievement-glow 2s ease-in-out infinite;
+}
+@keyframes achievement-glow {
+  0%, 100% { box-shadow: 0 0 12px rgba(245, 158, 11, 0.2); }
+  50% { box-shadow: 0 0 24px rgba(245, 158, 11, 0.45); }
+}
+
+/* ── LULcoin design system ───────────────────────────────────────── */
+:root {
+  --lul-gold: #fbbf24;
+  --lul-gold-bright: #fde68a;
+  --lul-gold-deep: #d97706;
+  --lul-glow: rgba(245, 158, 11, 0.35);
+  --lul-glow-strong: rgba(251, 191, 36, 0.55);
+}
+
+/* Wallet badge (balance display) */
+.lul-coin-badge {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(251, 191, 36, 0.32);
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.22) 0%, rgba(180, 83, 9, 0.12) 45%, rgba(120, 53, 15, 0.18) 100%);
+  box-shadow:
+    0 0 28px rgba(245, 158, 11, 0.14),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.25);
+}
+.lul-coin-badge::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    105deg,
+    transparent 35%,
+    rgba(251, 191, 36, 0.22) 45%,
+    rgba(255, 255, 255, 0.14) 50%,
+    rgba(251, 191, 36, 0.22) 55%,
+    transparent 65%
+  );
+  transform: translateX(-120%);
+  animation: lul-coin-shimmer 4s ease-in-out infinite;
+  pointer-events: none;
+}
+.lul-coin-badge::after {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(135deg, rgba(251, 191, 36, 0.45), transparent 40%, rgba(245, 158, 11, 0.2) 70%, rgba(251, 191, 36, 0.35));
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+  opacity: 0.65;
+}
+.lul-coin-badge--sm .lul-coin-icon-ring { width: 1.5rem; height: 1.5rem; }
+.lul-coin-badge--lg .lul-coin-icon-ring { width: 2.25rem; height: 2.25rem; }
+
+.lul-coin-icon-ring {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 999px;
+  border: 1px solid rgba(252, 211, 77, 0.45);
+  background: radial-gradient(circle at 35% 30%, rgba(253, 230, 138, 0.45), rgba(180, 83, 9, 0.55) 70%);
+  box-shadow:
+    inset 0 2px 6px rgba(255, 255, 255, 0.15),
+    inset 0 -2px 8px rgba(0, 0, 0, 0.35),
+    0 0 14px rgba(251, 191, 36, 0.35);
+  animation: lul-coin-float 3s ease-in-out infinite;
+}
+.lul-coin-icon-ring svg {
+  filter: drop-shadow(0 0 6px rgba(251, 191, 36, 0.85));
+  color: #fef3c7;
+}
+
+.lul-coin-label {
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  color: rgba(251, 191, 36, 0.72);
+  line-height: 1;
+}
+.lul-coin-label--sm { font-size: 7px; }
+.lul-coin-label--md { font-size: 8px; }
+.lul-coin-label--lg { font-size: 9px; }
+
+/* Amount text — gradient metallic gold */
+.lul-coin-amount {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+.lul-coin-amount--xs { font-size: 8px; }
+.lul-coin-amount--sm { font-size: 10px; }
+.lul-coin-amount--md { font-size: 14px; }
+.lul-coin-amount--lg { font-size: 18px; }
+.lul-coin-amount--xl { font-size: 22px; }
+
+.lul-coin-amount--balance {
+  background: linear-gradient(92deg, #fef3c7 0%, #fde68a 35%, #fbbf24 65%, #f59e0b 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  text-shadow: 0 0 20px rgba(251, 191, 36, 0.15);
+}
+.lul-coin-amount--earn {
+  background: linear-gradient(92deg, #6ee7b7 0%, #a7f3d0 40%, #fde68a 75%, #fbbf24 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.lul-coin-amount--streak {
+  color: #6ee7b7;
+  text-shadow: 0 0 12px rgba(52, 211, 153, 0.35);
+}
+.lul-coin-amount--jackpot {
+  background: linear-gradient(92deg, #fef08a 0%, #fbbf24 30%, #f97316 60%, #fde68a 100%);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: lul-coin-jackpot-text 2.5s ease-in-out infinite;
+}
+.lul-coin-amount--bet {
+  color: rgba(251, 191, 36, 0.88);
+  text-shadow: 0 0 8px rgba(245, 158, 11, 0.2);
+}
+.lul-coin-amount--loss {
+  color: #fb7185;
+  text-shadow: 0 0 8px rgba(244, 63, 94, 0.25);
+}
+.lul-coin-amount--refund {
+  color: #94a3b8;
+}
+
+.lul-coin-amount-icon {
+  flex-shrink: 0;
+  color: var(--lul-gold-bright);
+  filter: drop-shadow(0 0 4px var(--lul-glow));
+}
+
+/* Inline chips for bets, bonuses, feed */
+.lul-coin-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0.15rem 0.45rem;
+  border-radius: 0.5rem;
+  font-family: var(--font-mono);
+  font-size: 8px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  border: 1px solid rgba(251, 191, 36, 0.28);
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.14), rgba(120, 53, 15, 0.12));
+  color: rgba(253, 230, 138, 0.95);
+  box-shadow: 0 0 10px rgba(245, 158, 11, 0.08);
+}
+.lul-coin-chip--earn {
+  border-color: rgba(52, 211, 153, 0.35);
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.16), rgba(245, 158, 11, 0.1));
+  color: #a7f3d0;
+}
+.lul-coin-chip--streak {
+  border-color: rgba(52, 211, 153, 0.3);
+  background: rgba(16, 185, 129, 0.1);
+  color: #6ee7b7;
+}
+.lul-coin-chip--jackpot {
+  border-color: rgba(251, 191, 36, 0.45);
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.22), rgba(249, 115, 22, 0.15));
+  color: #fde68a;
+  animation: lul-coin-chip-pulse 2s ease-in-out infinite;
+}
+.lul-coin-chip--bet {
+  border-color: rgba(251, 191, 36, 0.22);
+  background: rgba(245, 158, 11, 0.08);
+  color: rgba(253, 230, 138, 0.9);
+}
+
+/* Jackpot pool hero */
+.lul-coin-jackpot-pool {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.65rem;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(251, 191, 36, 0.35);
+  background: linear-gradient(135deg, rgba(120, 53, 15, 0.35), rgba(245, 158, 11, 0.12));
+  box-shadow: 0 0 24px rgba(245, 158, 11, 0.18);
+  animation: lul-coin-jackpot-glow 3s ease-in-out infinite;
+}
+.lul-coin-jackpot-pool .lul-coin-amount {
+  font-size: 1.25rem;
+}
+
+/* Summary tile highlight (profile stats) */
+.lul-coin-summary-tile {
+  position: relative;
+  overflow: hidden;
+  border-color: rgba(251, 191, 36, 0.28) !important;
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.12), rgba(0, 0, 0, 0.3)) !important;
+  box-shadow: 0 0 18px rgba(245, 158, 11, 0.08);
+}
+.lul-coin-summary-tile::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(251, 191, 36, 0.5), transparent);
+}
+
+/* Feed panel chrome */
+.lul-coin-feed-panel {
+  border-color: rgba(251, 191, 36, 0.22) !important;
+  background: linear-gradient(145deg, rgba(69, 26, 3, 0.35) 0%, rgba(12, 13, 18, 1) 40%, rgba(10, 11, 16, 1) 100%) !important;
+  box-shadow: inset 0 1px 0 rgba(251, 191, 36, 0.06);
+}
+.lul-coin-feed-header-icon {
+  border-color: rgba(251, 191, 36, 0.35) !important;
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.18), rgba(120, 53, 15, 0.2)) !important;
+  box-shadow: 0 0 14px rgba(245, 158, 11, 0.12);
+}
+.lul-coin-feed-total {
+  background: linear-gradient(92deg, #fde68a, #fbbf24);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Feed kind chips */
+.coin-feed-kind-chip {
+  font-family: var(--font-mono);
+  font-size: 7px;
+  text-transform: uppercase;
+  padding: 0.1rem 0.35rem;
+  border-radius: 0.35rem;
+  border: 1px solid;
+}
+.coin-feed-kind--achievement { border-color: rgba(139, 92, 246, 0.35); background: rgba(139, 92, 246, 0.12); color: #c4b5fd; }
+.coin-feed-kind--daily_bonus { border-color: rgba(14, 165, 233, 0.35); background: rgba(14, 165, 233, 0.12); color: #7dd3fc; }
+.coin-feed-kind--game_win { border-color: rgba(16, 185, 129, 0.35); background: rgba(16, 185, 129, 0.12); color: #6ee7b7; }
+.coin-feed-kind--streak_bonus { border-color: rgba(249, 115, 22, 0.35); background: rgba(249, 115, 22, 0.12); color: #fdba74; }
+.coin-feed-kind--jackpot { border-color: rgba(251, 191, 36, 0.4); background: rgba(245, 158, 11, 0.15); color: #fde68a; }
+.coin-feed-kind--draw_refund { border-color: rgba(100, 116, 139, 0.35); background: rgba(100, 116, 139, 0.1); color: #cbd5e1; }
+
+.coin-feed-amount--achievement { color: #c4b5fd; text-shadow: 0 0 10px rgba(139, 92, 246, 0.25); }
+.coin-feed-amount--daily_bonus { color: #7dd3fc; }
+.coin-feed-amount--game_win { color: #6ee7b7; text-shadow: 0 0 10px rgba(52, 211, 153, 0.2); }
+.coin-feed-amount--streak_bonus { color: #fdba74; }
+.coin-feed-amount--jackpot {
+  background: linear-gradient(92deg, #fde68a, #fbbf24, #f97316);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.coin-feed-amount--draw_refund { color: #94a3b8; }
+
+.lul-coin-balance-footer {
+  color: rgba(251, 191, 36, 0.75) !important;
+}
+.lul-coin-balance-footer svg {
+  color: var(--lul-gold);
+  filter: drop-shadow(0 0 4px var(--lul-glow));
+}
+
+/* Achievement popup coin line */
+.lul-coin-reward-line {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.2rem 0.5rem;
+  margin-top: 0.35rem;
+  border-radius: 0.5rem;
+  border: 1px solid rgba(251, 191, 36, 0.3);
+  background: linear-gradient(90deg, rgba(245, 158, 11, 0.12), rgba(16, 185, 129, 0.08));
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: #fde68a;
+}
+
+/* Sign-in promo */
+.lul-coin-promo {
+  border-color: rgba(251, 191, 36, 0.25) !important;
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.08), rgba(99, 102, 241, 0.1)) !important;
+}
+
+@keyframes lul-coin-shimmer {
+  0%, 70% { transform: translateX(-120%); }
+  100% { transform: translateX(120%); }
+}
+@keyframes lul-coin-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-2px); }
+}
+@keyframes lul-coin-jackpot-text {
+  0%, 100% { background-position: 0% center; }
+  50% { background-position: 100% center; }
+}
+@keyframes lul-coin-jackpot-glow {
+  0%, 100% { box-shadow: 0 0 18px rgba(245, 158, 11, 0.15); }
+  50% { box-shadow: 0 0 32px rgba(251, 191, 36, 0.35); }
+}
+@keyframes lul-coin-chip-pulse {
+  0%, 100% { box-shadow: 0 0 8px rgba(245, 158, 11, 0.1); }
+  50% { box-shadow: 0 0 16px rgba(251, 191, 36, 0.3); }
+}
+
+/* Daily bonus claim card */
+.daily-bonus-ready {
+  animation: daily-bonus-glow 2.8s ease-in-out infinite;
+}
+@keyframes daily-bonus-glow {
+  0%, 100% { box-shadow: 0 0 0 rgba(52, 211, 153, 0); }
+  50% { box-shadow: 0 0 28px rgba(52, 211, 153, 0.12); }
+}
+.daily-bonus-claim-btn:not(:disabled):active {
+  transform: scale(0.97);
+}
+.daily-bonus-pulse {
+  animation: daily-bonus-pop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@keyframes daily-bonus-pop {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.02); }
+  100% { transform: scale(1); }
+}
+.daily-bonus-icon-bounce {
+  animation: daily-bonus-icon-bounce 1.6s ease-in-out infinite;
+}
+@keyframes daily-bonus-icon-bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
+}
+
+/* RPS arena */
+.rps-arena-glow,
+.ttt-arena-glow {
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+}
+.rps-vs-badge {
+  animation: rps-vs-pulse 2s ease-in-out infinite;
+}
+@keyframes rps-vs-pulse {
+  0%, 100% { box-shadow: 0 0 0 rgba(244, 63, 94, 0); }
+  50% { box-shadow: 0 0 18px rgba(244, 63, 94, 0.2); }
+}
+.rps-move-btn:active:not(:disabled) {
+  transform: scale(0.96);
+}
+.rps-move-picked {
+  box-shadow: 0 0 22px rgba(244, 63, 94, 0.25);
+}
+.rps-reveal-pop {
+  animation: rps-reveal-pop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+@keyframes rps-reveal-pop {
+  from { opacity: 0; transform: scale(0.4) rotate(-12deg); }
+  to { opacity: 1; transform: scale(1) rotate(0); }
+}
+.rps-reveal-shake {
+  animation: rps-reveal-shake 0.45s ease-in-out;
+}
+@keyframes rps-reveal-shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-4px); }
+  40% { transform: translateX(4px); }
+  60% { transform: translateX(-2px); }
+  80% { transform: translateX(2px); }
+}
+.rps-hero-float {
+  animation: rps-hero-float 4s ease-in-out infinite;
+}
+@keyframes rps-hero-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+
+.arcade-game-grid {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(100, 116, 139, 0.35) transparent;
+}
+.arcade-game-grid::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+.arcade-game-grid::-webkit-scrollbar-thumb {
+  background: rgba(100, 116, 139, 0.35);
+  border-radius: 999px;
+}
+
+.hof-podium-stage {
+  contain: layout style;
+}
+.hof-podium-slot {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  transform-origin: bottom center;
+}
+.hof-podium-rank-1 .hof-podium-avatar {
+  box-shadow: 0 0 14px rgba(251, 191, 36, 0.22);
+}
+.hof-podium-rank-1 .hof-podium-bar {
+  box-shadow: 0 -8px 28px rgba(251, 191, 36, 0.12);
+}
+
+.arena-done-pop {
+  animation: arena-done-pop 0.45s cubic-bezier(0.34, 1.3, 0.64, 1) both;
+}
+.arena-done-icon {
+  animation: arena-done-icon 0.55s cubic-bezier(0.34, 1.4, 0.64, 1) both;
+}
+@keyframes arena-done-pop {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes arena-done-icon {
+  from { opacity: 0; transform: scale(0.5) rotate(-8deg); }
+  to { opacity: 1; transform: scale(1) rotate(0); }
+}
+
+.coin-feed-list {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(251, 191, 36, 0.25) transparent;
+}
+.coin-feed-list::-webkit-scrollbar {
+  width: 5px;
+}
+.coin-feed-list::-webkit-scrollbar-thumb {
+  background: rgba(251, 191, 36, 0.25);
+  border-radius: 999px;
+}
+.coin-feed-row {
+  animation: coin-feed-row-in 0.35s ease-out both;
+}
+@keyframes coin-feed-row-in {
+  from { opacity: 0; transform: translateX(-6px); }
+  to { opacity: 1; transform: translateX(0); }
+}
