@@ -49,6 +49,18 @@ export const DEFAULT_VISIBILITY = {
   admin: 'members',
 };
 
+/** Site chrome / layout flags (not tabs). */
+export const DEFAULT_UI = {
+  /** Right diagnostics / shoutbox pane on the main shell */
+  showDiagnosticsPane: true,
+};
+
+function sanitizeUi(ui = {}) {
+  return {
+    showDiagnosticsPane: ui.showDiagnosticsPane !== false,
+  };
+}
+
 function normalizeVisibility(value) {
   return value === 'public' ? 'public' : 'members';
 }
@@ -78,6 +90,7 @@ export async function loadAccessControl() {
       version: 1,
       updatedAt: null,
       pages: { ...DEFAULT_VISIBILITY },
+      ui: { ...DEFAULT_UI },
     };
   }
   try {
@@ -87,6 +100,7 @@ export async function loadAccessControl() {
       version: parsed.version ?? 1,
       updatedAt: parsed.updatedAt ?? null,
       pages: sanitizePages(parsed.pages),
+      ui: sanitizeUi(parsed.ui),
     };
   } catch (err) {
     console.error('[access] CRITICAL: access-control.json unreadable', err);
@@ -105,11 +119,23 @@ function withAccessControlWrite(task) {
 export async function saveAccessControl(patch = {}) {
   return withAccessControlWrite(async () => {
     const current = await loadAccessControl();
-    const nextPages = sanitizePages({ ...current.pages, ...(patch.pages ?? {}) });
+    const nextPages = sanitizePages({
+      ...current.pages,
+      ...(patch.pages ?? {}),
+    });
+    const nextUi = sanitizeUi({
+      ...current.ui,
+      ...(patch.ui && typeof patch.ui === 'object' ? patch.ui : {}),
+    });
+    // Full reset of pages also restores UI defaults when explicitly requested
+    if (patch.resetUiDefaults) {
+      Object.assign(nextUi, DEFAULT_UI);
+    }
     const db = {
       version: 1,
       updatedAt: Date.now(),
       pages: nextPages,
+      ui: nextUi,
     };
     await fs.mkdir(path.dirname(DATA_FILE), { recursive: true });
     const tmp = `${DATA_FILE}.tmp`;

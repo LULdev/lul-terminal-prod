@@ -8,14 +8,19 @@ import type { TabId } from '../config/menuItems';
 import { DEFAULT_PUBLIC_TABS } from '../config/accessControl';
 import { ALL_TAB_IDS } from '../config/menuItems';
 import {
+  DEFAULT_SITE_UI,
   fetchPageVisibility,
   type PageVisibilityConfig,
   type PublicAccessControl,
+  type SiteUiConfig,
 } from '../lib/pageVisibility';
 
 type PageVisibilityContextValue = {
   loading: boolean;
   config: PageVisibilityConfig;
+  ui: SiteUiConfig;
+  /** Right diagnostics / shoutbox pane visible site-wide */
+  showDiagnosticsPane: boolean;
   updatedAt: number | null;
   isPublicTab: (tab: TabId) => boolean;
   requiresLogin: (tab: TabId) => boolean;
@@ -29,9 +34,16 @@ function fallbackIsPublic(tab: TabId): boolean {
   return DEFAULT_PUBLIC_TABS.has(tab);
 }
 
+function normalizeUi(ui?: Partial<SiteUiConfig> | null): SiteUiConfig {
+  return {
+    showDiagnosticsPane: ui?.showDiagnosticsPane !== false,
+  };
+}
+
 export function PageVisibilityProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [config, setConfig] = useState<PageVisibilityConfig>({});
+  const [ui, setUi] = useState<SiteUiConfig>({ ...DEFAULT_SITE_UI });
   const [updatedAt, setUpdatedAt] = useState<number | null>(null);
   const [fetchFailed, setFetchFailed] = useState(false);
   const configRef = useRef(config);
@@ -48,6 +60,7 @@ export function PageVisibilityProvider({ children }: { children: React.ReactNode
       }
       setConfig(derived);
     }
+    setUi(normalizeUi(data.ui));
     setUpdatedAt(data.updatedAt ?? null);
   }, []);
 
@@ -92,15 +105,19 @@ export function PageVisibilityProvider({ children }: { children: React.ReactNode
 
   const requiresLogin = useCallback((tab: TabId) => !isPublicTab(tab), [isPublicTab]);
 
+  const showDiagnosticsPane = ui.showDiagnosticsPane !== false;
+
   const value = useMemo(() => ({
     loading,
     config,
+    ui,
+    showDiagnosticsPane,
     updatedAt,
     isPublicTab,
     requiresLogin,
     refresh,
     applyConfig,
-  }), [loading, config, updatedAt, isPublicTab, requiresLogin, refresh, applyConfig]);
+  }), [loading, config, ui, showDiagnosticsPane, updatedAt, isPublicTab, requiresLogin, refresh, applyConfig]);
 
   return (
     <PageVisibilityContext.Provider value={value}>

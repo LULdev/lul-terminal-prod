@@ -21,11 +21,13 @@ import {
   TabId,
 } from '../../config/menuItems';
 import {
+  DEFAULT_SITE_UI,
   fetchAdminPageVisibility,
   resetAdminPageVisibility,
   updateAdminPageVisibility,
   type AdminAccessControl,
   type PageVisibility,
+  type SiteUiConfig,
 } from '../../lib/pageVisibility';
 import { useMountedLoad } from '../../hooks/useMountedLoad';
 import { usePageVisibility } from '../../context/PageVisibilityContext';
@@ -65,6 +67,7 @@ export function AdminPageVisibilityPanel() {
   const { refresh: refreshGlobal } = usePageVisibility();
   const [data, setData] = useState<AdminAccessControl | null>(null);
   const [draft, setDraft] = useState<Record<string, PageVisibility>>({});
+  const [uiDraft, setUiDraft] = useState<SiteUiConfig>({ ...DEFAULT_SITE_UI });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const saveGenRef = useRef(0);
@@ -82,6 +85,9 @@ export function AdminPageVisibilityPanel() {
       if (gen !== loadGenRef.current || !mountedRef.current) return;
       setData(res);
       setDraft(res.pages);
+      setUiDraft({
+        showDiagnosticsPane: res.ui?.showDiagnosticsPane !== false,
+      });
     } catch (e) {
       if (gen !== loadGenRef.current || !mountedRef.current) return;
       setErr(e instanceof Error ? e.message : 'Failed to load');
@@ -94,8 +100,10 @@ export function AdminPageVisibilityPanel() {
 
   const dirty = useMemo(() => {
     if (!data) return false;
-    return ALL_PAGES.some((p) => draft[p.id] !== data.pages[p.id]);
-  }, [data, draft]);
+    const pagesDirty = ALL_PAGES.some((p) => draft[p.id] !== data.pages[p.id]);
+    const uiDirty = uiDraft.showDiagnosticsPane !== (data.ui?.showDiagnosticsPane !== false);
+    return pagesDirty || uiDirty;
+  }, [data, draft, uiDraft]);
 
   const stats = useMemo(() => {
     const publicCount = ALL_PAGES.filter((p) => draft[p.id] === 'public').length;
@@ -135,13 +143,16 @@ export function AdminPageVisibilityPanel() {
     setErr('');
     setMsg('');
     try {
-      const res = await updateAdminPageVisibility(draft);
+      const res = await updateAdminPageVisibility(draft, uiDraft);
       if (gen !== saveGenRef.current) return;
       setData(res);
       setDraft(res.pages);
+      setUiDraft({
+        showDiagnosticsPane: res.ui?.showDiagnosticsPane !== false,
+      });
       await refreshGlobal();
       if (gen !== saveGenRef.current) return;
-      setMsg('Saved — guests see changes within ~60s (immediately after reload).');
+      setMsg('Saved — layout & visibility apply site-wide (reload within ~60s for other tabs).');
       setTimeout(() => setMsg(''), 5000);
     } catch (e) {
       if (gen !== saveGenRef.current) return;
@@ -161,6 +172,9 @@ export function AdminPageVisibilityPanel() {
       if (gen !== saveGenRef.current) return;
       setData(res);
       setDraft(res.pages);
+      setUiDraft({
+        showDiagnosticsPane: res.ui?.showDiagnosticsPane !== false,
+      });
       await refreshGlobal();
       if (gen !== saveGenRef.current) return;
       setMsg('Defaults restored.');
@@ -195,6 +209,50 @@ export function AdminPageVisibilityPanel() {
         Control which tabs guests without login may open. <span className="text-sky-400/90">Public</span> = freely accessible ·{' '}
         <span className="text-violet-400/90">Members</span> = login gate with explanation modal.
       </p>
+
+      {/* Layout chrome */}
+      <div className="mb-4 rounded-xl border border-indigo-500/25 bg-indigo-500/[0.06] p-3.5">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <div className="text-[10px] font-semibold text-indigo-100 flex items-center gap-1.5">
+              <span aria-hidden>📟</span> Diagnostics / Shoutbox pane
+            </div>
+            <p className="text-[8px] font-mono text-slate-500 mt-1 leading-relaxed">
+              Right-hand terminal (telemetry, shoutbox, CLI). When off, the main content uses the full width for everyone.
+            </p>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={uiDraft.showDiagnosticsPane}
+            onClick={() =>
+              setUiDraft((prev) => ({
+                ...prev,
+                showDiagnosticsPane: !prev.showDiagnosticsPane,
+              }))
+            }
+            className={`shrink-0 relative w-11 h-6 rounded-full border transition-colors ${
+              uiDraft.showDiagnosticsPane
+                ? 'bg-indigo-500/40 border-indigo-400/50'
+                : 'bg-slate-900 border-slate-700'
+            }`}
+          >
+            <span
+              className={`absolute top-0.5 left-0.5 h-4.5 w-4.5 rounded-full bg-white shadow transition-transform ${
+                uiDraft.showDiagnosticsPane ? 'translate-x-5' : 'translate-x-0'
+              }`}
+              style={{ width: 18, height: 18 }}
+            />
+          </button>
+        </div>
+        <p className="text-[8px] font-mono mt-2 text-slate-600">
+          Status:{' '}
+          <span className={uiDraft.showDiagnosticsPane ? 'text-emerald-400' : 'text-amber-400'}>
+            {uiDraft.showDiagnosticsPane ? 'Visible' : 'Hidden'}
+          </span>
+          {' · '}remember to Save
+        </p>
+      </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4">
         <StatPill icon={<Globe size={12} />} label="Public" value={stats.publicCount} accent="text-emerald-300" />

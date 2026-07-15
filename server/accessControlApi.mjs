@@ -9,6 +9,7 @@ import { requireRole } from './auth/authApi.mjs';
 import { canAccessAdmin } from './auth/permissions.mjs';
 import {
   ALL_MANAGEABLE_TAB_IDS,
+  DEFAULT_UI,
   DEFAULT_VISIBILITY,
   LOCKED_MEMBERS_TABS,
   LOCKED_PUBLIC_TABS,
@@ -48,6 +49,7 @@ export async function handleAccessControlRequest(req, res) {
         version: db.version,
         updatedAt: db.updatedAt,
         publicTabs: publicTabIds(db.pages),
+        ui: db.ui ?? { ...DEFAULT_UI },
       });
     }
 
@@ -62,8 +64,10 @@ export async function handleAccessControlRequest(req, res) {
       const db = await loadAccessControl();
       return sendJson(res, 200, {
         ...db,
+        ui: db.ui ?? { ...DEFAULT_UI },
         publicTabs: publicTabIds(db.pages),
         defaults: DEFAULT_VISIBILITY,
+        defaultUi: { ...DEFAULT_UI },
         lockedPublic: [...LOCKED_PUBLIC_TABS],
         lockedMembers: [...LOCKED_MEMBERS_TABS],
         allTabs: ALL_MANAGEABLE_TAB_IDS,
@@ -75,14 +79,29 @@ export async function handleAccessControlRequest(req, res) {
       await checkRateLimit(`access-control-admin-act:${adminKey}`, { max: 20, windowMs: 60_000 });
       const body = await readJsonBody(req);
       if (body.resetDefaults) {
-        const db = await saveAccessControl({ pages: { ...DEFAULT_VISIBILITY } });
-        return sendJson(res, 200, { ok: true, ...db, publicTabs: publicTabIds(db.pages) });
+        const db = await saveAccessControl({
+          pages: { ...DEFAULT_VISIBILITY },
+          ui: { ...DEFAULT_UI },
+          resetUiDefaults: true,
+        });
+        return sendJson(res, 200, {
+          ok: true,
+          ...db,
+          publicTabs: publicTabIds(db.pages),
+          defaultUi: { ...DEFAULT_UI },
+        });
       }
-      if (body.pages && typeof body.pages === 'object') {
-        const db = await saveAccessControl({ pages: body.pages });
-        return sendJson(res, 200, { ok: true, ...db, publicTabs: publicTabIds(db.pages) });
-      }
-      throw new Error('Invalid request');
+      const patch = {};
+      if (body.pages && typeof body.pages === 'object') patch.pages = body.pages;
+      if (body.ui && typeof body.ui === 'object') patch.ui = body.ui;
+      if (Object.keys(patch).length === 0) throw new Error('Invalid request');
+      const db = await saveAccessControl(patch);
+      return sendJson(res, 200, {
+        ok: true,
+        ...db,
+        publicTabs: publicTabIds(db.pages),
+        defaultUi: { ...DEFAULT_UI },
+      });
     }
 
     return sendJson(res, 404, { error: 'Not found' });

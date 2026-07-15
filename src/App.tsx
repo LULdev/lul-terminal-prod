@@ -105,7 +105,7 @@ export default function App() {
     user, isLoggedIn, isAdmin, loading: authLoading, openAuth, openLoginGate, syncAchievements, authSuccessTick,
     pendingTabAfterLogin, clearPendingTabAfterLogin, patchUser, handleUnlocks,
   } = useAuth();
-  const { requiresLogin, isPublicTab, loading: visibilityLoading } = usePageVisibility();
+  const { requiresLogin, isPublicTab, loading: visibilityLoading, showDiagnosticsPane } = usePageVisibility();
   const { newsFeedVersion } = useFeedUnread();
 
   const canAccessTab = useCallback((tab: TabId, loggedIn: boolean, admin: boolean) => {
@@ -908,32 +908,34 @@ export default function App() {
               </Suspense>
             </section>
 
-            <TerminalDiagnosticsPane
-              renderTab={renderTab}
-              themeColor={themeColor}
-              setThemeColor={setThemeColor}
-              isLoggedIn={isLoggedIn}
-              openAuth={openAuth}
-              isMuted={isMuted}
-              setIsMuted={setIsMuted}
-              isMatrixOverlayActive={isMatrixOverlayActive}
-              setIsMatrixOverlayActive={setIsMatrixOverlayActive}
-              isCrtEnabled={isCrtEnabled}
-              setIsCrtEnabled={setIsCrtEnabled}
-              setBsodActive={setBsodActive}
-              setSelfDestructCountdown={setSelfDestructCountdown}
-              selfDestructCountdown={selfDestructCountdown}
-              setIsShaking={setIsShaking}
-              playBeep={playBeep}
-              syncAchievements={syncAchievements}
-              synthTheme={synthTheme}
-              onNavigateProfile={(username) => handleTabClick('profile', { profileUsername: username })}
-              onChangeSynthTheme={(theme) => {
-                setSynthTheme(theme);
-                if (!isMuted) playBeep(600, 0.1, theme === 'clean-sine' ? 'sine' : theme === 'retro-8bit' ? 'square' : 'sawtooth');
-                terminalAppend(`🔊 Audio Synthesizer Theme set to ${theme.toUpperCase()}.`, 'success');
-              }}
-            />
+            {showDiagnosticsPane && (
+              <TerminalDiagnosticsPane
+                renderTab={renderTab}
+                themeColor={themeColor}
+                setThemeColor={setThemeColor}
+                isLoggedIn={isLoggedIn}
+                openAuth={openAuth}
+                isMuted={isMuted}
+                setIsMuted={setIsMuted}
+                isMatrixOverlayActive={isMatrixOverlayActive}
+                setIsMatrixOverlayActive={setIsMatrixOverlayActive}
+                isCrtEnabled={isCrtEnabled}
+                setIsCrtEnabled={setIsCrtEnabled}
+                setBsodActive={setBsodActive}
+                setSelfDestructCountdown={setSelfDestructCountdown}
+                selfDestructCountdown={selfDestructCountdown}
+                setIsShaking={setIsShaking}
+                playBeep={playBeep}
+                syncAchievements={syncAchievements}
+                synthTheme={synthTheme}
+                onNavigateProfile={(username) => handleTabClick('profile', { profileUsername: username })}
+                onChangeSynthTheme={(theme) => {
+                  setSynthTheme(theme);
+                  if (!isMuted) playBeep(600, 0.1, theme === 'clean-sine' ? 'sine' : theme === 'retro-8bit' ? 'square' : 'sawtooth');
+                  terminalAppend(`🔊 Audio Synthesizer Theme set to ${theme.toUpperCase()}.`, 'success');
+                }}
+              />
+            )}
 
             {/* Mount custom tracking physical claw inside sandbox bounds! */}
             {renderTab === 'fun' && (
