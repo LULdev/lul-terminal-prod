@@ -53,7 +53,7 @@ export function UserBar({ onNavigate }: UserBarProps) {
 
   if (loading) {
     return (
-      <div className="userbar-shell userbar-shell--loading mt-auto shrink-0">
+      <div className="userbar-shell userbar-shell--loading shrink-0">
         <div className="userbar-skeleton" />
         <p className="text-[9px] font-mono text-slate-600 text-center pt-1">Loading session…</p>
       </div>
@@ -62,7 +62,7 @@ export function UserBar({ onNavigate }: UserBarProps) {
 
   if (!isLoggedIn) {
     return (
-      <div className="userbar-shell userbar-shell--guest mt-auto shrink-0 relative z-30 pointer-events-auto">
+      <div className="userbar-shell userbar-shell--guest shrink-0 relative z-30 pointer-events-auto">
         <div className="userbar-guest-card">
           <div className="userbar-guest-card__icon" aria-hidden>
             <Sparkles size={16} />
@@ -116,7 +116,7 @@ export function UserBar({ onNavigate }: UserBarProps) {
   };
 
   return (
-    <div className="userbar-shell userbar-shell--authed mt-auto shrink-0">
+    <div className="userbar-shell userbar-shell--authed shrink-0">
       <button
         type="button"
         onClick={() => go('profile')}

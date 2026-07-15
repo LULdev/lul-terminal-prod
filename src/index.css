@@ -760,16 +760,17 @@ a.bot-mention-username:focus-visible {
   }
 }
 
-/* —— Sidebar UserBar (account dock) —— */
+/* —— Sidebar UserBar (account dock — top of menu) —— */
 .userbar-shell {
   position: relative;
   z-index: 20;
-  margin-top: auto;
-  padding-top: 0.75rem;
+  margin-top: 0;
+  margin-bottom: 0.25rem;
+  padding-bottom: 0.75rem;
   display: flex;
   flex-direction: column;
   gap: 0.55rem;
-  border-top: 1px solid transparent;
+  border-bottom: 1px solid transparent;
   border-image: linear-gradient(
       90deg,
       transparent,
@@ -783,7 +784,7 @@ a.bot-mention-username:focus-visible {
 @keyframes userbar-rise {
   from {
     opacity: 0;
-    transform: translateY(10px);
+    transform: translateY(-8px);
   }
   to {
     opacity: 1;
