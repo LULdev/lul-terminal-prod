@@ -7,6 +7,7 @@ import React, { useMemo } from 'react';
 import { Coins, Sparkles, X } from 'lucide-react';
 import { ACHIEVEMENT_BY_ID, TIER_STYLES } from '../../data/achievements';
 import { LulCoinAmount } from '../games/LulCoinAmount';
+import { AchievementConfetti } from './AchievementConfetti';
 
 type AchievementNotificationProps = {
   unlockIds: string[];
@@ -27,13 +28,18 @@ export function AchievementNotification({
     () => unlockIds.reduce((sum, id) => sum + (unlockRewards[id] ?? 0), 0),
     [unlockIds, unlockRewards],
   );
+  /** Stable key so confetti re-fires when a new set of unlocks arrives. */
+  const confettiKey = useMemo(() => unlockIds.slice().sort().join('|'), [unlockIds]);
 
   if (!unlockIds.length) return null;
 
   return (
     <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm">
+      {/* Full-page confetti — only this client sees it (local unlock state). */}
+      <AchievementConfetti burstKey={confettiKey} particleCount={Math.min(220, 100 + unlockIds.length * 40)} />
+
       <div
-        className="relative w-full max-w-md rounded-2xl border border-amber-500/35 bg-gradient-to-br from-[#1a1528] via-[#0c0d12] to-[#0f172a] p-5 shadow-[0_0_60px_rgba(245,158,11,0.15)] achievement-notify-pop"
+        className="relative z-[1] w-full max-w-md rounded-2xl border border-amber-500/35 bg-gradient-to-br from-[#1a1528] via-[#0c0d12] to-[#0f172a] p-5 shadow-[0_0_60px_rgba(245,158,11,0.15)] achievement-notify-pop"
         role="dialog"
         aria-modal="true"
         aria-labelledby="achievement-notify-title"
