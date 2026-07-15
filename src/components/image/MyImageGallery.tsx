@@ -75,9 +75,9 @@ export function MyImageGallery({ refreshKey = 0, onSelectImage }: MyImageGallery
     return () => { mountedRef.current = false; };
   }, []);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (opts?: { soft?: boolean }) => {
     const gen = ++loadGenRef.current;
-    setError('');
+    if (!opts?.soft) setError('');
     try {
       const [gallery, galleryStats] = await Promise.all([
         fetchMyGallery(sort),
@@ -86,9 +86,13 @@ export function MyImageGallery({ refreshKey = 0, onSelectImage }: MyImageGallery
       if (gen !== loadGenRef.current || !mountedRef.current) return;
       setImages(gallery.images);
       setStats(galleryStats);
+      setError('');
     } catch (e) {
       if (gen !== loadGenRef.current || !mountedRef.current) return;
-      setError(e instanceof Error ? e.message : 'Could not load gallery');
+      const msg = e instanceof Error ? e.message : 'Could not load gallery';
+      // Soft polls (interval) keep last good data on transient 429s
+      if (opts?.soft && /too many|429|rate/i.test(msg)) return;
+      setError(msg);
     } finally {
       if (gen === loadGenRef.current && mountedRef.current) setLoading(false);
     }
@@ -96,10 +100,11 @@ export function MyImageGallery({ refreshKey = 0, onSelectImage }: MyImageGallery
 
   useEffect(() => {
     setLoading(true);
-    load();
+    void load();
   }, [load, refreshKey]);
 
-  useVisibilityAwarePoll(() => { void load(); }, 30_000);
+  // Stable interval poll — load identity changes must not restart the timer
+  useVisibilityAwarePoll(() => { void load({ soft: true }); }, 30_000);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();

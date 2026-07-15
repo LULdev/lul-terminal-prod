@@ -83,21 +83,23 @@ export async function handleImageHostRequest(req, res) {
     await requireMemberTab(req, 'imagehost');
 
     if (req.method === 'GET' && pathname === '/api/images/stats') {
-      await checkRateLimit(`image-stats:${clientIp(req)}`, { max: 60, windowMs: 60_000 });
+      // Public totals bar — polled every ~8s; allow headroom for multi-tab
+      await checkRateLimit(`image-stats:${clientIp(req)}`, { max: 120, windowMs: 60_000 });
       return sendJson(res, 200, await readStats());
     }
 
     if (req.method === 'GET' && pathname === '/api/images/my/stats') {
-      await checkRateLimit(`image-gallery:${clientIp(req)}`, { max: 60, windowMs: 60_000 });
       await attachAuth(req);
       const user = requireAuth(req);
+      // Separate bucket from list so a list+stats pair does not double-count the same key
+      await checkRateLimit(`image-my-stats:${user.id}`, { max: 90, windowMs: 60_000 });
       return sendJson(res, 200, await computeUserGalleryStats(user.id));
     }
 
     if (req.method === 'GET' && pathname === '/api/images/my') {
-      await checkRateLimit(`image-gallery:${clientIp(req)}`, { max: 60, windowMs: 60_000 });
       await attachAuth(req);
       const user = requireAuth(req);
+      await checkRateLimit(`image-my-list:${user.id}`, { max: 90, windowMs: 60_000 });
       const sort = url.searchParams.get('sort') ?? 'newest';
       const images = await listImagesByUser(user.id);
       const sorted = sortGallery(images, sort);

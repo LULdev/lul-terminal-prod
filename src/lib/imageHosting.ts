@@ -294,12 +294,14 @@ export function pollImageMeta(
 export async function fetchMyGallery(sort: GallerySort = 'newest'): Promise<MyGalleryResponse> {
   const q = new URLSearchParams({ sort });
   const res = await sessionFetch(`${API}/my?${q}`);
+  if (res.status === 429) throw new Error('Too many requests — gallery will retry shortly');
   if (!res.ok) throw new Error('Gallery unavailable');
   return res.json() as Promise<MyGalleryResponse>;
 }
 
 export async function fetchMyGalleryStats(): Promise<MyGalleryStats> {
   const res = await sessionFetch(`${API}/my/stats`);
+  if (res.status === 429) throw new Error('Too many requests — gallery will retry shortly');
   if (!res.ok) throw new Error('Gallery stats unavailable');
   return res.json() as Promise<MyGalleryStats>;
 }

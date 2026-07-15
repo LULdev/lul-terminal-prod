@@ -28,9 +28,8 @@ export function useImageHostingStats() {
     } catch { /* ignore */ }
   }, []);
 
-  useEffect(() => { void load(); }, [load]);
-
-  useVisibilityAwarePoll(load, 8000);
+  // Poll owns the initial fetch (stable load ref — no re-fire storm)
+  useVisibilityAwarePoll(load, 12_000);
 
   return { imagesHosted, imageViewsTotal };
 }
