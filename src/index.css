@@ -485,6 +485,381 @@ html, body, #root {
   }
 }
 
+/* —— Sidebar UserBar (account dock) —— */
+.userbar-shell {
+  position: relative;
+  z-index: 20;
+  margin-top: auto;
+  padding-top: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  border-top: 1px solid transparent;
+  border-image: linear-gradient(
+      90deg,
+      transparent,
+      rgba(139, 92, 246, 0.35),
+      rgba(56, 189, 248, 0.25),
+      transparent
+    )
+    1;
+  animation: userbar-rise 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@keyframes userbar-rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.userbar-skeleton {
+  height: 4.5rem;
+  border-radius: 14px;
+  background: linear-gradient(
+    110deg,
+    rgba(30, 41, 59, 0.5) 25%,
+    rgba(51, 65, 85, 0.55) 37%,
+    rgba(30, 41, 59, 0.5) 63%
+  );
+  background-size: 200% 100%;
+  animation: userbar-shimmer 1.4s ease-in-out infinite;
+}
+@keyframes userbar-shimmer {
+  0% {
+    background-position: 100% 0;
+  }
+  100% {
+    background-position: -100% 0;
+  }
+}
+
+/* Guest card */
+.userbar-guest-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  padding: 0.7rem 0.75rem;
+  border-radius: 14px;
+  background: linear-gradient(
+    145deg,
+    rgba(99, 102, 241, 0.14),
+    rgba(15, 23, 42, 0.75) 55%,
+    rgba(8, 12, 22, 0.9)
+  );
+  border: 1px solid rgba(99, 102, 241, 0.28);
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.25) inset,
+    0 8px 24px rgba(0, 0, 0, 0.35);
+}
+.userbar-guest-card__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 10px;
+  color: #a5b4fc;
+  background: rgba(99, 102, 241, 0.18);
+  border: 1px solid rgba(129, 140, 248, 0.35);
+  flex-shrink: 0;
+  animation: userbar-pulse-soft 2.8s ease-in-out infinite;
+}
+@keyframes userbar-pulse-soft {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.25);
+  }
+  50% {
+    box-shadow: 0 0 16px 2px rgba(99, 102, 241, 0.2);
+  }
+}
+.userbar-guest-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.4rem;
+}
+.userbar-cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  padding: 0.55rem 0.5rem;
+  border-radius: 10px;
+  font-size: 10px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition:
+    transform 0.18s ease,
+    box-shadow 0.2s ease,
+    background 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease;
+}
+.userbar-cta:hover {
+  transform: translateY(-1px);
+}
+.userbar-cta:active {
+  transform: translateY(0) scale(0.98);
+}
+.userbar-cta--primary {
+  color: #e0e7ff;
+  border: 1px solid rgba(129, 140, 248, 0.45);
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.45), rgba(79, 70, 229, 0.25));
+  box-shadow: 0 4px 14px rgba(79, 70, 229, 0.25);
+}
+.userbar-cta--primary:hover {
+  border-color: rgba(165, 180, 252, 0.7);
+  box-shadow: 0 6px 20px rgba(99, 102, 241, 0.35);
+}
+.userbar-cta--secondary {
+  color: #94a3b8;
+  border: 1px solid rgba(51, 65, 85, 0.85);
+  background: rgba(15, 23, 42, 0.65);
+}
+.userbar-cta--secondary:hover {
+  color: #e2e8f0;
+  border-color: rgba(148, 163, 184, 0.4);
+  background: rgba(30, 41, 59, 0.7);
+}
+
+/* Profile strip */
+.userbar-profile {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  width: 100%;
+  padding: 0.55rem 0.6rem;
+  border-radius: 14px;
+  text-align: left;
+  cursor: pointer;
+  overflow: hidden;
+  border: 1px solid rgba(71, 85, 105, 0.45);
+  background: linear-gradient(
+    135deg,
+    rgba(30, 27, 75, 0.35),
+    rgba(15, 23, 42, 0.85) 50%,
+    rgba(8, 12, 20, 0.95)
+  );
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.2) inset,
+    0 6px 18px rgba(0, 0, 0, 0.3);
+  transition:
+    border-color 0.22s ease,
+    box-shadow 0.22s ease,
+    transform 0.18s ease;
+}
+.userbar-profile:hover {
+  border-color: rgba(139, 92, 246, 0.45);
+  box-shadow:
+    0 0 0 1px rgba(139, 92, 246, 0.12) inset,
+    0 8px 24px rgba(76, 29, 149, 0.25);
+  transform: translateY(-1px);
+}
+.userbar-profile:focus-visible {
+  outline: 2px solid rgba(167, 139, 250, 0.55);
+  outline-offset: 2px;
+}
+.userbar-profile__ring {
+  position: absolute;
+  inset: -40% -20%;
+  background: radial-gradient(circle at 20% 30%, rgba(139, 92, 246, 0.18), transparent 45%),
+    radial-gradient(circle at 80% 70%, rgba(56, 189, 248, 0.1), transparent 40%);
+  pointer-events: none;
+  opacity: 0.85;
+  transition: opacity 0.25s ease;
+}
+.userbar-profile:hover .userbar-profile__ring {
+  opacity: 1;
+}
+.userbar-profile__avatar {
+  position: relative;
+  z-index: 1;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 11px;
+  border: 1.5px solid rgba(148, 163, 184, 0.35);
+  object-fit: cover;
+  flex-shrink: 0;
+  box-shadow: 0 0 0 2px rgba(15, 23, 42, 0.8), 0 0 12px rgba(139, 92, 246, 0.2);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+.userbar-profile:hover .userbar-profile__avatar {
+  border-color: rgba(167, 139, 250, 0.65);
+  box-shadow: 0 0 0 2px rgba(15, 23, 42, 0.9), 0 0 16px rgba(139, 92, 246, 0.4);
+  transform: scale(1.04);
+}
+.userbar-profile__meta {
+  position: relative;
+  z-index: 1;
+}
+.userbar-profile__name {
+  font-size: 11px;
+  font-weight: 650;
+  color: #f1f5f9;
+  letter-spacing: 0.01em;
+  line-height: 1.2;
+}
+.userbar-profile__handle {
+  margin-top: 2px;
+  font-size: 8.5px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  color: #64748b;
+  line-height: 1.2;
+}
+.userbar-profile__badges {
+  position: relative;
+  z-index: 1;
+}
+
+/* Nav chips */
+.userbar-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+.userbar-nav-chip {
+  position: relative;
+  flex: 1 1 auto;
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.28rem;
+  padding: 0.45rem 0.35rem;
+  border-radius: 10px;
+  border: 1px solid rgba(51, 65, 85, 0.75);
+  background: rgba(15, 23, 42, 0.55);
+  color: #94a3b8;
+  font-size: 9px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  overflow: hidden;
+  isolation: isolate;
+  transition:
+    color 0.18s ease,
+    border-color 0.18s ease,
+    background 0.18s ease,
+    transform 0.16s ease,
+    box-shadow 0.2s ease;
+}
+.userbar-nav-chip__glow {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  background: radial-gradient(circle at 50% 120%, rgba(139, 92, 246, 0.35), transparent 65%);
+  transition: opacity 0.22s ease;
+  pointer-events: none;
+  z-index: 0;
+}
+.userbar-nav-chip__icon,
+.userbar-nav-chip__label {
+  position: relative;
+  z-index: 1;
+}
+.userbar-nav-chip__icon {
+  display: inline-flex;
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.userbar-nav-chip:hover {
+  color: #e2e8f0;
+  border-color: rgba(100, 116, 139, 0.65);
+  background: rgba(30, 41, 59, 0.75);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+}
+.userbar-nav-chip:hover .userbar-nav-chip__glow {
+  opacity: 1;
+}
+.userbar-nav-chip:hover .userbar-nav-chip__icon {
+  transform: translateY(-1px) scale(1.08);
+}
+.userbar-nav-chip:active {
+  transform: translateY(0) scale(0.97);
+}
+.userbar-nav-chip:focus-visible {
+  outline: 2px solid rgba(167, 139, 250, 0.55);
+  outline-offset: 1px;
+}
+.userbar-nav-chip--home {
+  color: #c4b5fd;
+  border-color: rgba(139, 92, 246, 0.4);
+  background: linear-gradient(160deg, rgba(139, 92, 246, 0.2), rgba(15, 23, 42, 0.7));
+  box-shadow: 0 0 12px rgba(139, 92, 246, 0.12);
+}
+.userbar-nav-chip--home:hover {
+  color: #ede9fe;
+  border-color: rgba(167, 139, 250, 0.65);
+  box-shadow: 0 4px 16px rgba(109, 40, 217, 0.3);
+}
+.userbar-nav-chip--home .userbar-nav-chip__glow {
+  background: radial-gradient(circle at 50% 120%, rgba(167, 139, 250, 0.45), transparent 65%);
+}
+.userbar-nav-chip--admin {
+  color: #a78bfa;
+  border-color: rgba(109, 40, 217, 0.45);
+  background: linear-gradient(160deg, rgba(91, 33, 182, 0.22), rgba(15, 23, 42, 0.75));
+}
+.userbar-nav-chip--admin:hover {
+  color: #ddd6fe;
+  border-color: rgba(167, 139, 250, 0.55);
+  box-shadow: 0 4px 16px rgba(91, 33, 182, 0.28);
+}
+.userbar-nav-chip--danger {
+  flex: 0 0 auto;
+  color: #64748b;
+  border-color: rgba(51, 65, 85, 0.85);
+  min-width: 2rem;
+}
+.userbar-nav-chip--danger:hover {
+  color: #fda4af;
+  border-color: rgba(244, 63, 94, 0.45);
+  background: rgba(136, 19, 55, 0.25);
+  box-shadow: 0 4px 14px rgba(190, 18, 60, 0.2);
+}
+.userbar-nav-chip--danger .userbar-nav-chip__glow {
+  background: radial-gradient(circle at 50% 120%, rgba(244, 63, 94, 0.4), transparent 65%);
+}
+.userbar-nav-chip--icon-only {
+  padding-left: 0.55rem;
+  padding-right: 0.55rem;
+}
+.userbar-nav-chip:disabled {
+  opacity: 0.55;
+  cursor: wait;
+  transform: none;
+}
+.userbar-error {
+  margin: 0;
+  padding: 0.35rem 0.45rem;
+  border-radius: 8px;
+  font-size: 8px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  color: #fb7185;
+  background: rgba(136, 19, 55, 0.2);
+  border: 1px solid rgba(244, 63, 94, 0.3);
+  animation: userbar-rise 0.25s ease both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .userbar-shell,
+  .userbar-skeleton,
+  .userbar-guest-card__icon,
+  .userbar-nav-chip,
+  .userbar-profile,
+  .userbar-cta {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
 /* —— Achievement tiers —— */
 .achievement-tier-bronze {
   border-color: rgba(180, 120, 60, 0.45);

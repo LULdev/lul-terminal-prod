@@ -4,7 +4,7 @@
  */
 
 import React, { useState } from 'react';
-import { BarChart3, Crown, Home, LogIn, LogOut, Settings, Shield } from 'lucide-react';
+import { BarChart3, Crown, Home, LogIn, LogOut, Settings, Shield, Sparkles, UserPlus } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { LOGOUT_ARCADE_BLOCKED } from '../../lib/authMessages';
 import { TabId } from '../../config/menuItems';
@@ -16,103 +16,173 @@ type UserBarProps = {
   onNavigate: (tab: TabId, opts?: { profileUsername?: string }) => void;
 };
 
+type NavKey = 'dashboard' | 'activity' | 'profile' | 'admin';
+
+function NavChip({
+  label,
+  icon,
+  onClick,
+  variant = 'default',
+  title,
+}: {
+  label: string;
+  icon: React.ReactNode;
+  onClick: () => void;
+  variant?: 'default' | 'home' | 'admin' | 'danger';
+  title?: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      title={title ?? label}
+      aria-label={label}
+      className={`userbar-nav-chip userbar-nav-chip--${variant}`}
+    >
+      <span className="userbar-nav-chip__glow" aria-hidden />
+      <span className="userbar-nav-chip__icon">{icon}</span>
+      <span className="userbar-nav-chip__label">{label}</span>
+    </button>
+  );
+}
+
 export function UserBar({ onNavigate }: UserBarProps) {
   const { user, isLoggedIn, isAdmin, openAuth, logout, loading } = useAuth();
   const [logoutError, setLogoutError] = useState('');
+  const [busyLogout, setBusyLogout] = useState(false);
 
   if (loading) {
     return (
-      <div className="mt-auto pt-3 border-t border-slate-800/60 px-1 text-[9px] font-mono text-slate-600">
-        Auth…
+      <div className="userbar-shell userbar-shell--loading mt-auto shrink-0">
+        <div className="userbar-skeleton" />
+        <p className="text-[9px] font-mono text-slate-600 text-center pt-1">Loading session…</p>
       </div>
     );
   }
 
   if (!isLoggedIn) {
     return (
-      <div className="relative z-30 mt-auto shrink-0 pt-3 border-t border-slate-800/60 space-y-1.5 pointer-events-auto">
-        <button
-          type="button"
-          onClick={() => openAuth('login')}
-          className="relative z-10 w-full flex cursor-pointer items-center gap-2 px-3 py-2 rounded-md border border-indigo-500/30 bg-indigo-500/10 text-indigo-200 text-[10px] font-mono hover:bg-indigo-500/20"
-        >
-          <LogIn size={12} /> Sign In
-        </button>
-        <button
-          type="button"
-          onClick={() => openAuth('register')}
-          className="relative z-10 w-full flex cursor-pointer items-center gap-2 px-3 py-2 rounded-md border border-slate-800 text-slate-500 text-[10px] font-mono hover:text-slate-300"
-        >
-          <Crown size={12} /> Register
-        </button>
+      <div className="userbar-shell userbar-shell--guest mt-auto shrink-0 relative z-30 pointer-events-auto">
+        <div className="userbar-guest-card">
+          <div className="userbar-guest-card__icon" aria-hidden>
+            <Sparkles size={16} />
+          </div>
+          <div className="min-w-0">
+            <div className="text-[11px] font-semibold text-slate-100 tracking-tight">Join the terminal</div>
+            <div className="text-[8px] font-mono text-slate-500 mt-0.5 leading-snug">
+              Sign in for shoutbox, arcade, pastes & more
+            </div>
+          </div>
+        </div>
+        <div className="userbar-guest-actions">
+          <button
+            type="button"
+            onClick={() => openAuth('login')}
+            className="userbar-cta userbar-cta--primary relative z-10"
+          >
+            <LogIn size={13} strokeWidth={2.25} />
+            <span>Sign in</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => openAuth('register')}
+            className="userbar-cta userbar-cta--secondary relative z-10"
+          >
+            <UserPlus size={13} strokeWidth={2.25} />
+            <span>Register</span>
+          </button>
+        </div>
       </div>
     );
   }
 
+  const go = (key: NavKey) => {
+    if (key === 'profile') {
+      onNavigate('profile', { profileUsername: user!.username });
+      return;
+    }
+    onNavigate(key);
+  };
+
+  const handleLogout = async () => {
+    setLogoutError('');
+    setBusyLogout(true);
+    try {
+      const ok = await logout();
+      if (!ok) setLogoutError(LOGOUT_ARCADE_BLOCKED);
+    } finally {
+      setBusyLogout(false);
+    }
+  };
+
   return (
-    <div className="mt-auto pt-3 border-t border-slate-800/60 space-y-1.5">
+    <div className="userbar-shell userbar-shell--authed mt-auto shrink-0">
       <button
         type="button"
-        onClick={() => onNavigate('profile', { profileUsername: user!.username })}
-        className="w-full flex items-center gap-2 px-2 py-2 rounded-md hover:bg-slate-800/40 text-left"
+        onClick={() => go('profile')}
+        className="userbar-profile"
+        title="Open your profile"
       >
-        <img src={safeAvatarUrl(user!.avatarUrl, user!.username)} alt={user!.displayName} className="w-8 h-8 rounded-lg border border-slate-700/60 shrink-0" />
-        <div className="min-w-0 flex-1">
-          <div className="text-[10px] font-semibold text-slate-200 truncate">{user!.displayName}</div>
-          <div className="text-[8px] font-mono text-slate-500 truncate">@{user!.username}</div>
+        <span className="userbar-profile__ring" aria-hidden />
+        <img
+          src={safeAvatarUrl(user!.avatarUrl, user!.username)}
+          alt={user!.displayName}
+          className="userbar-profile__avatar"
+        />
+        <div className="userbar-profile__meta min-w-0 flex-1 text-left">
+          <div className="userbar-profile__name truncate">{user!.displayName}</div>
+          <div className="userbar-profile__handle truncate">@{user!.username}</div>
         </div>
-        <div className="flex items-center gap-0.5 shrink-0">
+        <div className="userbar-profile__badges flex items-center gap-1 shrink-0">
           <VerifiedBadge verified={user!.verified} />
           <VipBadge />
         </div>
       </button>
-      <div className="flex gap-1">
-        <button
-          type="button"
-          onClick={() => onNavigate('dashboard')}
-          className="flex-1 flex items-center justify-center gap-1 py-1.5 rounded border border-violet-500/30 bg-violet-500/10 text-[9px] font-mono text-violet-300 hover:bg-violet-500/20"
-        >
-          <Home size={10} /> Home
-        </button>
-        <button
-          type="button"
-          onClick={() => onNavigate('activity')}
-          className="flex-1 flex items-center justify-center gap-1 py-1.5 rounded border border-slate-800 text-[9px] font-mono text-slate-500 hover:text-indigo-300"
-        >
-          <BarChart3 size={10} /> Activity
-        </button>
-        <button
-          type="button"
-          onClick={() => onNavigate('profile', { profileUsername: user!.username })}
-          className="flex-1 flex items-center justify-center gap-1 py-1.5 rounded border border-slate-800 text-[9px] font-mono text-slate-500 hover:text-slate-300"
-        >
-          <Settings size={10} /> Profile
-        </button>
+
+      <div className="userbar-nav" role="navigation" aria-label="Account shortcuts">
+        <NavChip
+          label="Home"
+          icon={<Home size={12} strokeWidth={2.25} />}
+          onClick={() => go('dashboard')}
+          variant="home"
+        />
+        <NavChip
+          label="Activity"
+          icon={<BarChart3 size={12} strokeWidth={2.25} />}
+          onClick={() => go('activity')}
+        />
+        <NavChip
+          label="Profile"
+          icon={<Settings size={12} strokeWidth={2.25} />}
+          onClick={() => go('profile')}
+        />
         {isAdmin && (
-          <button
-            type="button"
-            onClick={() => onNavigate('admin')}
-            className="flex-1 flex items-center justify-center gap-1 py-1.5 rounded border border-violet-800/50 text-[9px] font-mono text-violet-400 hover:bg-violet-500/10"
-          >
-            <Shield size={10} /> Admin
-          </button>
+          <NavChip
+            label="Admin"
+            icon={<Shield size={12} strokeWidth={2.25} />}
+            onClick={() => go('admin')}
+            variant="admin"
+          />
         )}
         <button
           type="button"
-          onClick={async () => {
-            setLogoutError('');
-            const ok = await logout();
-            if (!ok) setLogoutError(LOGOUT_ARCADE_BLOCKED);
-          }}
-          className="px-2 py-1.5 rounded border border-slate-800 text-slate-600 hover:text-rose-300"
+          onClick={() => void handleLogout()}
+          disabled={busyLogout}
+          className="userbar-nav-chip userbar-nav-chip--danger userbar-nav-chip--icon-only"
           title="Sign out"
           aria-label="Sign out"
         >
-          <LogOut size={10} />
+          <span className="userbar-nav-chip__glow" aria-hidden />
+          <span className="userbar-nav-chip__icon">
+            <LogOut size={12} strokeWidth={2.25} />
+          </span>
         </button>
       </div>
+
       {logoutError && (
-        <p className="text-[8px] font-mono text-rose-400 px-1">{logoutError}</p>
+        <p className="userbar-error" role="alert">
+          {logoutError}
+        </p>
       )}
     </div>
   );
