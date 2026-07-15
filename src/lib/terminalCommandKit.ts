@@ -19,7 +19,6 @@ export const COMMAND_CATALOG: { title: string; items: CommandCatalogEntry[] }[] 
       { label: '!reboot', hint: 'restart', run: '!reboot' },
       { label: '!clean', hint: 'clear console', run: '!clean' },
       { label: '!history', hint: 'last 10 commands', run: '!history' },
-      { label: '!autos', hint: 'all auto messages', run: '!autos' },
     ],
   },
   {

@@ -7,7 +7,6 @@ import React, { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { Bug, Volume2, VolumeX } from 'lucide-react';
 import { LogLine } from '../../types';
 import { generateAsciiArt } from '../../utils/ascii';
-import { postAllAutoMessages } from '../../data/autoConsoleMessages';
 import { EmoteMenuButton } from './EmoteMenuButton';
 import { UnifiedTerminalPanel } from './UnifiedTerminalPanel';
 import { SystemTelemetrySection } from './SystemTelemetrySection';
@@ -161,7 +160,6 @@ export const TerminalDiagnosticsPane = memo(function TerminalDiagnosticsPane({
     setCommandInput('');
     setTempInput('');
     setCommandLogs(getCompactCommandHintLogs());
-    postedAutoCatalog.current = false;
   }, [isLoggedIn]);
 
   const appendLogRef = useRef<(msg: string, type?: LogLine['type'], commandToRun?: string) => void>(() => {});
@@ -169,7 +167,6 @@ export const TerminalDiagnosticsPane = memo(function TerminalDiagnosticsPane({
     (text: string) => Promise<{ ok: true } | { ok: false; error: string }>
   >(async () => ({ ok: false, error: 'Chat not ready' }));
   const cliInputRef = useRef<HTMLInputElement>(null);
-  const postedAutoCatalog = useRef(false);
   const activeIntervalsRef = useRef(new Set<ReturnType<typeof setInterval>>());
 
   const trackInterval = useCallback((id: ReturnType<typeof setInterval>) => {
@@ -273,15 +270,6 @@ export const TerminalDiagnosticsPane = memo(function TerminalDiagnosticsPane({
     return () => registerShoutboxSend(null);
   }, []);
 
-  useEffect(() => {
-    if (!isLoggedIn || postedAutoCatalog.current) return;
-    postedAutoCatalog.current = true;
-    const t = setTimeout(() => {
-      postAllAutoMessages((msg, type) => appendLogRef.current(msg, type));
-    }, 900);
-    return () => clearTimeout(t);
-  }, [isLoggedIn]);
-
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'ArrowUp') {
       e.preventDefault();
@@ -357,7 +345,7 @@ export const TerminalDiagnosticsPane = memo(function TerminalDiagnosticsPane({
         appendLog('💀 CRITICAL: Elevating grid permissions... access GRANTED.', 'alert');
         playBeep(150, 0.5, 'square');
       } else if (query === 'autos' || query === 'autologs' || query === 'auto-messages') {
-        postAllAutoMessages(appendLog);
+        appendLog('No auto-send messages registered.', 'info');
       } else if (query === 'history') {
         appendLog('⏳ --- INTERACTIVE COMMAND HISTORY (LAST 10) ---', 'success');
         if (commandHistory.length === 0) {
