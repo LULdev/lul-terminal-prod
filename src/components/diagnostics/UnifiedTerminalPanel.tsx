@@ -67,7 +67,7 @@ function ChatLine({ msg, onOpenProfile }: { msg: ChatMessage; onOpenProfile?: (u
         <span className="text-slate-400 shrink-0">{msg.username}:</span>
       )}
       <span className={`whitespace-pre-wrap leading-tight break-all ${textClass}`}>
-        <ChatMessageBody msg={msg} onOpenProfile={onOpenProfile} />
+        <ChatMessageBody msg={msg} onOpenProfile={onOpenProfile} botMessage={botLine} />
       </span>
     </div>
   );

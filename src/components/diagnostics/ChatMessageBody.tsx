@@ -49,27 +49,35 @@ function EmoteImg({ seg }: { seg: Extract<ChatSegment, { type: 'emote' }> }) {
 export function SegmentView({
   seg,
   onOpenProfile,
+  botMessage = false,
 }: {
   seg: ChatSegment;
   onOpenProfile?: (username: string) => void;
+  /** When true, @user mentions get the animated bot-mention style. */
+  botMessage?: boolean;
 }) {
   if (seg.type === 'user') {
     const displayName = shoutboxUsernameDisplay(seg.username, seg.label);
+    const mentionClass = botMessage
+      ? 'bot-mention-username'
+      : 'shoutbox-segment-link font-semibold hover:opacity-90';
     if (onOpenProfile && seg.username) {
       return (
         <button
           type="button"
           onClick={() => onOpenProfile(seg.username)}
-          className="shoutbox-segment-link font-semibold hover:opacity-90 bg-transparent border-0 p-0 cursor-pointer font-inherit"
+          className={`${mentionClass} bg-transparent border-0 p-0 cursor-pointer font-inherit align-baseline`}
         >
           {displayName}
         </button>
       );
     }
     const href = safeHref(seg.href);
-    if (!href) return <span className="font-semibold">{displayName}</span>;
+    if (!href) {
+      return <span className={botMessage ? 'bot-mention-username' : 'font-semibold'}>{displayName}</span>;
+    }
     return (
-      <a href={href} rel="noopener noreferrer" className="shoutbox-segment-link font-semibold hover:opacity-90">
+      <a href={href} rel="noopener noreferrer" className={`${mentionClass} hover:opacity-95`}>
         {displayName}
       </a>
     );
@@ -106,16 +114,18 @@ export type ChatMessageBodySource = {
 export function ChatMessageBody({
   msg,
   onOpenProfile,
+  botMessage = false,
 }: {
   msg: ChatMessageBodySource | ChatMessage | PinnedMessage;
   onOpenProfile?: (username: string) => void;
+  botMessage?: boolean;
 }) {
   if (msg.segments?.length) {
     return (
       <span className="break-words whitespace-pre-wrap">
         {msg.segments.map((seg, i) => (
           <React.Fragment key={i}>
-            <SegmentView seg={seg} onOpenProfile={onOpenProfile} />
+            <SegmentView seg={seg} onOpenProfile={onOpenProfile} botMessage={botMessage} />
           </React.Fragment>
         ))}
       </span>

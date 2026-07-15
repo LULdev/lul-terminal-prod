@@ -530,6 +530,7 @@ export function AdminShoutboxPanel() {
                         <ChatMessageBody
                           msg={{ text: msg.text, segments: msg.segments ?? null }}
                           onOpenProfile={openProfileNewTab}
+                          botMessage={isBotSpeaker(msg) || msg.kind === 'bot' || msg.kind === 'achievement'}
                         />
                       </p>
                     </div>
