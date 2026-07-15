@@ -26,7 +26,6 @@ import type { LogLine } from '../../types';
 
 /** Match server DISPLAY_HISTORY — full shoutbox history load. */
 const DISPLAY_LIMIT = 200;
-const BOT_MSG_PREFIX = '[BOT 🤖]';
 
 function formatTime(ts: number) {
   return new Date(ts).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
@@ -44,10 +43,7 @@ function ChatLine({ msg, onOpenProfile }: { msg: ChatMessage; onOpenProfile?: (u
     <div className={`flex gap-1.5 items-start leading-tight group ${botLine ? 'bot-message-row' : ''}`}>
       <span className="text-slate-600 font-semibold shrink-0 select-none pt-px">[{formatTime(msg.createdAt)}]</span>
       {botLine ? (
-        <>
-          <ChatRoleBadges role="bot" compact />
-          <span className="shrink-0 font-semibold bot-username-style select-none">{BOT_MSG_PREFIX}</span>
-        </>
+        <ChatRoleBadges role="bot" compact />
       ) : onOpenProfile ? (
         <>
           <ChatUserChip
