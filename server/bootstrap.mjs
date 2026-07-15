@@ -77,6 +77,17 @@ function ensurePremiumVaultKey() {
 }
 
 /**
+ * Create empty JSON store files when missing so status probes and APIs
+ * do not fail on a fresh deploy / empty data volume.
+ */
+async function ensureDefaultStoreFiles() {
+  const { ensurePersonaDb } = await import('./personaDatabaseStore.mjs');
+  const { ensureColonDb } = await import('./colonScraperDatabaseStore.mjs');
+  await ensurePersonaDb();
+  await ensureColonDb();
+}
+
+/**
  * Full application bootstrap. Idempotent and safe to call on every start.
  */
 export async function bootstrapApplication() {
@@ -84,6 +95,9 @@ export async function bootstrapApplication() {
   ensureDataLayout();
   const vault = ensurePremiumVaultKey();
   console.log(`[bootstrap] Premium vault key: ${vault.source}`);
+
+  await ensureDefaultStoreFiles();
+  console.log('[bootstrap] Default data stores ready.');
 
   await initAuth();
   console.log('[bootstrap] Auth subsystem ready.');

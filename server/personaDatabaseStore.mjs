@@ -20,8 +20,21 @@ const EMPTY_DB = {
 
 let cache = null;
 
+/** Create directory + empty entries.json when missing (first deploy / empty volume). */
+export async function ensurePersonaDb() {
+  await fs.mkdir(ROOT, { recursive: true });
+  try {
+    await fs.access(DB_FILE);
+  } catch {
+    const tmp = `${DB_FILE}.tmp`;
+    await fs.writeFile(tmp, `${JSON.stringify(EMPTY_DB, null, 2)}\n`, 'utf8');
+    await fs.rename(tmp, DB_FILE);
+  }
+}
+
 export async function loadPersonaDb() {
   if (cache) return cache;
+  await ensurePersonaDb();
   try {
     const raw = await fs.readFile(DB_FILE, 'utf8');
     const data = JSON.parse(raw);
@@ -32,6 +45,12 @@ export async function loadPersonaDb() {
     };
     return cache;
   } catch (err) {
+    // Missing file after ensure is unexpected; still recover with empty in-memory store.
+    if (err?.code === 'ENOENT') {
+      console.warn('[persona-db] entries.json missing — using empty database');
+      cache = { ...EMPTY_DB, entries: [] };
+      return cache;
+    }
     console.error('[persona-db] CRITICAL: entries.json unreadable', err);
     throw new Error('Persona database unavailable');
   }
