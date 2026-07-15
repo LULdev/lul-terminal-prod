@@ -378,11 +378,18 @@ export function UnifiedTerminalPanel({
 
   return (
     <div
-      ref={scrollRef}
-      className="flex-1 min-h-[300px] mt-1 bg-black/50 rounded p-3 font-mono text-[8px] leading-relaxed overflow-y-auto border border-slate-800/60 shadow-inner flex flex-col gap-2 relative animate-fade-in"
+      className="flex-1 min-h-[300px] mt-1 bg-black/50 rounded p-3 font-mono text-[8px] leading-relaxed border border-slate-800/60 shadow-inner flex flex-col relative animate-fade-in overflow-hidden"
       id="unified-terminal-stream"
     >
       {isMatrixOverlayActive && <MatrixOverlay onClose={onCloseMatrix} />}
+
+      {/* Pinned boot header — stays visible; history scrolls below */}
+      {bootLog && (
+        <div className="terminal-boot-sticky shrink-0">
+          <TerminalLogLine log={bootLog} themeText={themeText} onRun={processCommand} />
+          <div className="shoutbox-history-divider shrink-0" aria-hidden />
+        </div>
+      )}
 
       {chatStatus !== 'ok' && (
         <p className={`text-[7px] font-mono text-center py-1 shrink-0 ${
@@ -396,31 +403,30 @@ export function UnifiedTerminalPanel({
         </p>
       )}
 
-      {loading && streamEntries.length === 0 && isLoggedIn && (
-        <p className="text-slate-600 text-center py-4">Initializing terminal stream…</p>
-      )}
+      {/* Scrollable shoutbox + command stream */}
+      <div
+        ref={scrollRef}
+        className="terminal-stream-scroll flex-1 min-h-0 overflow-y-auto overflow-x-hidden flex flex-col gap-2 overscroll-contain"
+      >
+        {loading && streamEntries.length === 0 && isLoggedIn && (
+          <p className="text-slate-600 text-center py-4">Initializing terminal stream…</p>
+        )}
 
-      {bootLog && (
-        <div className="terminal-boot-sticky shrink-0">
-          <TerminalLogLine log={bootLog} themeText={themeText} onRun={processCommand} />
-          <div className="shoutbox-history-divider shrink-0" aria-hidden />
-        </div>
-      )}
-
-      {streamEntries.map((entry) => {
-        if (entry.kind === 'chat') {
+        {streamEntries.map((entry) => {
+          if (entry.kind === 'chat') {
+            return (
+              <React.Fragment key={`chat-${entry.msg.id}`}>
+                <ChatLine msg={entry.msg} onOpenProfile={onOpenProfile} />
+              </React.Fragment>
+            );
+          }
           return (
-            <React.Fragment key={`chat-${entry.msg.id}`}>
-              <ChatLine msg={entry.msg} onOpenProfile={onOpenProfile} />
+            <React.Fragment key={`log-${entry.log.id}`}>
+              <TerminalLogLine log={entry.log} themeText={themeText} onRun={processCommand} />
             </React.Fragment>
           );
-        }
-        return (
-          <React.Fragment key={`log-${entry.log.id}`}>
-            <TerminalLogLine log={entry.log} themeText={themeText} onRun={processCommand} />
-          </React.Fragment>
-        );
-      })}
+        })}
+      </div>
     </div>
   );
 }

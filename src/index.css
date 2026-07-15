@@ -420,14 +420,27 @@ html, body, #root {
   margin-left: -4px;
   border-radius: 0 4px 4px 0;
 }
+/* Boot line pinned above the scrollable shoutbox stream */
 .terminal-boot-sticky {
-  position: sticky;
-  top: 0;
+  position: relative;
   z-index: 5;
-  background: rgba(10, 10, 15, 0.92);
+  flex-shrink: 0;
+  background: linear-gradient(180deg, rgba(10, 10, 15, 0.98) 70%, rgba(10, 10, 15, 0.85));
   backdrop-filter: blur(4px);
   padding-bottom: 2px;
-  margin-bottom: 2px;
+  margin-bottom: 0;
+  border-bottom: 1px solid rgba(51, 65, 85, 0.35);
+}
+.terminal-stream-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(100, 116, 139, 0.55) transparent;
+}
+.terminal-stream-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+.terminal-stream-scroll::-webkit-scrollbar-thumb {
+  background: rgba(100, 116, 139, 0.45);
+  border-radius: 3px;
 }
 .shoutbox-pinned {
   background: linear-gradient(180deg, rgba(99, 102, 241, 0.12), rgba(15, 23, 42, 0.4));
@@ -437,7 +450,7 @@ html, body, #root {
 }
 .shoutbox-history-divider {
   border-top: 1px dashed rgba(100, 116, 139, 0.45);
-  margin: 4px 0;
+  margin: 4px 0 0;
 }
 .shoutbox-segment-link {
   color: #67e8f9;
