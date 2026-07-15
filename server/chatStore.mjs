@@ -17,7 +17,8 @@ export const MAX_MESSAGE_LEN = 280;
 /** Stored lobby rows (admin monitor); live terminal shows DISPLAY_HISTORY lines. */
 export const MAX_MESSAGES = 2000;
 export const MIN_SEND_INTERVAL_MS = 3000;
-export const DISPLAY_HISTORY = 30;
+/** Messages returned to the terminal shoutbox on full history load. */
+export const DISPLAY_HISTORY = 200;
 
 const EMPTY_LOBBY = { version: 1, updatedAt: null, messages: [] };
 

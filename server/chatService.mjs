@@ -64,7 +64,7 @@ async function buildUserLookups() {
 export async function listLobbyMessages({ since = 0, limit = DISPLAY_HISTORY } = {}) {
   const [db, lookups] = await Promise.all([loadLobbyDb(), buildUserLookups()]);
   const sinceTs = Math.max(0, Number(since) || 0);
-  const cap = Math.min(120, Math.max(1, Number(limit) || DISPLAY_HISTORY));
+  const cap = Math.min(DISPLAY_HISTORY, Math.max(1, Number(limit) || DISPLAY_HISTORY));
   let list = db.messages.filter((m) => m.lobby === LOBBY_ID);
 
   if (sinceTs > 0) {

@@ -22,7 +22,8 @@ import {
 import { useAuth } from '../../context/AuthContext';
 import type { LogLine } from '../../types';
 
-const DISPLAY_LIMIT = 30;
+/** Match server DISPLAY_HISTORY — full shoutbox history load. */
+const DISPLAY_LIMIT = 200;
 const BOT_MSG_PREFIX = '[BOT 🤖]';
 
 function formatTime(ts: number) {
