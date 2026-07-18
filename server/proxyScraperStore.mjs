@@ -69,20 +69,115 @@ export function proxyEntryKey(proxy) {
   return `${proxy.type}:${proxy.host}:${proxy.port}`;
 }
 
-export async function ensureStore() {
-  await fs.mkdir(ROOT, { recursive: true });
+const FALLBACK_SOURCES = [
+  {
+    id: 'thespeedx-http',
+    name: 'TheSpeedX · http.txt',
+    url: 'https://raw.githubusercontent.com/TheSpeedX/PROXY-List/master/http.txt',
+    type: 'http',
+    repo: 'TheSpeedX/PROXY-List',
+  },
+  {
+    id: 'thespeedx-socks4',
+    name: 'TheSpeedX · socks4.txt',
+    url: 'https://raw.githubusercontent.com/TheSpeedX/PROXY-List/master/socks4.txt',
+    type: 'socks4',
+    repo: 'TheSpeedX/PROXY-List',
+  },
+  {
+    id: 'thespeedx-socks5',
+    name: 'TheSpeedX · socks5.txt',
+    url: 'https://raw.githubusercontent.com/TheSpeedX/PROXY-List/master/socks5.txt',
+    type: 'socks5',
+    repo: 'TheSpeedX/PROXY-List',
+  },
+  {
+    id: 'monosans-http',
+    name: 'monosans · proxies/http.txt',
+    url: 'https://raw.githubusercontent.com/monosans/proxy-list/main/proxies/http.txt',
+    type: 'http',
+    repo: 'monosans/proxy-list',
+  },
+  {
+    id: 'monosans-socks5',
+    name: 'monosans · proxies/socks5.txt',
+    url: 'https://raw.githubusercontent.com/monosans/proxy-list/main/proxies/socks5.txt',
+    type: 'socks5',
+    repo: 'monosans/proxy-list',
+  },
+  {
+    id: 'clarketm-raw',
+    name: 'clarketm · proxy-list-raw.txt',
+    url: 'https://raw.githubusercontent.com/clarketm/proxy-list/master/proxy-list-raw.txt',
+    type: 'http',
+    repo: 'clarketm/proxy-list',
+  },
+];
+
+async function seedSourcesIfNeeded() {
+  let needsSeed = false;
   try {
     await fs.access(SOURCES_FILE);
+    const raw = await fs.readFile(SOURCES_FILE, 'utf8');
+    const data = JSON.parse(raw);
+    if (!Array.isArray(data.sources) || data.sources.length === 0) needsSeed = true;
   } catch {
-    const { execSync } = await import('child_process');
-    execSync(`node "${SEED_SCRIPT}"`, { stdio: 'ignore' });
+    needsSeed = true;
   }
+  if (!needsSeed) return;
+
+  try {
+    const { execFileSync } = await import('child_process');
+    execFileSync(process.execPath, [SEED_SCRIPT], {
+      stdio: 'pipe',
+      cwd: path.join(__dirname, '..'),
+      timeout: 60_000,
+      windowsHide: true,
+    });
+  } catch (err) {
+    console.warn('[proxy-scraper] Full source seed failed — writing fallback sources', err?.message ?? err);
+    await atomicWrite(SOURCES_FILE, {
+      version: 1,
+      updatedAt: new Date().toISOString(),
+      count: FALLBACK_SOURCES.length,
+      sources: FALLBACK_SOURCES,
+      note: 'fallback — run npm run seed:proxy-sources for the full catalog',
+    });
+  }
+
+  // If seed produced empty/broken file, still guarantee fallbacks
+  try {
+    const raw = await fs.readFile(SOURCES_FILE, 'utf8');
+    const data = JSON.parse(raw);
+    if (!Array.isArray(data.sources) || data.sources.length === 0) {
+      await atomicWrite(SOURCES_FILE, {
+        version: 1,
+        updatedAt: new Date().toISOString(),
+        count: FALLBACK_SOURCES.length,
+        sources: FALLBACK_SOURCES,
+      });
+    }
+  } catch {
+    await atomicWrite(SOURCES_FILE, {
+      version: 1,
+      updatedAt: new Date().toISOString(),
+      count: FALLBACK_SOURCES.length,
+      sources: FALLBACK_SOURCES,
+    });
+  }
+}
+
+export async function ensureStore() {
+  await fs.mkdir(ROOT, { recursive: true });
+  await seedSourcesIfNeeded();
 }
 
 export async function loadSources() {
   await ensureStore();
-  const data = await readJsonOrDefault(SOURCES_FILE, { sources: [] }, 'sources.json');
-  return data.sources ?? [];
+  const data = await readJsonOrDefault(SOURCES_FILE, { sources: FALLBACK_SOURCES }, 'sources.json');
+  const sources = data.sources ?? [];
+  if (!sources.length) return [...FALLBACK_SOURCES];
+  return sources;
 }
 
 export async function saveSources(sources) {

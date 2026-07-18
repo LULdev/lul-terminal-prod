@@ -3,9 +3,10 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ArrowRight, Plus, Trash2 } from 'lucide-react';
 import { useMountedLoad } from '../../hooks/useMountedLoad';
+import { detectProxyPaste } from '../../lib/proxyParse';
 import {
   addCustomProxies,
   clearCustomProxies,
@@ -98,26 +99,63 @@ export function AdminCustomProxiesPanel({ onAdded, onGoToChecker }: AdminCustomP
     return p.raw.includes(q) || p.host.includes(q) || p.type.includes(q);
   });
 
+  const detection = useMemo(
+    () => detectProxyPaste(pasteText, defaultType),
+    [pasteText, defaultType],
+  );
+
   return (
     <ToolCard title="Custom proxies" icon="✏️" accent="emerald">
       <p className="text-[9px] font-mono text-slate-500 mb-3 leading-relaxed">
-        Manually added proxies remain <strong className="text-emerald-300">permanently stored</strong>. During check the checker auto-detects SOCKS4/5 · HTTP · HTTPS — only <code className="text-slate-400">ip:port</code> is needed.
+        Bulk paste with <strong className="text-emerald-300">auto-detect</strong> for{' '}
+        <code className="text-slate-400">ip:port</code>,{' '}
+        <code className="text-slate-400">type://…</code>,{' '}
+        <code className="text-slate-400">user:pass@ip:port</code>,{' '}
+        <code className="text-slate-400">ip:port:user:pass</code>. Stored permanently; checker can refine protocol.
       </p>
 
       <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 mb-3">
         <div className="sm:col-span-3">
-          <label className="text-[8px] font-mono text-slate-500 uppercase">Paste proxies (one per line)</label>
+          <label className="text-[8px] font-mono text-slate-500 uppercase">Paste proxies (bulk)</label>
           <textarea
             value={pasteText}
             onChange={(e) => setPasteText(e.target.value)}
-            rows={4}
-            placeholder={'219.249.37.107:8382\nhttp://219.249.37.107:8382\nsocks5://user:pass@10.0.0.2:1080'}
+            rows={5}
+            placeholder={'1.2.3.4:8080\nhttp://5.6.7.8:3128\nsocks5://user:pass@10.0.0.2:1080\n9.8.7.6:1080:user:pass'}
             className="mt-1 w-full bg-black/40 border border-slate-800 rounded-lg px-3 py-2 text-[10px] font-mono text-slate-300 focus:border-emerald-500/40 focus:outline-none"
+            spellCheck={false}
           />
+          {pasteText.trim() && (
+            <div className="mt-1.5 flex flex-wrap gap-1.5 text-[8px] font-mono">
+              <span className={`px-2 py-0.5 rounded border ${detection.count ? 'border-emerald-500/40 text-emerald-300 bg-emerald-500/10' : 'border-rose-500/40 text-rose-300 bg-rose-500/10'}`}>
+                {detection.count.toLocaleString('en-US')} detected
+              </span>
+              {(['http', 'https', 'socks4', 'socks5'] as ProxyType[]).map((t) =>
+                detection.byType[t] > 0 ? (
+                  <span key={t} className={`px-1.5 py-0.5 rounded border uppercase ${TYPE_STYLES[t]}`}>
+                    {t} {detection.byType[t]}
+                  </span>
+                ) : null,
+              )}
+              {detection.withAuth > 0 && (
+                <span className="px-1.5 py-0.5 rounded border border-amber-500/30 text-amber-300/90">
+                  auth {detection.withAuth}
+                </span>
+              )}
+              {detection.sample[0] && (
+                <span className="text-slate-600 truncate max-w-full">
+                  e.g. {detection.sample[0].type}://{detection.sample[0].raw}
+                </span>
+              )}
+            </div>
+          )}
         </div>
         <div className="flex flex-col gap-2 justify-end">
           <label className="text-[8px] font-mono text-slate-500 uppercase">
             Default type
+            <span className="block text-[7px] text-slate-600 normal-case tracking-normal mt-0.5">
+              used when scheme omitted
+            </span>
             <select
               value={defaultType}
               onChange={(e) => setDefaultType(e.target.value as ProxyType)}
@@ -129,9 +167,9 @@ export function AdminCustomProxiesPanel({ onAdded, onGoToChecker }: AdminCustomP
               <option value="socks5">SOCKS5</option>
             </select>
           </label>
-          <ActionButton onClick={addProxies} variant="emerald" disabled={busy || !pasteText.trim()}>
+          <ActionButton onClick={addProxies} variant="emerald" disabled={busy || detection.count === 0}>
             <Plus size={12} className="inline mr-1" />
-            {busy ? 'Saving…' : 'Add'}
+            {busy ? 'Saving…' : detection.count ? `Add ${detection.count}` : 'Add'}
           </ActionButton>
         </div>
       </div>

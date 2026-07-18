@@ -23,7 +23,7 @@ import {
   saveState,
 } from './proxyScraperStore.mjs';
 import { dedupeProxies } from './proxyScraperEngine.mjs';
-import { parseProxiesFromText } from './proxyParseCore.mjs';
+import { detectProxyPaste, parseProxiesFromText } from './proxyParseCore.mjs';
 import { wrapAsyncHandler } from './asyncMiddleware.mjs';
 import { assertSafeFetchUrl } from './assertSafeFetchUrl.mjs';
 import { checkRateLimit, clientIp, isRateLimitError } from './rateLimit.mjs';
@@ -159,6 +159,18 @@ export async function handleProxyScraperRequest(req, res) {
       return sendJson(res, 200, { count: custom.proxies.length, proxies: custom.proxies, updatedAt: custom.updatedAt });
     }
 
+    if (req.method === 'POST' && pathname === '/api/proxy/detect') {
+      await checkRateLimit(`proxy-detect:${clientIp(req)}`, { max: 60, windowMs: 60_000 });
+      await attachAuth(req);
+      requireRole(req, canAccessAdmin);
+      const body = await readJsonBody(req);
+      const defaultType = ['http', 'https', 'socks4', 'socks5'].includes(body.defaultType)
+        ? body.defaultType
+        : 'http';
+      const detection = detectProxyPaste(String(body.text ?? ''), defaultType);
+      return sendJson(res, 200, detection);
+    }
+
     if (req.method === 'POST' && pathname === '/api/proxy/custom') {
       await checkRateLimit(adminActKey, { max: 20, windowMs: 60_000 });
       const body = await readJsonBody(req);
@@ -172,13 +184,18 @@ export async function handleProxyScraperRequest(req, res) {
           body.proxies.map((p) => {
             if (typeof p === 'string') return p;
             const type = p.type ?? defaultType;
-            return `${type}://${p.host}:${p.port}`;
+            const auth = p.username && p.password ? `${p.username}:${p.password}@` : '';
+            return `${type}://${auth}${p.host}:${p.port}`;
           }).join('\n'),
           defaultType,
         );
       }
 
-      if (!incoming.length) throw new Error('No valid proxies detected — format: ip:port or type://ip:port');
+      if (!incoming.length) {
+        throw new Error(
+          'No valid proxies detected — try: ip:port · type://ip:port · user:pass@ip:port · ip:port:user:pass',
+        );
+      }
 
       const stamped = incoming.map((p) => ({
         ...p,

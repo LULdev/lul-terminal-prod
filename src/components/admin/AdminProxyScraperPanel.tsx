@@ -148,10 +148,17 @@ export function AdminProxyScraperPanel({ onScrapeSuccess, onGoToChecker, scrapeR
 
         {msg && <p className="text-[10px] font-mono text-teal-300 mb-2">{msg}</p>}
 
+        {sources.length === 0 && (
+          <p className="text-[9px] font-mono text-amber-300/90 mb-3 p-2 rounded-lg border border-amber-500/25 bg-amber-500/10">
+            No scrape sources loaded yet. Reload the page or run{' '}
+            <code className="text-amber-200">npm run seed:proxy-sources</code> on the server — bootstrap also seeds fallback lists automatically.
+          </p>
+        )}
+
         <div className="flex flex-wrap gap-2 mb-4 items-center">
-          <ActionButton onClick={runScrape} variant="indigo" disabled={busy}>
+          <ActionButton onClick={runScrape} variant="indigo" disabled={busy || (sources.length === 0 && !oneOffUrls.trim())}>
             <Play size={12} className="inline mr-1" />
-            {busy ? 'Scraping…' : 'Scrape all sources'}
+            {busy ? 'Scraping…' : sources.length ? `Scrape ${sources.length} sources` : 'Scrape (need sources or URLs)'}
           </ActionButton>
           {onGoToChecker && (
             <button

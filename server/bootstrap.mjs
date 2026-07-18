@@ -83,8 +83,11 @@ function ensurePremiumVaultKey() {
 async function ensureDefaultStoreFiles() {
   const { ensurePersonaDb } = await import('./personaDatabaseStore.mjs');
   const { ensureColonDb } = await import('./colonScraperDatabaseStore.mjs');
+  const { ensureStore: ensureProxyScraperStore } = await import('./proxyScraperStore.mjs');
   await ensurePersonaDb();
   await ensureColonDb();
+  // Seeds sources.json if missing/empty so proxy scraper works on first deploy
+  await ensureProxyScraperStore();
 }
 
 /**

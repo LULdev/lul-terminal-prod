@@ -23,6 +23,7 @@ import {
   XCircle,
   Zap,
 } from 'lucide-react';
+import { detectProxyPaste } from '../../lib/proxyParse';
 import { fetchProxyResults, type ProxyType } from '../../lib/proxyScraper';
 import {
   cancelCheckerJob,
@@ -350,13 +351,36 @@ export function AdminProxyCheckerPanel({ onGoToScraper }: AdminProxyCheckerPanel
         </div>
 
         {inputMode === 'paste' && (
-          <textarea
-            value={pasteText}
-            onChange={(e) => setPasteText(e.target.value)}
-            rows={4}
-            placeholder="ip:port or http://ip:port — will be normalized"
-            className="w-full mb-3 bg-black/40 border border-slate-800 rounded-xl px-3 py-2 text-[10px] font-mono text-slate-300 focus:border-teal-500/40 focus:outline-none"
-          />
+          <div className="mb-3">
+            <textarea
+              value={pasteText}
+              onChange={(e) => setPasteText(e.target.value)}
+              rows={5}
+              placeholder={'Bulk paste — auto-detect:\nip:port\ntype://ip:port\nuser:pass@ip:port\nip:port:user:pass'}
+              className="w-full bg-black/40 border border-slate-800 rounded-xl px-3 py-2 text-[10px] font-mono text-slate-300 focus:border-teal-500/40 focus:outline-none"
+              spellCheck={false}
+            />
+            {pasteText.trim() && (() => {
+              const d = detectProxyPaste(pasteText, 'http');
+              return (
+                <div className="mt-1.5 flex flex-wrap gap-1.5 text-[8px] font-mono">
+                  <span className={`px-2 py-0.5 rounded border ${d.count ? 'border-teal-500/40 text-teal-300 bg-teal-500/10' : 'border-rose-500/40 text-rose-300'}`}>
+                    {d.count.toLocaleString('en-US')} auto-detected
+                  </span>
+                  {(['http', 'https', 'socks4', 'socks5'] as ProxyType[]).map((t) =>
+                    d.byType[t] > 0 ? (
+                      <span key={t} className={`px-1.5 py-0.5 rounded border uppercase ${TYPE_COLORS[t]}`}>
+                        {t} {d.byType[t]}
+                      </span>
+                    ) : null,
+                  )}
+                  {d.withAuth > 0 && (
+                    <span className="px-1.5 py-0.5 rounded border border-amber-500/30 text-amber-300">auth {d.withAuth}</span>
+                  )}
+                </div>
+              );
+            })()}
+          </div>
         )}
 
         <button
@@ -406,7 +430,15 @@ export function AdminProxyCheckerPanel({ onGoToScraper }: AdminProxyCheckerPanel
         )}
 
         <div className="flex flex-wrap gap-2 items-center mb-3">
-          <ActionButton onClick={runCheck} variant="indigo" disabled={busy || (inputMode === 'paste' && !pasteText.trim()) || (inputMode === 'scraped' && poolCount === 0)}>
+          <ActionButton
+            onClick={runCheck}
+            variant="indigo"
+            disabled={
+              busy
+              || (inputMode === 'paste' && detectProxyPaste(pasteText, 'http').count === 0)
+              || (inputMode === 'scraped' && poolCount === 0)
+            }
+          >
             <Play size={12} className="inline mr-1" />
             {busy ? `Checking ${progress}%` : 'Start check'}
           </ActionButton>
