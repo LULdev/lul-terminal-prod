@@ -11,6 +11,7 @@ import {
   Clock,
   ExternalLink,
   Send,
+  Trash2,
   User,
   VolumeX,
 } from 'lucide-react';
@@ -19,7 +20,7 @@ import { useAuth } from '../../context/AuthContext';
 
 import { insertShoutboxDraft, focusShoutboxInput } from '../../lib/shoutboxDraft';
 import { sendShoutboxCommand } from '../../lib/shoutboxSend';
-import { adminModerateShoutboxUser } from '../../lib/adminModules';
+import { adminDeleteShoutboxMessage, adminModerateShoutboxUser } from '../../lib/adminModules';
 import { SessionExpiredError } from '../../lib/sessionFetch';
 import { terminalAppend } from '../../lib/terminalLogBridge';
 import { safeAvatarUrl } from '../../lib/safeAvatarUrl';
@@ -49,6 +50,10 @@ type ChatUserChipProps = {
   compact?: boolean;
   /** Use admin REST mod API instead of slash commands (admin monitor). */
   modViaApi?: boolean;
+  /** Shoutbox message id — enables “Delete message” for admins. */
+  messageId?: string;
+  /** Called after the message is deleted server-side (remove from local UI). */
+  onMessageDeleted?: (messageId: string) => void;
 };
 
 const ROLE_STYLES: Record<UserRole, string> = {
@@ -70,7 +75,14 @@ type ContextMenuState = {
   y: number;
 };
 
-export function ChatUserChip({ user, onOpenProfile, compact = false, modViaApi = false }: ChatUserChipProps) {
+export function ChatUserChip({
+  user,
+  onOpenProfile,
+  compact = false,
+  modViaApi = false,
+  messageId,
+  onMessageDeleted,
+}: ChatUserChipProps) {
   const { isLoggedIn, isAdmin, openAuth, refresh } = useAuth();
   const [menu, setMenu] = useState<ContextMenuState | null>(null);
   const [acting, setActing] = useState(false);
@@ -160,14 +172,33 @@ export function ChatUserChip({ user, onOpenProfile, compact = false, modViaApi =
 
   const closeMenu = useCallback(() => setMenu(null), []);
 
+  const deleteMessage = useCallback(async () => {
+    if (!isAdmin || !messageId) return;
+    setActing(true);
+    try {
+      await adminDeleteShoutboxMessage(messageId);
+      onMessageDeleted?.(messageId);
+      terminalAppend(`✓ Message deleted (${messageId.slice(0, 6)}…)`, 'info');
+    } catch (e) {
+      if (e instanceof SessionExpiredError) {
+        void refresh().finally(() => openAuth('login'));
+        return;
+      }
+      terminalAppend(`❌ Delete failed: ${e instanceof Error ? e.message : 'error'}`, 'warn');
+    } finally {
+      if (mountedRef.current) setActing(false);
+    }
+  }, [isAdmin, messageId, onMessageDeleted, refresh, openAuth]);
+
   const handleContextMenu = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (isBot) return;
+    // Bots: only allow menu when admin can delete this message
+    if (isBot && !(isAdmin && messageId)) return;
 
     const pad = 8;
     const menuW = 200;
-    const menuH = isAdmin ? 320 : 160;
+    const menuH = isAdmin ? 360 : 160;
     const x = Math.min(e.clientX, window.innerWidth - menuW - pad);
     const y = Math.min(e.clientY, window.innerHeight - menuH - pad);
     setMenu({ x, y });
@@ -205,35 +236,54 @@ export function ChatUserChip({ user, onOpenProfile, compact = false, modViaApi =
     };
   }, [menu, closeMenu]);
 
-  const menuItems: MenuItem[] = [
-    {
-      id: 'profile',
-      label: 'View profile',
-      icon: <ExternalLink size={12} />,
-      onClick: () => {
-        closeMenu();
-        openProfile();
+  const menuItems: MenuItem[] = [];
+
+  if (!isBot) {
+    menuItems.push(
+      {
+        id: 'profile',
+        label: 'View profile',
+        icon: <ExternalLink size={12} />,
+        onClick: () => {
+          closeMenu();
+          openProfile();
+        },
       },
-    },
-    {
-      id: 'ping',
-      label: `Ping @${user.username}`,
-      icon: <AtSign size={12} />,
-      onClick: () => {
-        closeMenu();
-        pingUser();
+      {
+        id: 'ping',
+        label: `Ping @${user.username}`,
+        icon: <AtSign size={12} />,
+        onClick: () => {
+          closeMenu();
+          pingUser();
+        },
       },
-    },
-    {
-      id: 'ping-send',
-      label: 'Ping & send',
-      icon: <Send size={12} />,
+      {
+        id: 'ping-send',
+        label: 'Ping & send',
+        icon: <Send size={12} />,
+        onClick: async () => {
+          closeMenu();
+          await pingAndSend();
+        },
+      },
+    );
+  }
+
+  if (isAdmin && messageId) {
+    menuItems.push({
+      id: 'delete-msg',
+      label: 'Delete message',
+      icon: <Trash2 size={12} />,
+      tone: 'danger',
+      dividerBefore: menuItems.length > 0,
       onClick: async () => {
         closeMenu();
-        await pingAndSend();
+        if (!confirm('Delete this shoutbox message?')) return;
+        await deleteMessage();
       },
-    },
-  ];
+    });
+  }
 
   if (isAdmin && !isBot && user.role !== 'admin' && user.role !== 'vip') {
     menuItems.push(

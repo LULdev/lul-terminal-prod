@@ -31,7 +31,15 @@ function formatTime(ts: number) {
   return new Date(ts).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
 }
 
-function ChatLine({ msg, onOpenProfile }: { msg: ChatMessage; onOpenProfile?: (username: string) => void }) {
+function ChatLine({
+  msg,
+  onOpenProfile,
+  onMessageDeleted,
+}: {
+  msg: ChatMessage;
+  onOpenProfile?: (username: string) => void;
+  onMessageDeleted?: (messageId: string) => void;
+}) {
   const botLine = isBotSpeaker(msg);
   const textClass = botLine
     ? 'shoutbox-msg-text shoutbox-msg-text--bot'
@@ -43,11 +51,7 @@ function ChatLine({ msg, onOpenProfile }: { msg: ChatMessage; onOpenProfile?: (u
     <div className={`shoutbox-msg group ${botLine ? 'bot-message-row' : ''}`}>
       <span className="shoutbox-msg__time">[{formatTime(msg.createdAt)}]</span>
 
-      {botLine ? (
-        <span className="shoutbox-msg__identity">
-          <span className="shoutbox-msg__name bot-username-style">@{msg.username}</span>
-        </span>
-      ) : onOpenProfile ? (
+      {onOpenProfile ? (
         <ChatUserChip
           user={{
             userId: msg.userId,
@@ -58,10 +62,12 @@ function ChatLine({ msg, onOpenProfile }: { msg: ChatMessage; onOpenProfile?: (u
             verified: msg.verified,
           }}
           onOpenProfile={onOpenProfile}
+          messageId={msg.id}
+          onMessageDeleted={onMessageDeleted}
         />
       ) : (
         <span className="shoutbox-msg__identity">
-          <span className="shoutbox-msg__name">@{msg.username}</span>
+          <span className={`shoutbox-msg__name ${botLine ? 'bot-username-style' : ''}`}>@{msg.username}</span>
         </span>
       )}
 
@@ -148,6 +154,11 @@ export function UnifiedTerminalPanel({
   const [loading, setLoading] = useState(true);
   const [chatStatus, setChatStatus] = useState<'ok' | 'offline' | 'rate_limited' | 'gated'>('ok');
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  const handleMessageDeleted = useCallback((messageId: string) => {
+    setMessages((prev) => prev.filter((m) => m.id !== messageId));
+    knownIdsRef.current.delete(messageId);
+  }, []);
   const lastTsRef = useRef(0);
   const lobbyUpdatedAtRef = useRef<string | null>(null);
   const knownIdsRef = useRef(new Set<string>());
@@ -444,7 +455,11 @@ export function UnifiedTerminalPanel({
           if (entry.kind === 'chat') {
             return (
               <React.Fragment key={`chat-${entry.msg.id}`}>
-                <ChatLine msg={entry.msg} onOpenProfile={onOpenProfile} />
+                <ChatLine
+                  msg={entry.msg}
+                  onOpenProfile={onOpenProfile}
+                  onMessageDeleted={handleMessageDeleted}
+                />
               </React.Fragment>
             );
           }
