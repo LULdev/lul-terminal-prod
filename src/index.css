@@ -2201,7 +2201,8 @@ a.bot-mention-username:focus-visible {
   .userbar-balance__coin-rim,
   .userbar-balance__coin-spark,
   .userbar-balance__amount,
-  .userbar-hof__trophy {
+  .userbar-hof__trophy,
+  .ach-rarity.ach-badge--live::before {
     animation: none !important;
     transition: none !important;
   }
@@ -2243,15 +2244,21 @@ a.bot-mention-username:focus-visible {
   50% { box-shadow: 0 0 28px rgba(56, 189, 248, 0.35); }
 }
 
-/* —— Rarity badges (static, low-cost — no infinite animations) —— */
+/* —— Rarity badges: static fill/icon, animated border ring only —— */
+@property --ach-border-angle {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 0deg;
+}
+
 .ach-badge {
   position: relative;
   overflow: visible;
   border-style: solid;
   border-width: 1px;
-  transition: border-color 0.12s ease, filter 0.12s ease, box-shadow 0.12s ease;
-  /* contain paint where possible without clipping tips (tips are children — keep visible) */
+  transition: filter 0.12s ease;
   contain: layout style;
+  isolation: isolate;
 }
 .ach-badge--compact {
   border-radius: 0.4rem;
@@ -2261,82 +2268,143 @@ a.bot-mention-username:focus-visible {
 }
 .ach-badge--live:hover {
   z-index: 2;
-  filter: brightness(1.05);
+  filter: brightness(1.04);
 }
 .ach-badge--locked {
   opacity: 0.42;
   filter: grayscale(0.9) saturate(0.25);
   box-shadow: none !important;
 }
-/* Kill leftover pseudo shine layers (were causing diagonal stripe glitches) */
-.ach-badge::before,
-.ach-badge::after,
-.ach-rarity::before,
-.ach-rarity::after {
-  content: none !important;
+.ach-badge--locked::before {
   display: none !important;
   animation: none !important;
 }
 
-/* COMMON */
+/*
+ * Animated border only: masked conic ring sits on the edge.
+ * Does not animate background, text, or icon (icon stays still).
+ */
+.ach-rarity.ach-badge--live {
+  border-color: transparent;
+}
+.ach-rarity.ach-badge--live::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1.5px;
+  pointer-events: none;
+  z-index: 0;
+  background: conic-gradient(
+    from var(--ach-border-angle),
+    var(--ach-border-a, #64748b) 0%,
+    var(--ach-border-b, #94a3b8) 25%,
+    var(--ach-border-c, #64748b) 50%,
+    var(--ach-border-b, #94a3b8) 75%,
+    var(--ach-border-a, #64748b) 100%
+  );
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  animation: ach-border-spin 5s linear infinite;
+}
+.ach-badge--live::after {
+  display: none !important;
+  content: none !important;
+}
+@keyframes ach-border-spin {
+  to { --ach-border-angle: 360deg; }
+}
+
+/* COMMON — soft steel border */
 .ach-rarity--common.ach-badge--live {
-  border-color: rgba(148, 163, 184, 0.4);
+  --ach-border-a: #64748b;
+  --ach-border-b: #cbd5e1;
+  --ach-border-c: #475569;
   background: linear-gradient(145deg, rgba(71, 85, 105, 0.28), rgba(15, 23, 42, 0.94));
-  box-shadow: 0 0 0 1px rgba(148, 163, 184, 0.05) inset, 0 1px 3px rgba(0, 0, 0, 0.28);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.28);
+}
+.ach-rarity--common.ach-badge--live::before {
+  animation-duration: 7s;
 }
 
-/* RARE */
+/* RARE — sapphire */
 .ach-rarity--rare.ach-badge--live {
-  border-color: rgba(56, 189, 248, 0.45);
+  --ach-border-a: #0ea5e9;
+  --ach-border-b: #7dd3fc;
+  --ach-border-c: #0369a1;
   background: linear-gradient(145deg, rgba(14, 165, 233, 0.2), rgba(15, 23, 42, 0.95));
-  box-shadow: 0 0 0 1px rgba(125, 211, 252, 0.08) inset, 0 0 6px rgba(56, 189, 248, 0.1);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.28);
 }
-.ach-rarity--rare.ach-badge--live .ach-badge__icon {
-  filter: drop-shadow(0 0 1px rgba(125, 211, 252, 0.3));
+.ach-rarity--rare.ach-badge--live::before {
+  animation-duration: 4.5s;
 }
 
-/* EPIC */
+/* EPIC — violet */
 .ach-rarity--epic.ach-badge--live {
-  border-color: rgba(192, 132, 252, 0.5);
+  --ach-border-a: #a855f7;
+  --ach-border-b: #e9d5ff;
+  --ach-border-c: #6b21a8;
   background: linear-gradient(145deg, rgba(168, 85, 247, 0.22), rgba(15, 10, 30, 0.96));
-  box-shadow: 0 0 0 1px rgba(216, 180, 254, 0.08) inset, 0 0 6px rgba(168, 85, 247, 0.12);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.28);
 }
-.ach-rarity--epic.ach-badge--live .ach-badge__icon {
-  filter: drop-shadow(0 0 1px rgba(216, 180, 254, 0.35));
+.ach-rarity--epic.ach-badge--live::before {
+  animation-duration: 4s;
 }
 
-/* LEGENDARY */
+/* LEGENDARY — gold */
 .ach-rarity--legendary.ach-badge--live {
-  border-color: rgba(251, 191, 36, 0.55);
+  --ach-border-a: #d97706;
+  --ach-border-b: #fde68a;
+  --ach-border-c: #b45309;
   background: linear-gradient(145deg, rgba(251, 191, 36, 0.2), rgba(120, 53, 15, 0.32), rgba(20, 12, 5, 0.96));
-  box-shadow: 0 0 0 1px rgba(254, 243, 199, 0.08) inset, 0 0 6px rgba(251, 191, 36, 0.12);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.28);
 }
-.ach-rarity--legendary.ach-badge--live .ach-badge__icon {
-  filter: drop-shadow(0 0 1px rgba(253, 224, 71, 0.4));
+.ach-rarity--legendary.ach-badge--live::before {
+  animation-duration: 3.5s;
 }
 
-/* MYTHIC — static prism gradient (no holo animation) */
+/* MYTHIC — prism border */
 .ach-rarity--mythic.ach-badge--live {
-  border-color: rgba(244, 114, 182, 0.5);
+  --ach-border-a: #f472b6;
+  --ach-border-b: #67e8f9;
+  --ach-border-c: #c084fc;
   background: linear-gradient(
     135deg,
-    rgba(251, 191, 36, 0.14) 0%,
-    rgba(244, 114, 182, 0.16) 32%,
-    rgba(167, 139, 250, 0.18) 64%,
+    rgba(251, 191, 36, 0.12) 0%,
+    rgba(244, 114, 182, 0.14) 32%,
+    rgba(167, 139, 250, 0.16) 64%,
     rgba(15, 10, 30, 0.96) 100%
   );
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.06) inset, 0 0 7px rgba(244, 114, 182, 0.12);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.28);
 }
-.ach-rarity--mythic.ach-badge--live .ach-badge__icon {
-  filter: drop-shadow(0 0 1px rgba(244, 114, 182, 0.35));
+.ach-rarity--mythic.ach-badge--live::before {
+  animation-duration: 3s;
+  background: conic-gradient(
+    from var(--ach-border-angle),
+    #fbbf24 0%,
+    #f472b6 25%,
+    #a78bfa 50%,
+    #22d3ee 75%,
+    #fbbf24 100%
+  );
 }
 
+/* Icon / image: never animated */
 .ach-badge__icon {
   position: relative;
   z-index: 2;
   display: inline-block;
   line-height: 1;
   flex-shrink: 0;
+  filter: none !important;
+  animation: none !important;
+  transform: none !important;
 }
 .ach-badge__body {
   position: relative;
