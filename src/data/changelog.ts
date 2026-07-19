@@ -23,6 +23,19 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '3.48.2',
+    title: 'Paste viewer in App shell + guest ratings (24h IP lock)',
+    date: 'Jul 19, 2026 - 14:30',
+    highlight: true,
+    items: [
+      { priority: 'P0', text: 'P0 — /p/:id paste viewer mounts inside the full App shell (sidebar, diagnostics, auth) — no more standalone bare page.' },
+      { priority: 'P0', text: 'P0 — Star ratings rewritten: guests + owner + members may rate; one vote per IP, locked 24h (hashed IP, no login required).' },
+      { priority: 'P1', text: 'P1 — Rating UI no longer gated on sign-in; shows lock remaining after vote; re-rate after 24h.' },
+      { priority: 'P2', text: 'P2 — Leaving /p/:id via sidebar restores normal tab URLs; popstate restores paste deep-links.' },
+      { priority: 'P9', text: 'P9 — Private pastes still owner-only for rating; public/protected open to guests.' },
+    ],
+  },
+  {
     version: '3.48.1',
     title: 'Paste module deep audit — views, burn, ratings, access',
     date: 'Jul 19, 2026 - 12:00',

@@ -18,6 +18,7 @@ import { DASHBOARD_MENU_ITEM, LAB_MENU_ITEMS, MAIN_MENU_ITEMS, TabId } from './c
 import { DEFAULT_PUBLIC_TABS } from './config/accessControl';
 import { usePageVisibility } from './context/PageVisibilityContext';
 import { parseProfileRoute, profilePath, syncUrlForTab } from './lib/profileRouting';
+import { parsePasteViewerId } from './lib/paste';
 import { captureReferralFromUrl } from './lib/referral';
 import { ChangelogPanel } from './components/changelog/ChangelogPanel';
 import { markChangelogVisited, notifyFeedRead, useFeedUnread } from './hooks/useFeedUnread';
@@ -30,6 +31,7 @@ import { SystemFooterBar } from './components/diagnostics/SystemFooterBar';
 import { terminalAppend } from './lib/terminalLogBridge';
 import { AuthModal } from './components/auth/AuthModal';
 import { FeatureLoginGate } from './components/auth/FeatureLoginGate';
+import { PasteViewer } from './components/paste/PasteViewer';
 
 import { useAuth } from './context/AuthContext';
 import {
@@ -99,6 +101,7 @@ function resolveGuestSafeTab(tab: TabId | null | undefined, isPublic: (t: TabId)
 }
 
 const initialDeepLink = typeof window !== 'undefined' ? readDeepLinkParams() : { tab: null, category: null, account: null };
+const initialPasteViewerId = typeof window !== 'undefined' ? parsePasteViewerId() : null;
 
 export default function App() {
   const {
@@ -114,8 +117,12 @@ export default function App() {
     return isPublicTab(tab);
   }, [isPublicTab]);
 
+  /** Deep-link paste share (/p/:id) — shown inside the full App shell. */
+  const [pasteViewerId, setPasteViewerId] = useState<string | null>(initialPasteViewerId);
+
   // Navigation active tab matching the design HTML options
   const [activeTab, setActiveTab] = useState<TabId>(() => {
+    if (initialPasteViewerId) return 'paste';
     const initial = initialProfileRoute?.tab ?? initialDeepLink.tab ?? 'changelog';
     if (initial === 'profile' && initialProfileRoute?.username) return 'profile';
     return initial;
@@ -143,6 +150,16 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    if (pasteViewerId) {
+      const path = `/p/${pasteViewerId}`;
+      const url = `${window.location.origin}${path}`;
+      const canonical = document.querySelector('link[rel="canonical"]');
+      const ogUrl = document.querySelector('meta[property="og:url"]');
+      if (canonical) canonical.setAttribute('href', url);
+      if (ogUrl) ogUrl.setAttribute('content', url);
+      // PasteViewer sets document.title when content loads
+      return;
+    }
     const menu = [DASHBOARD_MENU_ITEM, ...MAIN_MENU_ITEMS, ...LAB_MENU_ITEMS].find((m) => m.id === renderTab);
     const suffix = renderTab === 'profile' && profileUsername ? ` · @${profileUsername}` : '';
     document.title = menu ? `${menu.label}${suffix} · LUL Terminal` : 'LUL Terminal';
@@ -157,7 +174,7 @@ export default function App() {
     if (canonical) canonical.setAttribute('href', url);
     if (ogUrl) ogUrl.setAttribute('content', url);
     return () => { document.title = 'LUL Terminal'; };
-  }, [renderTab, profileUsername]);
+  }, [renderTab, profileUsername, pasteViewerId]);
 
   const sessionTrackedRef = useRef(false);
   const visitorCtxRef = useRef<ReturnType<typeof collectVisitorContext> | null>(null);
@@ -397,6 +414,8 @@ export default function App() {
 
   useEffect(() => {
     if (authLoading || visibilityLoading) return;
+    // Public paste share links must not be redirected by members-only Paste tab
+    if (pasteViewerId) return;
     if (!canAccessTab(activeTab, isLoggedIn, isAdmin)) {
       const safe = resolveGuestSafeTab(null, isPublicTab);
       setActiveTab(safe);
@@ -410,7 +429,7 @@ export default function App() {
       setProfileUsername(null);
       syncUrlForTab(safe);
     }
-  }, [authLoading, visibilityLoading, isLoggedIn, isAdmin, activeTab, requiresLogin, canAccessTab, isPublicTab]);
+  }, [authLoading, visibilityLoading, isLoggedIn, isAdmin, activeTab, requiresLogin, canAccessTab, isPublicTab, pasteViewerId]);
 
   useEffect(() => {
     if (isLoggedIn) return;
@@ -577,6 +596,14 @@ export default function App() {
       pendingPopRef.current = true;
       return;
     }
+    const pasteId = parsePasteViewerId();
+    if (pasteId) {
+      setPasteViewerId(pasteId);
+      setActiveTab('paste');
+      setProfileUsername(null);
+      return;
+    }
+    setPasteViewerId(null);
     const route = parseProfileRoute();
     if (route) {
       if (!isLoggedIn && !isPublicTab('profile')) {
@@ -630,9 +657,9 @@ export default function App() {
   const didBootstrapAuthTab = useRef(false);
   useEffect(() => {
     if (authLoading || !isLoggedIn || didBootstrapAuthTab.current) return;
-    if (initialProfileRoute || initialDeepLink.tab) return;
+    if (initialProfileRoute || initialDeepLink.tab || initialPasteViewerId) return;
     const path = window.location.pathname.replace(/\/+$/, '') || '/';
-    if (path === '/') return;
+    if (path === '/' || path.startsWith('/p/') || path.startsWith('/profile/')) return;
     didBootstrapAuthTab.current = true;
     setActiveTab('dashboard');
     setProfileUsername(null);
@@ -642,6 +669,7 @@ export default function App() {
   useEffect(() => {
     if (authSuccessTick < 1) return;
     if (pendingTabAfterLogin) {
+      setPasteViewerId(null);
       const { tab, profileUsername: pun } = pendingTabAfterLogin;
       clearPendingTabAfterLogin();
       if (!canAccessTab(tab, true, isAdmin)) {
@@ -660,6 +688,8 @@ export default function App() {
       }
       return;
     }
+    // Stay on /p/:id after login so private pastes can open for the owner
+    if (pasteViewerId) return;
     if (canAccessTab(activeTab, true, isAdmin)) {
       if (activeTab === 'profile' && profileUsername) {
         syncUrlForTab(activeTab, profileUsername);
@@ -671,7 +701,7 @@ export default function App() {
     setActiveTab('dashboard');
     setProfileUsername(null);
     syncUrlForTab('dashboard');
-  }, [authSuccessTick, pendingTabAfterLogin, clearPendingTabAfterLogin, canAccessTab, isAdmin, activeTab, profileUsername]);
+  }, [authSuccessTick, pendingTabAfterLogin, clearPendingTabAfterLogin, canAccessTab, isAdmin, activeTab, profileUsername, pasteViewerId]);
 
   useEffect(() => {
     if (authLoading || visibilityLoading || isLoggedIn) return;
@@ -694,7 +724,9 @@ export default function App() {
       playBeep(520, 0.06, 'sine');
       return;
     }
-    const isSameTab = tab === activeTab && tab !== 'profile';
+    // Leaving a /p/:id deep-link: drop viewer and use normal tab URLs
+    setPasteViewerId(null);
+    const isSameTab = tab === activeTab && tab !== 'profile' && !pasteViewerId;
     setActiveTab(tab);
     if (tab === 'profile') {
       const uname = opts?.profileUsername ?? profileUsername;
@@ -708,7 +740,7 @@ export default function App() {
       lastSyncedTabRef.current = tab;
     }
     playBeep(740, 0.08, 'sine');
-  }, [activeTab, isLoggedIn, isAdmin, isPublicTab, requiresLogin, openLoginGate, profileUsername, playBeep, authLoading, visibilityLoading]);
+  }, [activeTab, isLoggedIn, isAdmin, isPublicTab, requiresLogin, openLoginGate, profileUsername, playBeep, authLoading, visibilityLoading, pasteViewerId]);
 
 
   return (
@@ -775,6 +807,9 @@ export default function App() {
 
             {/* DYNAMIC CONTENT AREA (Fluid Middle Column) */}
             <section className="flex-1 min-h-0 p-6 flex flex-col bg-[#11131b] text-slate-300 relative border-r border-slate-800/40 overflow-hidden" id="editorial-left-pane">
+              {pasteViewerId ? (
+                <PasteViewer id={pasteViewerId} embedded />
+              ) : (
               <Suspense fallback={<TabPageFallback />}>
               {renderTab === 'dashboard' && (
                 <UserDashboardPage onNavigate={handleTabClick} />
@@ -906,6 +941,7 @@ export default function App() {
               {renderTab === 'admin' && <AdminDashboardPage />}
 
               </Suspense>
+              )}
             </section>
 
             {showDiagnosticsPane && (

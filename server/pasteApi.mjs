@@ -30,7 +30,8 @@ import {
   listTrendingPublic,
   purgeIfExpired,
   readStats,
-  getUserPasteRating,
+  getPasteRatingStatus,
+  pasteRatingKeyFromIp,
   ratePaste,
   recordView,
   savePaste,
@@ -72,6 +73,10 @@ function toAdminClientMeta(meta, req) {
   };
 }
 
+function ratingKeyFromReq(req) {
+  return pasteRatingKeyFromIp(clientIp(req));
+}
+
 function toClientMeta(meta, req, { includePrivate = false, userId = null } = {}) {
   const origin = originFromReq(req);
   const locked = meta.visibility === 'protected';
@@ -101,10 +106,13 @@ function toClientMeta(meta, req, { includePrivate = false, userId = null } = {})
   if (includePrivate) {
     base.userId = meta.userId ?? null;
   }
-  if (userId) {
-    const ur = getUserPasteRating(meta, userId);
-    if (ur) base.userRating = ur;
-  }
+  // Rating identity is IP-based (guests + members); userId kept for ownership only.
+  const ratingKey = ratingKeyFromReq(req);
+  const status = getPasteRatingStatus(meta, ratingKey);
+  if (status.userRating) base.userRating = status.userRating;
+  base.canRate = status.canRate;
+  if (status.lockedUntil) base.ratingLockedUntil = status.lockedUntil;
+  void userId;
   return base;
 }
 
@@ -477,39 +485,42 @@ export async function handlePasteRequest(req, res) {
 
     const rateMatch = pathname.match(/^\/api\/paste\/([A-Za-z0-9_-]{6,32})\/rate$/);
     if (rateMatch && req.method === 'POST') {
+      // Guests + members may rate; 24h IP lock enforced in pasteStore.ratePaste
       await attachAuth(req);
-      let user;
-      try {
-        user = requireAuth(req);
-      } catch {
-        return sendJson(res, 401, { error: 'Sign in required to rate', requiresLogin: true });
-      }
-      await checkRateLimit(`paste-rate:${user.id}`, { max: 40, windowMs: 60_000 });
+      const ip = clientIp(req);
+      const voterKey = pasteRatingKeyFromIp(ip);
+      await checkRateLimit(`paste-rate:${ip}`, { max: 40, windowMs: 60_000 });
       const meta = await loadAlive(rateMatch[1]);
       if (!meta) return sendJson(res, 404, { error: 'Paste not found' });
-      // Owner may set/update rating on their own paste (allowed — useful for demos / admin)
-      // Access: public always; private owner only; protected needs prior unlock not required for rating public view
+      const user = req.auth?.user ?? null;
+      // Private pastes: only the owner may rate (must be signed in as owner)
       if (meta.visibility === 'private') {
-        if (!meta.userId || String(meta.userId) !== String(user.id)) {
+        if (!user?.id || !meta.userId || String(meta.userId) !== String(user.id)) {
           return sendJson(res, 404, { error: 'Paste not found' });
         }
-      } else if (meta.visibility === 'protected') {
-        // Allow rating if viewer can open content (logged-in members who know the paste)
-        // Protected pastes: only owner rates without password; others need to have access via password unlock first is too heavy —
-        // Allow any logged-in user to rate protected pastes they can discover (same as public after unlock).
-        // If they got this far with a valid session, accept rating for protected pastes.
       }
-      // public + protected + own private: rate
+      // public + protected + own private: rate by IP (owner included)
       const body = await readJsonBody(req, 4 * 1024);
       const stars = Number(body.stars);
       if (!Number.isFinite(stars) || stars < 1 || stars > 5) {
         return sendJson(res, 400, { error: 'Rating must be between 1 and 5' });
       }
       try {
-        const result = await ratePaste(rateMatch[1], user.id, stars);
+        const result = await ratePaste(rateMatch[1], voterKey, stars);
         return sendJson(res, 200, result);
       } catch (e) {
         const msg = e instanceof Error ? e.message : 'Rating failed';
+        if (e?.code === 'RATE_LOCKED') {
+          return sendJson(res, 429, {
+            error: msg,
+            code: 'RATE_LOCKED',
+            userRating: e.userRating,
+            lockedUntil: e.lockedUntil,
+            ratingAvg: e.ratingAvg,
+            ratingCount: e.ratingCount,
+            retryAfterMs: e.retryAfterMs,
+          });
+        }
         return sendJson(res, msg.includes('not found') ? 404 : 400, { error: msg });
       }
     }

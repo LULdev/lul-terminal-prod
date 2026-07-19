@@ -38,9 +38,13 @@ import { safePasteAssetUrl } from '../../lib/safePasteUrl';
 import { PasteCodeView } from './PasteCodeView';
 import { PasteStarRating } from './PasteStarRating';
 
-type Props = { id: string };
+type Props = {
+  id: string;
+  /** When true, fill the App shell content pane (no full-viewport chrome). */
+  embedded?: boolean;
+};
 
-export function PasteViewer({ id }: Props) {
+export function PasteViewer({ id, embedded = false }: Props) {
   const { user, isLoggedIn, openAuth } = useAuth();
   const [paste, setPaste] = useState<PasteRecord | null>(null);
   const [views, setViews] = useState(0);
@@ -57,7 +61,14 @@ export function PasteViewer({ id }: Props) {
   const [ratingAvg, setRatingAvg] = useState(0);
   const [ratingCount, setRatingCount] = useState(0);
   const [userRating, setUserRating] = useState<number | null>(null);
+  const [canRate, setCanRate] = useState(true);
+  const [ratingLockedUntil, setRatingLockedUntil] = useState<number | null>(null);
   const mountedRef = useRef(true);
+
+  const shellClass = embedded
+    ? 'h-full min-h-0 overflow-y-auto bg-[#07080c] relative'
+    : 'min-h-screen bg-[#07080c] relative overflow-hidden';
+  const padClass = embedded ? 'py-3 px-1 sm:px-2' : 'py-6 px-4 sm:px-8';
 
   useEffect(() => {
     mountedRef.current = true;
@@ -103,6 +114,8 @@ export function PasteViewer({ id }: Props) {
           setRatingAvg(data.ratingAvg ?? 0);
           setRatingCount(data.ratingCount ?? 0);
           setUserRating(data.userRating ?? null);
+          setCanRate(data.canRate !== false);
+          setRatingLockedUntil(data.ratingLockedUntil ?? null);
           return;
         }
         if (!data.content) {
@@ -115,6 +128,8 @@ export function PasteViewer({ id }: Props) {
         setRatingAvg(data.ratingAvg ?? 0);
         setRatingCount(data.ratingCount ?? 0);
         setUserRating(data.userRating ?? null);
+        setCanRate(data.canRate !== false);
+        setRatingLockedUntil(data.ratingLockedUntil ?? null);
         setViewsReady(true);
         // Only show burn warning when the paste was actually burn-after-read and consumed
         if (data.burned && data.burnAfterRead) {
@@ -179,6 +194,8 @@ export function PasteViewer({ id }: Props) {
       setRatingAvg(data.ratingAvg ?? 0);
       setRatingCount(data.ratingCount ?? 0);
       setUserRating(data.userRating ?? null);
+      setCanRate(data.canRate !== false);
+      setRatingLockedUntil(data.ratingLockedUntil ?? null);
       setViewsReady(true);
       if (data.burned && data.burnAfterRead) {
         setError('This paste was burn-after-read and has been consumed.');
@@ -208,7 +225,7 @@ export function PasteViewer({ id }: Props) {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#07080c] flex items-center justify-center">
+      <div className={`${shellClass} flex items-center justify-center`}>
         <p className="text-[11px] font-mono text-slate-500 animate-pulse">Loading paste…</p>
       </div>
     );
@@ -216,7 +233,7 @@ export function PasteViewer({ id }: Props) {
 
   if (paste?.requiresLogin && !paste.content) {
     return (
-      <div className="min-h-screen bg-[#07080c] flex items-center justify-center p-4 sm:p-8 relative overflow-hidden">
+      <div className={`${shellClass} flex items-center justify-center p-4 sm:p-8`}>
         <div className="absolute inset-0 bg-gradient-to-b from-violet-500/[0.04] via-transparent to-indigo-500/[0.03] pointer-events-none" />
         <div className="relative z-10 w-full max-w-md rounded-2xl border border-violet-500/25 bg-[#0c0d12]/95 p-5 shadow-2xl text-center">
           <div className="w-11 h-11 mx-auto rounded-lg border border-violet-500/30 bg-violet-500/10 flex items-center justify-center mb-3">
@@ -241,7 +258,7 @@ export function PasteViewer({ id }: Props) {
 
   if (paste?.requiresPassword && !paste.content) {
     return (
-      <div className="min-h-screen bg-[#07080c] flex items-center justify-center p-4 sm:p-8 relative overflow-hidden">
+      <div className={`${shellClass} flex items-center justify-center p-4 sm:p-8`}>
         <div className="absolute inset-0 bg-gradient-to-b from-amber-500/[0.04] via-transparent to-indigo-500/[0.03] pointer-events-none" />
         <form
           onSubmit={onUnlock}
@@ -280,7 +297,7 @@ export function PasteViewer({ id }: Props) {
 
   if (error && !paste?.content) {
     return (
-      <div className="min-h-screen bg-[#07080c] flex flex-col items-center justify-center gap-3 p-6">
+      <div className={`${shellClass} flex flex-col items-center justify-center gap-3 p-6`}>
         <p className="text-4xl opacity-40">📋</p>
         <p className="text-[12px] font-mono text-red-300/90 text-center max-w-sm">{error || 'Not found'}</p>
       </div>
@@ -289,7 +306,7 @@ export function PasteViewer({ id }: Props) {
 
   if (!paste?.content) {
     return (
-      <div className="min-h-screen bg-[#07080c] flex flex-col items-center justify-center gap-3 p-6">
+      <div className={`${shellClass} flex flex-col items-center justify-center gap-3 p-6`}>
         <p className="text-4xl opacity-40">📋</p>
         <p className="text-[12px] font-mono text-slate-500">Paste not found or expired.</p>
       </div>
@@ -297,7 +314,7 @@ export function PasteViewer({ id }: Props) {
   }
 
   return (
-    <div className="min-h-screen bg-[#07080c] py-6 px-4 sm:px-8 relative overflow-hidden">
+    <div className={`${shellClass} ${padClass}`}>
       <div className="absolute inset-0 bg-gradient-to-b from-emerald-500/[0.04] via-transparent to-indigo-500/[0.03] pointer-events-none" />
 
       <div className="max-w-[min(100%,920px)] mx-auto flex flex-col gap-4 relative z-10">
@@ -362,11 +379,14 @@ export function PasteViewer({ id }: Props) {
                 ratingAvg={ratingAvg}
                 ratingCount={ratingCount}
                 userRating={userRating}
-                isLoggedIn={Boolean(user)}
-                onRated={(avg, count, ur) => {
+                canRate={canRate}
+                ratingLockedUntil={ratingLockedUntil}
+                onRated={(avg, count, ur, lockedUntil) => {
                   setRatingAvg(avg);
                   setRatingCount(count);
                   setUserRating(ur);
+                  setCanRate(false);
+                  setRatingLockedUntil(lockedUntil ?? Date.now() + 24 * 60 * 60 * 1000);
                 }}
               />
             </div>

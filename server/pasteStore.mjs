@@ -554,42 +554,108 @@ export async function computeAdminPasteStats() {
   };
 }
 
-export async function ratePaste(id, userId, stars) {
+/** One vote per IP per paste; locked for 24h after each vote (guests + members, incl. owner). */
+export const PASTE_RATE_LOCK_MS = 24 * 60 * 60 * 1000;
+
+/** Stable privacy-safe key from client IP (no raw IP stored in meta). */
+export function pasteRatingKeyFromIp(ip) {
+  const raw = String(ip || 'unknown').trim() || 'unknown';
+  return `ip:${crypto.createHash('sha256').update(`paste-rate:${raw}`).digest('hex').slice(0, 24)}`;
+}
+
+function normalizeVoteEntry(entry) {
+  if (entry == null) return null;
+  if (typeof entry === 'number' && entry >= 1 && entry <= 5) {
+    return { stars: Math.round(entry), at: 0 };
+  }
+  if (typeof entry === 'object') {
+    const stars = Math.min(5, Math.max(1, Math.round(Number(entry.stars) || 0)));
+    if (!stars) return null;
+    return { stars, at: Number(entry.at) || 0 };
+  }
+  return null;
+}
+
+/**
+ * @returns {{ userRating: number|null, canRate: boolean, lockedUntil: number|null }}
+ */
+export function getPasteRatingStatus(meta, voterKey) {
+  if (!meta?.ratingVotes || !voterKey) {
+    return { userRating: null, canRate: true, lockedUntil: null };
+  }
+  const entry = normalizeVoteEntry(meta.ratingVotes[String(voterKey).slice(0, 40)]);
+  if (!entry) return { userRating: null, canRate: true, lockedUntil: null };
+  const lockedUntil = entry.at > 0 ? entry.at + PASTE_RATE_LOCK_MS : null;
+  const locked = lockedUntil != null && Date.now() < lockedUntil;
+  return {
+    userRating: entry.stars,
+    canRate: !locked,
+    lockedUntil: locked ? lockedUntil : null,
+  };
+}
+
+/** @deprecated use getPasteRatingStatus — kept for legacy call sites */
+export function getUserPasteRating(meta, userId) {
+  const status = getPasteRatingStatus(meta, userId);
+  return status.userRating;
+}
+
+/**
+ * Rate a paste by IP-derived voter key (guests allowed).
+ * Re-rate only after 24h lock expires; within lock returns error with previous rating.
+ */
+export async function ratePaste(id, voterKey, stars) {
   return withPasteWrite(async () => {
     const meta = await purgeIfExpired(await getMeta(id), { inWrite: true });
     if (!meta) throw new Error('Paste not found');
-    const uid = String(userId).slice(0, 32);
+    const key = String(voterKey || '').slice(0, 40);
+    if (!key) throw new Error('Invalid voter');
     const raw = Number(stars);
     if (!Number.isFinite(raw)) throw new Error('Invalid rating');
     const value = Math.min(5, Math.max(1, Math.round(raw)));
     if (!meta.ratingVotes || typeof meta.ratingVotes !== 'object') meta.ratingVotes = {};
-    const prev = meta.ratingVotes[uid];
+
+    const prev = normalizeVoteEntry(meta.ratingVotes[key]);
+    if (prev && prev.at > 0) {
+      const lockedUntil = prev.at + PASTE_RATE_LOCK_MS;
+      if (Date.now() < lockedUntil) {
+        const remainingMs = lockedUntil - Date.now();
+        const hours = Math.max(1, Math.ceil(remainingMs / (60 * 60 * 1000)));
+        const err = new Error(`Already rated from this network — try again in ~${hours}h`);
+        err.code = 'RATE_LOCKED';
+        err.statusCode = 429;
+        err.retryAfterMs = remainingMs;
+        err.userRating = prev.stars;
+        err.lockedUntil = lockedUntil;
+        err.ratingAvg = meta.ratingAvg ?? 0;
+        err.ratingCount = meta.ratingCount ?? 0;
+        throw err;
+      }
+    }
+
     let sum = Number(meta.ratingSum) || 0;
     let count = Number(meta.ratingCount) || 0;
-    if (prev) {
-      sum = sum - prev + value;
+    if (prev?.stars) {
+      sum = sum - prev.stars + value;
     } else {
       sum += value;
       count += 1;
     }
-    meta.ratingVotes[uid] = value;
+    const now = Date.now();
+    meta.ratingVotes[key] = { stars: value, at: now };
     meta.ratingSum = sum;
     meta.ratingCount = count;
     meta.ratingAvg = count ? Math.round((sum / count) * 10) / 10 : 0;
-    meta.updatedAt = Date.now();
+    meta.updatedAt = now;
     await writeMetaAtomic(id, meta);
     return {
       ratingAvg: meta.ratingAvg,
       ratingCount: meta.ratingCount,
       userRating: value,
+      canRate: false,
+      lockedUntil: now + PASTE_RATE_LOCK_MS,
     };
   });
-}
-
-export function getUserPasteRating(meta, userId) {
-  if (!meta?.ratingVotes || !userId) return null;
-  const v = meta.ratingVotes[String(userId).slice(0, 32)];
-  return v ? Number(v) : null;
 }
 
 export async function deletePaste(id, userId) {

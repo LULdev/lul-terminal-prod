@@ -29,6 +29,8 @@ export type PasteMeta = {
   ratingAvg?: number;
   ratingCount?: number;
   userRating?: number;
+  canRate?: boolean;
+  ratingLockedUntil?: number | null;
   username: string | null;
   viewUrl: string;
   rawUrl: string;
@@ -389,23 +391,44 @@ export async function forkPaste(id: string): Promise<PasteForkPayload> {
   return res.json();
 }
 
-export async function ratePaste(id: string, stars: number): Promise<{
+export type PasteRateResult = {
   ratingAvg: number;
   ratingCount: number;
   userRating: number;
-}> {
-  // soft401: do not wipe session on 401 from rate — show sign-in instead
+  canRate?: boolean;
+  lockedUntil?: number | null;
+};
+
+export async function ratePaste(id: string, stars: number): Promise<PasteRateResult> {
+  // soft401: guests rate without session — never wipe login on 401
   const res = await sessionFetch(
     `${API}/${id}/rate`,
     { method: 'POST', body: JSON.stringify({ stars }) },
     { soft401: true },
   );
-  if (!res.ok) throw new Error(await parseError(res));
-  return res.json() as Promise<{
-    ratingAvg: number;
-    ratingCount: number;
-    userRating: number;
-  }>;
+  if (!res.ok) {
+    let body: Record<string, unknown> = {};
+    try {
+      body = await res.json() as Record<string, unknown>;
+    } catch {
+      /* ignore */
+    }
+    const msg = typeof body.error === 'string' ? body.error : (res.statusText || 'Rating failed');
+    const err = new Error(msg) as Error & {
+      code?: string;
+      userRating?: number;
+      lockedUntil?: number;
+      ratingAvg?: number;
+      ratingCount?: number;
+    };
+    if (typeof body.code === 'string') err.code = body.code;
+    if (typeof body.userRating === 'number') err.userRating = body.userRating;
+    if (typeof body.lockedUntil === 'number') err.lockedUntil = body.lockedUntil;
+    if (typeof body.ratingAvg === 'number') err.ratingAvg = body.ratingAvg;
+    if (typeof body.ratingCount === 'number') err.ratingCount = body.ratingCount;
+    throw err;
+  }
+  return res.json() as Promise<PasteRateResult>;
 }
 
 export function dedupePasteLines(content: string): { content: string; removed: number } {

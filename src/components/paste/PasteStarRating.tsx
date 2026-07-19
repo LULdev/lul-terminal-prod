@@ -12,17 +12,33 @@ type Props = {
   ratingAvg: number;
   ratingCount: number;
   userRating?: number | null;
-  isLoggedIn: boolean;
-  onRated?: (avg: number, count: number, userRating: number) => void;
+  /** When false, stars are display-only until lock expires (from server). */
+  canRate?: boolean;
+  ratingLockedUntil?: number | null;
+  onRated?: (avg: number, count: number, userRating: number, lockedUntil?: number | null) => void;
   size?: 'sm' | 'md';
 };
+
+function formatLockRemaining(lockedUntil: number | null | undefined): string {
+  if (!lockedUntil) return '';
+  const ms = lockedUntil - Date.now();
+  if (ms <= 0) return '';
+  const hours = Math.ceil(ms / (60 * 60 * 1000));
+  if (hours >= 24) return '~24h';
+  if (hours <= 1) {
+    const mins = Math.max(1, Math.ceil(ms / 60_000));
+    return `~${mins}m`;
+  }
+  return `~${hours}h`;
+}
 
 export function PasteStarRating({
   pasteId,
   ratingAvg,
   ratingCount,
   userRating,
-  isLoggedIn,
+  canRate = true,
+  ratingLockedUntil = null,
   onRated,
   size = 'md',
 }: Props) {
@@ -32,19 +48,40 @@ export function PasteStarRating({
   const [hover, setHover] = useState(0);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [lockedUntil, setLockedUntil] = useState<number | null>(ratingLockedUntil ?? null);
+  const [allowRate, setAllowRate] = useState(canRate);
 
   useEffect(() => {
     setAvg(ratingAvg);
     setCount(ratingCount);
     setMine(userRating ?? 0);
+    setLockedUntil(ratingLockedUntil ?? null);
+    setAllowRate(canRate);
     setError('');
-  }, [pasteId, ratingAvg, ratingCount, userRating]);
+  }, [pasteId, ratingAvg, ratingCount, userRating, canRate, ratingLockedUntil]);
+
+  // Re-enable stars when 24h lock expires (client-side)
+  useEffect(() => {
+    if (!lockedUntil) return;
+    const ms = lockedUntil - Date.now();
+    if (ms <= 0) {
+      setAllowRate(true);
+      setLockedUntil(null);
+      return;
+    }
+    const t = window.setTimeout(() => {
+      setAllowRate(true);
+      setLockedUntil(null);
+    }, Math.min(ms + 50, 2_147_000_000));
+    return () => window.clearTimeout(t);
+  }, [lockedUntil]);
 
   const iconSize = size === 'sm' ? 14 : 18;
   const display = hover || mine || Math.round(avg);
+  const interactive = allowRate && !busy;
 
   const submit = async (stars: number) => {
-    if (!isLoggedIn || busy) return;
+    if (!allowRate || busy) return;
     setBusy(true);
     setError('');
     try {
@@ -52,14 +89,34 @@ export function PasteStarRating({
       setAvg(result.ratingAvg);
       setCount(result.ratingCount);
       setMine(result.userRating);
-      onRated?.(result.ratingAvg, result.ratingCount, result.userRating);
+      setAllowRate(result.canRate !== false ? Boolean(result.canRate) : false);
+      setLockedUntil(result.lockedUntil ?? null);
+      onRated?.(result.ratingAvg, result.ratingCount, result.userRating, result.lockedUntil ?? null);
     } catch (e) {
-      const msg = e instanceof Error ? e.message : 'Rating failed';
-      setError(msg === 'Session expired' ? 'Sign in again to rate' : msg);
+      const err = e as Error & {
+        code?: string;
+        userRating?: number;
+        lockedUntil?: number;
+        ratingAvg?: number;
+        ratingCount?: number;
+      };
+      const msg = err instanceof Error ? err.message : 'Rating failed';
+      if (err.code === 'RATE_LOCKED' || /already rated/i.test(msg)) {
+        if (typeof err.userRating === 'number') setMine(err.userRating);
+        if (typeof err.ratingAvg === 'number') setAvg(err.ratingAvg);
+        if (typeof err.ratingCount === 'number') setCount(err.ratingCount);
+        if (typeof err.lockedUntil === 'number') {
+          setLockedUntil(err.lockedUntil);
+          setAllowRate(false);
+        }
+      }
+      setError(msg);
     } finally {
       setBusy(false);
     }
   };
+
+  const lockHint = formatLockRemaining(lockedUntil);
 
   return (
     <div className="flex flex-col gap-1">
@@ -71,13 +128,21 @@ export function PasteStarRating({
               <button
                 key={n}
                 type="button"
-                disabled={!isLoggedIn || busy}
-                onMouseEnter={() => isLoggedIn && setHover(n)}
+                disabled={!interactive}
+                onMouseEnter={() => interactive && setHover(n)}
                 onClick={() => submit(n)}
                 className={`p-0.5 rounded transition-transform ${
-                  isLoggedIn ? 'hover:scale-110 cursor-pointer' : 'cursor-default opacity-90'
+                  interactive ? 'hover:scale-110 cursor-pointer' : 'cursor-default opacity-90'
                 } ${busy ? 'opacity-50' : ''}`}
-                title={isLoggedIn ? `Rate ${n} star${n > 1 ? 's' : ''}` : 'Sign in to rate'}
+                title={
+                  interactive
+                    ? `Rate ${n} star${n > 1 ? 's' : ''}`
+                    : lockHint
+                      ? `Rated — next change in ${lockHint}`
+                      : mine
+                        ? `Your rating: ${mine}★`
+                        : 'Rating locked'
+                }
               >
                 <Star
                   size={iconSize}
@@ -96,11 +161,14 @@ export function PasteStarRating({
           </span>
         </div>
       </div>
-      {!isLoggedIn && (
-        <p className="text-[7px] font-mono text-slate-600">Sign in to rate this paste</p>
+      {mine > 0 && !error && (
+        <p className="text-[7px] font-mono text-amber-400/70">
+          Your rating: {mine}★
+          {lockHint ? ` · locked ${lockHint}` : ''}
+        </p>
       )}
-      {isLoggedIn && mine > 0 && !error && (
-        <p className="text-[7px] font-mono text-amber-400/70">Your rating: {mine}★</p>
+      {!mine && allowRate && !error && (
+        <p className="text-[7px] font-mono text-slate-600">Guests may rate · 1 vote / 24h per network</p>
       )}
       {error && (
         <p className="text-[7px] font-mono text-rose-400" role="alert">{error}</p>
