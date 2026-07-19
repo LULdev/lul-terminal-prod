@@ -1431,6 +1431,555 @@ a.bot-mention-username:focus-visible {
   position: relative;
 }
 
+/* —— Trophy Vault (structured locked showcase) —— */
+.ach-vault {
+  position: relative;
+  border-radius: 1rem;
+  border: 1px solid rgba(139, 92, 246, 0.22);
+  background:
+    radial-gradient(ellipse 80% 50% at 10% 0%, rgba(139, 92, 246, 0.12), transparent 55%),
+    radial-gradient(ellipse 60% 40% at 90% 10%, rgba(56, 189, 248, 0.08), transparent 50%),
+    linear-gradient(180deg, rgba(14, 12, 24, 0.98), rgba(10, 11, 16, 0.98));
+  padding: 0.85rem 0.9rem 1rem;
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.35) inset,
+    0 12px 40px rgba(0, 0, 0, 0.35);
+}
+.ach-vault__header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  margin-bottom: 0.75rem;
+}
+.ach-vault__title-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+.ach-vault__title {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.55rem;
+  min-width: 0;
+}
+.ach-vault__title-icon {
+  font-size: 1.25rem;
+  line-height: 1;
+  filter: drop-shadow(0 0 8px rgba(167, 139, 250, 0.45));
+}
+.ach-vault__heading {
+  margin: 0;
+  font-size: 11px;
+  font-family: ui-monospace, monospace;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #c4b5fd;
+}
+.ach-vault__sub {
+  margin: 0.15rem 0 0;
+  font-size: 8px;
+  font-family: ui-monospace, monospace;
+  color: #64748b;
+  line-height: 1.35;
+}
+.ach-vault__progress-pill {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.15rem;
+  flex-shrink: 0;
+  padding: 0.35rem 0.55rem;
+  border-radius: 999px;
+  border: 1px solid rgba(139, 92, 246, 0.35);
+  background: rgba(76, 29, 149, 0.2);
+  font-family: ui-monospace, monospace;
+}
+.ach-vault__progress-num {
+  font-size: 13px;
+  font-weight: 800;
+  color: #e9d5ff;
+}
+.ach-vault__progress-sep {
+  font-size: 10px;
+  color: #64748b;
+}
+.ach-vault__progress-total {
+  font-size: 10px;
+  color: #94a3b8;
+}
+.ach-vault__progress-pct {
+  margin-left: 0.35rem;
+  font-size: 8px;
+  font-weight: 700;
+  color: #a78bfa;
+}
+.ach-vault__bar {
+  position: relative;
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(30, 41, 59, 0.9);
+  overflow: hidden;
+  border: 1px solid rgba(51, 65, 85, 0.6);
+}
+.ach-vault__bar-fill {
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #6366f1, #a855f7, #22d3ee);
+  background-size: 200% 100%;
+  animation: ach-vault-bar 4s linear infinite;
+  box-shadow: 0 0 12px rgba(167, 139, 250, 0.45);
+  transition: width 0.4s ease;
+}
+@keyframes ach-vault-bar {
+  0% { background-position: 0% 50%; }
+  100% { background-position: 200% 50%; }
+}
+.ach-vault__bar-glow {
+  position: absolute;
+  top: 50%;
+  width: 10px;
+  height: 10px;
+  margin-top: -5px;
+  border-radius: 50%;
+  background: #e9d5ff;
+  box-shadow: 0 0 10px 3px rgba(192, 132, 252, 0.7);
+  pointer-events: none;
+  opacity: 0.85;
+}
+.ach-vault__rarity-strip {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.35rem;
+}
+@media (max-width: 640px) {
+  .ach-vault__rarity-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+.ach-vault__rarity-chip {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding: 0.4rem 0.45rem;
+  border-radius: 0.55rem;
+  border: 1px solid rgba(51, 65, 85, 0.7);
+  background: rgba(15, 23, 42, 0.65);
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.15s ease, background 0.15s ease, transform 0.12s ease;
+}
+.ach-vault__rarity-chip:hover {
+  transform: translateY(-1px);
+  border-color: rgba(148, 163, 184, 0.45);
+}
+.ach-vault__rarity-chip.is-on {
+  border-color: rgba(167, 139, 250, 0.55);
+  background: rgba(76, 29, 149, 0.25);
+  box-shadow: 0 0 0 1px rgba(167, 139, 250, 0.15) inset;
+}
+.ach-vault__rarity-chip-label {
+  font-size: 7px;
+  font-family: ui-monospace, monospace;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #94a3b8;
+}
+.ach-vault__rarity-chip-count {
+  font-size: 9px;
+  font-family: ui-monospace, monospace;
+  font-weight: 700;
+  color: #e2e8f0;
+}
+.ach-vault__rarity-chip-bar {
+  display: block;
+  height: 3px;
+  border-radius: 999px;
+  background: rgba(30, 41, 59, 0.9);
+  overflow: hidden;
+}
+.ach-vault__rarity-chip-bar > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  transition: width 0.3s ease;
+}
+.ach-vault__rarity-chip--common .ach-vault__rarity-chip-bar > span { background: #94a3b8; }
+.ach-vault__rarity-chip--rare .ach-vault__rarity-chip-bar > span { background: #38bdf8; }
+.ach-vault__rarity-chip--epic .ach-vault__rarity-chip-bar > span { background: #a855f7; }
+.ach-vault__rarity-chip--legendary .ach-vault__rarity-chip-bar > span { background: #fbbf24; }
+.ach-vault__rarity-chip--mythic .ach-vault__rarity-chip-bar > span { background: linear-gradient(90deg, #f472b6, #22d3ee); }
+
+.ach-vault__controls {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid rgba(51, 65, 85, 0.45);
+}
+.ach-vault__tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  padding: 0.2rem;
+  border-radius: 0.65rem;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(51, 65, 85, 0.5);
+}
+.ach-vault__tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  flex: 1;
+  justify-content: center;
+  min-width: 5rem;
+  padding: 0.4rem 0.5rem;
+  border: 0;
+  border-radius: 0.5rem;
+  background: transparent;
+  color: #64748b;
+  font-size: 8px;
+  font-family: ui-monospace, monospace;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: color 0.12s ease, background 0.12s ease;
+}
+.ach-vault__tab:hover { color: #cbd5e1; }
+.ach-vault__tab.is-on {
+  color: #f1f5f9;
+  background: rgba(99, 102, 241, 0.25);
+  box-shadow: 0 1px 8px rgba(99, 102, 241, 0.2);
+}
+.ach-vault__tab-count {
+  font-size: 7px;
+  padding: 0.1rem 0.35rem;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.7);
+  color: #94a3b8;
+}
+.ach-vault__tab.is-on .ach-vault__tab-count {
+  background: rgba(129, 140, 248, 0.3);
+  color: #e0e7ff;
+}
+.ach-vault__filters {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+@media (min-width: 640px) {
+  .ach-vault__filters {
+    flex-direction: row;
+    align-items: center;
+  }
+}
+.ach-vault__search {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.55rem;
+  border-radius: 0.55rem;
+  border: 1px solid rgba(51, 65, 85, 0.7);
+  background: rgba(0, 0, 0, 0.4);
+  color: #64748b;
+}
+.ach-vault__search:focus-within {
+  border-color: rgba(129, 140, 248, 0.5);
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.15);
+}
+.ach-vault__search input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  outline: none;
+  color: #e2e8f0;
+  font-size: 9px;
+  font-family: ui-monospace, monospace;
+}
+.ach-vault__search input::placeholder { color: #475569; }
+.ach-vault__kind {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem;
+}
+.ach-vault__kind-icon { color: #64748b; margin-right: 0.15rem; }
+.ach-vault__kind-btn {
+  padding: 0.3rem 0.5rem;
+  border-radius: 999px;
+  border: 1px solid rgba(51, 65, 85, 0.7);
+  background: rgba(15, 23, 42, 0.6);
+  color: #64748b;
+  font-size: 7px;
+  font-family: ui-monospace, monospace;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  cursor: pointer;
+  transition: border-color 0.12s ease, color 0.12s ease, background 0.12s ease;
+}
+.ach-vault__kind-btn:hover { color: #cbd5e1; border-color: #64748b; }
+.ach-vault__kind-btn.is-on {
+  color: #e0e7ff;
+  border-color: rgba(129, 140, 248, 0.45);
+  background: rgba(99, 102, 241, 0.2);
+}
+
+.ach-vault__body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+.ach-vault__group {
+  border-radius: 0.75rem;
+  border: 1px solid rgba(51, 65, 85, 0.55);
+  background: rgba(8, 10, 16, 0.65);
+  overflow: visible;
+}
+.ach-vault__group-head {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.5rem 0.65rem;
+  border: 0;
+  border-radius: 0.75rem;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  color: #cbd5e1;
+  transition: background 0.12s ease;
+}
+.ach-vault__group-head:hover {
+  background: rgba(30, 41, 59, 0.45);
+}
+.ach-vault__group-left {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 0;
+}
+.ach-vault__group-title {
+  font-size: 9px;
+  font-family: ui-monospace, monospace;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.ach-vault__group-badge {
+  font-size: 7px;
+  font-family: ui-monospace, monospace;
+  font-weight: 700;
+  padding: 0.12rem 0.4rem;
+  border-radius: 999px;
+  background: rgba(51, 65, 85, 0.7);
+  color: #94a3b8;
+}
+.ach-vault__chevron {
+  color: #64748b;
+  transition: transform 0.2s ease;
+  flex-shrink: 0;
+}
+.ach-vault__chevron.is-closed { transform: rotate(-90deg); }
+.ach-vault__rarity-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  box-shadow: 0 0 6px currentColor;
+}
+.ach-vault__rarity-dot--common { background: #94a3b8; color: #94a3b8; }
+.ach-vault__rarity-dot--rare { background: #38bdf8; color: #38bdf8; }
+.ach-vault__rarity-dot--epic { background: #a855f7; color: #a855f7; }
+.ach-vault__rarity-dot--legendary { background: #fbbf24; color: #fbbf24; }
+.ach-vault__rarity-dot--mythic {
+  background: linear-gradient(135deg, #f472b6, #22d3ee);
+  box-shadow: 0 0 8px rgba(244, 114, 182, 0.5);
+}
+.ach-vault__lock-ico { color: #64748b; flex-shrink: 0; }
+.ach-vault__group-head--unlocked .ach-vault__group-title { color: #c4b5fd; }
+.ach-vault__group-head--common .ach-vault__group-title { color: #cbd5e1; }
+.ach-vault__group-head--rare .ach-vault__group-title { color: #7dd3fc; }
+.ach-vault__group-head--epic .ach-vault__group-title { color: #d8b4fe; }
+.ach-vault__group-head--legendary .ach-vault__group-title { color: #fde68a; }
+.ach-vault__group-head--mythic .ach-vault__group-title { color: #f9a8d4; }
+
+/* Locked rows — readable list */
+.ach-vault__list {
+  list-style: none;
+  margin: 0;
+  padding: 0 0.4rem 0.45rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+.ach-vault__row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.55rem;
+  padding: 0.5rem 0.55rem;
+  border-radius: 0.65rem;
+  border: 1px solid rgba(51, 65, 85, 0.55);
+  background:
+    linear-gradient(135deg, rgba(15, 23, 42, 0.9), rgba(8, 10, 16, 0.95));
+  transition: border-color 0.15s ease, background 0.15s ease, transform 0.12s ease;
+  cursor: default;
+}
+.ach-vault__row:hover,
+.ach-vault__row:focus-visible {
+  border-color: rgba(148, 163, 184, 0.4);
+  background: linear-gradient(135deg, rgba(30, 41, 59, 0.75), rgba(15, 23, 42, 0.95));
+  outline: none;
+  transform: translateY(-1px);
+}
+.ach-vault__row--rare:hover { border-color: rgba(56, 189, 248, 0.4); }
+.ach-vault__row--epic:hover { border-color: rgba(168, 85, 247, 0.4); }
+.ach-vault__row--legendary:hover { border-color: rgba(251, 191, 36, 0.45); }
+.ach-vault__row--mythic:hover { border-color: rgba(244, 114, 182, 0.45); }
+
+.ach-vault__row-icon {
+  position: relative;
+  flex-shrink: 0;
+  width: 2.15rem;
+  height: 2.15rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.55rem;
+  border: 1px solid rgba(71, 85, 105, 0.6);
+  background: rgba(0, 0, 0, 0.4);
+}
+.ach-vault__row-emoji {
+  font-size: 1rem;
+  line-height: 1;
+  filter: grayscale(0.85) opacity(0.55);
+}
+.ach-vault__row-lock {
+  position: absolute;
+  right: -3px;
+  bottom: -3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  background: #0f172a;
+  border: 1px solid rgba(100, 116, 139, 0.7);
+  color: #94a3b8;
+}
+.ach-vault__row-main { flex: 1; min-width: 0; }
+.ach-vault__row-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.3rem;
+  margin-bottom: 0.25rem;
+}
+.ach-vault__row-name {
+  font-size: 10px;
+  font-weight: 700;
+  color: #e2e8f0;
+  margin-right: 0.15rem;
+  letter-spacing: 0.01em;
+}
+.ach-vault__pill {
+  font-size: 6.5px;
+  font-family: ui-monospace, monospace;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 0.12rem 0.35rem;
+  border-radius: 999px;
+  border: 1px solid rgba(71, 85, 105, 0.6);
+  color: #94a3b8;
+  background: rgba(15, 23, 42, 0.7);
+  white-space: nowrap;
+}
+.ach-vault__pill--common { color: #cbd5e1; border-color: rgba(148, 163, 184, 0.35); }
+.ach-vault__pill--rare { color: #7dd3fc; border-color: rgba(56, 189, 248, 0.35); background: rgba(12, 74, 110, 0.25); }
+.ach-vault__pill--epic { color: #d8b4fe; border-color: rgba(168, 85, 247, 0.35); background: rgba(88, 28, 135, 0.25); }
+.ach-vault__pill--legendary { color: #fde68a; border-color: rgba(251, 191, 36, 0.4); background: rgba(120, 53, 15, 0.25); }
+.ach-vault__pill--mythic { color: #f9a8d4; border-color: rgba(244, 114, 182, 0.4); background: rgba(131, 24, 67, 0.25); }
+.ach-vault__pill--diff { color: #a5b4fc; border-color: rgba(99, 102, 241, 0.3); }
+.ach-vault__pill--kind { color: #94a3b8; }
+
+.ach-vault__row-hint {
+  margin: 0;
+  font-size: 8px;
+  font-family: ui-monospace, monospace;
+  color: #94a3b8;
+  line-height: 1.4;
+}
+.ach-vault__row-hint-label {
+  display: inline-block;
+  margin-right: 0.35rem;
+  font-size: 6.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #64748b;
+  padding: 0.05rem 0.3rem;
+  border-radius: 4px;
+  background: rgba(51, 65, 85, 0.5);
+  border: 1px solid rgba(71, 85, 105, 0.4);
+  vertical-align: middle;
+}
+
+.ach-vault__unlocked-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.35rem;
+  padding: 0 0.45rem 0.5rem;
+}
+@media (min-width: 640px) {
+  .ach-vault__unlocked-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+@media (min-width: 900px) {
+  .ach-vault__unlocked-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+}
+.ach-vault__tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  text-align: center;
+  padding: 0.4rem 0.3rem;
+  min-height: 3.2rem;
+}
+
+.ach-vault__empty {
+  text-align: center;
+  padding: 1.5rem 1rem;
+  border-radius: 0.75rem;
+  border: 1px dashed rgba(71, 85, 105, 0.55);
+  background: rgba(0, 0, 0, 0.25);
+}
+.ach-vault__empty-icon {
+  font-size: 1.5rem;
+  margin-bottom: 0.4rem;
+  opacity: 0.7;
+}
+.ach-vault__empty-title {
+  margin: 0 0 0.25rem;
+  font-size: 11px;
+  font-weight: 700;
+  color: #e2e8f0;
+}
+.ach-vault__empty-body {
+  margin: 0;
+  font-size: 8px;
+  font-family: ui-monospace, monospace;
+  color: #64748b;
+  line-height: 1.45;
+  max-width: 22rem;
+  margin-inline: auto;
+}
+
 /* Profile strip */
 .userbar-profile {
   position: relative;
