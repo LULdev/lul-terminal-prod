@@ -21,6 +21,7 @@ export const GAME_STAT_PREFIX: Record<GameId, string> = {
   highlow: 'Highlow',
   mines: 'Mines',
   blackjack: 'Blackjack',
+  dice100: 'Dice100',
 };
 
 /** Any user/profile object with game* stat fields from the server. */
@@ -200,6 +201,7 @@ export type AllArcadeStatFields =
   ArcadeStatFieldsFor<'Highlow'> &
   ArcadeStatFieldsFor<'Mines'> &
   ArcadeStatFieldsFor<'Blackjack'> &
+  ArcadeStatFieldsFor<'Dice100'> &
   ArcadeStatFieldsFor<'Nim'> &
   ArcadeStatFieldsFor<'Connect4'>;
 
