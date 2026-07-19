@@ -20,6 +20,7 @@ import {
 import {
   addToJackpot,
   appendMatchHistory,
+  DICE_POT_SEED_RATE,
   JACKPOT_CHANCE,
   MATCH_DONE_TTL_MS,
   MATCH_TIMEOUT_MS,
@@ -386,6 +387,15 @@ export async function settleMatch({
   }
 
   if (m.mode === 'bot') {
+    // Dice family: every wager seeds the community pot (win or lose)
+    const isDiceFamily = gameId === 'dice100' || gameId === 'dice';
+    const dicePotSeed = isDiceFamily
+      ? Math.max(1, Math.floor(bet * DICE_POT_SEED_RATE))
+      : 0;
+    if (dicePotSeed > 0) {
+      await addToJackpot(dicePotSeed);
+    }
+
     if (r === 'draw') {
       outcome = 'draw';
       logDrawRefund(p1, { ...ledgerCtx, amount: bet });
@@ -417,7 +427,13 @@ export async function settleMatch({
       }
     } else {
       outcome = 'loss';
-      await addToJackpot(bet);
+      // Remaining stake after the per-bet seed also feeds the pot
+      if (dicePotSeed > 0) {
+        const rest = bet - dicePotSeed;
+        if (rest > 0) await addToJackpot(rest);
+      } else {
+        await addToJackpot(bet);
+      }
       p1.gameTotalLost = (Number(p1.gameTotalLost) || 0) + bet;
       bumpGameStats(p1, statKey, 'loss');
     }

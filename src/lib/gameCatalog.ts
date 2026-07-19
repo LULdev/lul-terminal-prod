@@ -285,7 +285,8 @@ export const GAME_CATALOG: GameCatalogEntry[] = [
       'Solo vs terminal (instant roll)',
       'Set target 1–99 · Over or Under',
       'Payout = bet × multiplier (1% edge)',
-      'Losses feed the jackpot pool',
+      '2% of every bet seeds the jackpot pot',
+      'Full loss still feeds the remaining pot',
     ],
   },
 ];

@@ -54,6 +54,8 @@ export const STARTING_LULCOINS = 1000;
 export const MIN_BET = 1;
 export const MAX_BET = 500;
 export const JACKPOT_CHANCE = 0.006;
+/** Fraction of every Dice / Dice 100 wager seeded into the community jackpot (win or lose). */
+export const DICE_POT_SEED_RATE = 0.02;
 export const DAILY_BONUS_COINS = 50;
 export const DAILY_BONUS_COOLDOWN_MS = 24 * 60 * 60 * 1000;
 export const MATCH_TIMEOUT_MS = 45_000;

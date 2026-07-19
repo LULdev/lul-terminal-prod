@@ -341,7 +341,7 @@ export function Dice100Arena({
       </div>
 
       <p className="dice100-footnote">
-        {catalog.icon} {catalog.label} · solo instant · 1% house edge · losses feed jackpot
+        {catalog.icon} {catalog.label} · solo instant · 1% house edge · 2% of every bet seeds the jackpot pot
       </p>
     </div>
   );
