@@ -88,6 +88,13 @@ async function ensureDefaultStoreFiles() {
   await ensureColonDb();
   // Seeds sources.json if missing/empty so proxy scraper works on first deploy
   await ensureProxyScraperStore();
+  // Paste meta/content dirs
+  const fs = await import('fs');
+  const path = await import('path');
+  const { fileURLToPath } = await import('url');
+  const root = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'data', 'paste');
+  fs.mkdirSync(path.join(root, 'meta'), { recursive: true });
+  fs.mkdirSync(path.join(root, 'content'), { recursive: true });
 }
 
 /**

@@ -236,13 +236,27 @@ async function countPasteViewDeduped(req, pasteId, { consumeBurn = false } = {})
   });
 }
 
+/** Routes that must work for public paste share links without the Paste tab being public. */
+function isPublicPasteShareRoute(method, pathname) {
+  if (method === 'GET' && pathname === '/api/paste/stats') return true;
+  if (method === 'GET' && pathname === '/api/paste/public') return true;
+  if (method === 'GET' && pathname === '/api/paste/trending') return true;
+  // /api/paste/:id, /raw, /view, /unlock
+  if (/^\/api\/paste\/[A-Za-z0-9_-]{10,14}(\/(raw|view|unlock))?$/.test(pathname)) {
+    if (method === 'GET') return true;
+    if (method === 'POST' && /\/(view|unlock)$/.test(pathname)) return true;
+  }
+  return false;
+}
+
 export async function handlePasteRequest(req, res) {
   const url = new URL(req.url, 'http://localhost');
   const pathname = url.pathname;
 
   try {
     const isAdminRoute = pathname.startsWith('/api/paste/admin');
-    if (!isAdminRoute) {
+    // Members-only paste module (create/my gallery) — not public share links.
+    if (!isAdminRoute && !isPublicPasteShareRoute(req.method, pathname)) {
       await requireMemberTab(req, 'paste');
     }
 

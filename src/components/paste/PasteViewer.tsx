@@ -121,8 +121,21 @@ export function PasteViewer({ id }: Props) {
         if (viewResult.burned || data.burned) {
           setError('This paste was burn-after-read and has been consumed.');
         }
-      } catch {
-        if (!cancelled) setError('Could not load paste — is the server running?');
+      } catch (e) {
+        if (!cancelled) {
+          const msg = e instanceof Error ? e.message : '';
+          if (/permission|sign in|not logged/i.test(msg)) {
+            setError(msg || 'Sign in required to view this paste.');
+          } else if (/not found|expired/i.test(msg)) {
+            setError('Paste not found or expired.');
+          } else if (/too many|429|rate/i.test(msg)) {
+            setError('Too many requests — wait a moment and refresh.');
+          } else if (msg) {
+            setError(msg);
+          } else {
+            setError('Could not load paste — is the server running?');
+          }
+        }
       } finally {
         if (!cancelled) setLoading(false);
       }
