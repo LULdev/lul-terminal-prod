@@ -31,7 +31,15 @@ function formatTime(ts: number) {
   return new Date(ts).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
 }
 
-function ChatLine({ msg, onOpenProfile }: { msg: ChatMessage; onOpenProfile?: (username: string) => void }) {
+function ChatLine({
+  msg,
+  onOpenProfile,
+  onMessageDeleted,
+}: {
+  msg: ChatMessage;
+  onOpenProfile?: (username: string) => void;
+  onMessageDeleted?: (messageId: string) => void;
+}) {
   const botLine = isBotSpeaker(msg);
   const textClass = botLine
     ? 'text-sky-100/90'
@@ -43,7 +51,23 @@ function ChatLine({ msg, onOpenProfile }: { msg: ChatMessage; onOpenProfile?: (u
     <div className={`flex gap-1.5 items-start leading-tight group ${botLine ? 'bot-message-row' : ''}`}>
       <span className="text-slate-600 font-semibold shrink-0 select-none pt-px">[{formatTime(msg.createdAt)}]</span>
       {botLine ? (
-        <ChatRoleBadges role="bot" compact />
+        onOpenProfile ? (
+          <ChatUserChip
+            user={{
+              userId: msg.userId,
+              username: msg.username,
+              displayName: msg.displayName,
+              role: 'bot',
+              avatarUrl: msg.avatarUrl ?? undefined,
+            }}
+            onOpenProfile={onOpenProfile}
+            messageId={msg.id}
+            onMessageDeleted={onMessageDeleted}
+            compact
+          />
+        ) : (
+          <ChatRoleBadges role="bot" compact />
+        )
       ) : onOpenProfile ? (
         <>
           <ChatUserChip
@@ -56,6 +80,8 @@ function ChatLine({ msg, onOpenProfile }: { msg: ChatMessage; onOpenProfile?: (u
               verified: msg.verified,
             }}
             onOpenProfile={onOpenProfile}
+            messageId={msg.id}
+            onMessageDeleted={onMessageDeleted}
           />
           <span className="text-slate-600 shrink-0 select-none">:</span>
         </>
@@ -150,6 +176,11 @@ export function UnifiedTerminalPanel({
   const mountedRef = useRef(true);
   const isMutedRef = useRef(isMuted);
   const hadMessagesRef = useRef(false);
+
+  const handleMessageDeleted = useCallback((messageId: string) => {
+    setMessages((prev) => prev.filter((m) => m.id !== messageId));
+    knownIdsRef.current.delete(messageId);
+  }, []);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -437,7 +468,11 @@ export function UnifiedTerminalPanel({
           if (entry.kind === 'chat') {
             return (
               <React.Fragment key={`chat-${entry.msg.id}`}>
-                <ChatLine msg={entry.msg} onOpenProfile={onOpenProfile} />
+                <ChatLine
+                  msg={entry.msg}
+                  onOpenProfile={onOpenProfile}
+                  onMessageDeleted={handleMessageDeleted}
+                />
               </React.Fragment>
             );
           }
