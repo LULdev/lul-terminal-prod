@@ -903,27 +903,65 @@ a.bot-mention-username:focus-visible {
   background: rgba(30, 41, 59, 0.7);
 }
 
-/* LUL coin balance chip */
+/* LUL coin balance chip — premium shiny gold */
 .userbar-balance {
   position: relative;
   display: flex;
   align-items: center;
-  gap: 0.45rem;
+  gap: 0.55rem;
   width: 100%;
-  padding: 0.45rem 0.65rem;
-  border-radius: 12px;
+  padding: 0.5rem 0.7rem;
+  border-radius: 14px;
   overflow: hidden;
-  border: 1px solid rgba(251, 191, 36, 0.38);
-  background: linear-gradient(
-    125deg,
-    rgba(120, 53, 15, 0.45) 0%,
-    rgba(30, 20, 8, 0.92) 40%,
-    rgba(15, 23, 42, 0.95) 100%
-  );
+  isolation: isolate;
+  border: 1px solid rgba(251, 191, 36, 0.48);
+  background:
+    linear-gradient(
+      125deg,
+      rgba(180, 83, 9, 0.55) 0%,
+      rgba(69, 26, 3, 0.88) 28%,
+      rgba(15, 23, 42, 0.96) 72%,
+      rgba(30, 20, 8, 0.98) 100%
+    );
   box-shadow:
-    0 0 0 1px rgba(251, 191, 36, 0.08) inset,
-    0 0 18px rgba(245, 158, 11, 0.18),
-    0 4px 14px rgba(0, 0, 0, 0.35);
+    0 0 0 1px rgba(253, 224, 71, 0.12) inset,
+    0 0 22px rgba(245, 158, 11, 0.28),
+    0 0 40px rgba(251, 191, 36, 0.08),
+    0 6px 16px rgba(0, 0, 0, 0.4);
+}
+.userbar-balance::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(ellipse 80% 90% at 12% 40%, rgba(253, 224, 71, 0.22), transparent 55%);
+  pointer-events: none;
+  z-index: 0;
+}
+.userbar-balance__glow {
+  position: absolute;
+  width: 3.5rem;
+  height: 3.5rem;
+  left: -0.4rem;
+  top: 50%;
+  transform: translateY(-50%);
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(251, 191, 36, 0.35) 0%, transparent 70%);
+  filter: blur(6px);
+  animation: userbar-balance-pulse 2.6s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 0;
+}
+@keyframes userbar-balance-pulse {
+  0%,
+  100% {
+    opacity: 0.55;
+    transform: translateY(-50%) scale(0.92);
+  }
+  50% {
+    opacity: 1;
+    transform: translateY(-50%) scale(1.08);
+  }
 }
 .userbar-balance__shine {
   position: absolute;
@@ -931,86 +969,176 @@ a.bot-mention-username:focus-visible {
   background: linear-gradient(
     105deg,
     transparent 0%,
-    transparent 40%,
-    rgba(254, 243, 199, 0.14) 48%,
-    rgba(253, 230, 138, 0.22) 50%,
-    rgba(254, 243, 199, 0.12) 52%,
-    transparent 60%,
+    transparent 38%,
+    rgba(255, 255, 255, 0.06) 45%,
+    rgba(254, 243, 199, 0.28) 50%,
+    rgba(255, 255, 255, 0.08) 55%,
+    transparent 62%,
     transparent 100%
   );
-  background-size: 220% 100%;
-  animation: userbar-balance-shine 3.2s ease-in-out infinite;
+  background-size: 240% 100%;
+  animation: userbar-balance-shine 2.8s ease-in-out infinite;
   pointer-events: none;
+  z-index: 1;
 }
 @keyframes userbar-balance-shine {
   0% {
-    background-position: 120% 0;
+    background-position: 140% 0;
   }
   100% {
-    background-position: -120% 0;
+    background-position: -140% 0;
   }
 }
-.userbar-balance__label {
+.userbar-balance__text {
   position: relative;
-  z-index: 1;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 0.12rem;
+  min-width: 0;
+  flex: 1;
+}
+.userbar-balance__label {
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  font-size: 8px;
-  font-weight: 600;
-  letter-spacing: 0.06em;
+  font-size: 7px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: rgba(253, 230, 138, 0.72);
+  color: rgba(253, 230, 138, 0.78);
+  text-shadow: 0 0 10px rgba(251, 191, 36, 0.25);
 }
 .userbar-balance__amount {
-  position: relative;
-  z-index: 1;
-  margin-left: auto;
-  font-size: 11px !important;
-  filter: drop-shadow(0 0 8px rgba(251, 191, 36, 0.35));
+  font-size: 12px !important;
+  letter-spacing: 0.02em;
+  filter:
+    drop-shadow(0 0 6px rgba(251, 191, 36, 0.55))
+    drop-shadow(0 0 14px rgba(245, 158, 11, 0.25));
+  animation: userbar-amount-glow 3s ease-in-out infinite;
+}
+@keyframes userbar-amount-glow {
+  0%,
+  100% {
+    filter:
+      drop-shadow(0 0 5px rgba(251, 191, 36, 0.4))
+      drop-shadow(0 0 10px rgba(245, 158, 11, 0.15));
+  }
+  50% {
+    filter:
+      drop-shadow(0 0 10px rgba(253, 224, 71, 0.75))
+      drop-shadow(0 0 18px rgba(251, 191, 36, 0.35));
+  }
 }
 
-/* Animated placeholder gold coin */
+/* Premium animated LUL coin */
 .userbar-balance__coin {
   position: relative;
-  z-index: 1;
-  width: 1.35rem;
-  height: 1.35rem;
+  z-index: 2;
+  width: 1.65rem;
+  height: 1.65rem;
   flex-shrink: 0;
-  perspective: 40px;
-  animation: userbar-coin-bob 2.4s ease-in-out infinite;
+  perspective: 60px;
+  animation: userbar-coin-bob 2.2s ease-in-out infinite;
+}
+.userbar-balance__coin-rim {
+  position: absolute;
+  inset: -2px;
+  border-radius: 50%;
+  background: conic-gradient(
+    from 0deg,
+    #fef08a,
+    #d97706,
+    #fbbf24,
+    #78350f,
+    #fde68a,
+    #b45309,
+    #fef08a
+  );
+  animation: userbar-coin-rim-spin 6s linear infinite;
+  opacity: 0.9;
+  filter: blur(0.2px);
 }
 .userbar-balance__coin-face {
   position: absolute;
-  inset: 0;
+  inset: 1px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
+  overflow: hidden;
   background:
-    radial-gradient(circle at 32% 28%, #fef9c3 0%, #fde68a 22%, #fbbf24 55%, #d97706 88%, #92400e 100%);
-  border: 1.5px solid rgba(253, 224, 71, 0.85);
+    radial-gradient(circle at 30% 24%, #fffbeb 0%, #fef08a 18%, #fbbf24 48%, #d97706 78%, #92400e 100%);
+  border: 1.5px solid rgba(254, 243, 199, 0.75);
   box-shadow:
-    0 0 0 1px rgba(120, 53, 15, 0.5) inset,
-    0 0 10px rgba(251, 191, 36, 0.55),
-    0 2px 4px rgba(0, 0, 0, 0.4);
-  animation: userbar-coin-spin 4.5s linear infinite;
+    0 0 0 1px rgba(120, 53, 15, 0.55) inset,
+    0 0 0 2px rgba(253, 224, 71, 0.15),
+    0 0 14px rgba(251, 191, 36, 0.7),
+    0 0 28px rgba(245, 158, 11, 0.25),
+    0 3px 6px rgba(0, 0, 0, 0.45);
+  animation: userbar-coin-spin 5s linear infinite;
   transform-style: preserve-3d;
 }
+.userbar-balance__coin-highlight {
+  position: absolute;
+  top: 8%;
+  left: 14%;
+  width: 42%;
+  height: 28%;
+  border-radius: 50%;
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.75), transparent 70%);
+  pointer-events: none;
+}
 .userbar-balance__coin-glyph {
+  position: relative;
+  z-index: 1;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  font-size: 8px;
-  font-weight: 800;
+  font-size: 9px;
+  font-weight: 900;
   color: #78350f;
-  text-shadow: 0 1px 0 rgba(254, 243, 199, 0.55);
+  text-shadow:
+    0 1px 0 rgba(254, 243, 199, 0.65),
+    0 0 6px rgba(253, 224, 71, 0.35);
   line-height: 1;
 }
 .userbar-balance__coin-edge {
   position: absolute;
-  inset: 15% -1px;
+  inset: 18% -2px;
   border-radius: 50%;
-  background: linear-gradient(180deg, #fbbf24, #b45309);
-  opacity: 0.35;
+  background: linear-gradient(180deg, #fde68a, #b45309);
+  opacity: 0.4;
   z-index: -1;
-  filter: blur(0.5px);
+  filter: blur(1px);
+}
+.userbar-balance__coin-spark {
+  position: absolute;
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: #fffbeb;
+  box-shadow: 0 0 6px 2px rgba(254, 243, 199, 0.9);
+  pointer-events: none;
+}
+.userbar-balance__coin-spark--a {
+  top: 12%;
+  right: 18%;
+  animation: userbar-spark 1.8s ease-in-out infinite;
+}
+.userbar-balance__coin-spark--b {
+  bottom: 20%;
+  left: 14%;
+  width: 2px;
+  height: 2px;
+  animation: userbar-spark 2.2s ease-in-out 0.6s infinite;
+}
+@keyframes userbar-spark {
+  0%,
+  100% {
+    opacity: 0.2;
+    transform: scale(0.6);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.25);
+  }
 }
 @keyframes userbar-coin-spin {
   0% {
@@ -1020,14 +1148,222 @@ a.bot-mention-username:focus-visible {
     transform: rotateY(360deg);
   }
 }
+@keyframes userbar-coin-rim-spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
 @keyframes userbar-coin-bob {
   0%,
   100% {
-    transform: translateY(0);
+    transform: translateY(0) scale(1);
   }
   50% {
-    transform: translateY(-1.5px);
+    transform: translateY(-2px) scale(1.04);
   }
+}
+
+/* Hall of Fame — compact award row */
+.userbar-hof {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  width: 100%;
+  padding: 0.45rem 0.5rem 0.5rem;
+  border-radius: 12px;
+  border: 1px solid rgba(251, 191, 36, 0.28);
+  background: linear-gradient(
+    145deg,
+    rgba(69, 26, 3, 0.35) 0%,
+    rgba(15, 23, 42, 0.9) 45%,
+    rgba(30, 27, 75, 0.35) 100%
+  );
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.25) inset,
+    0 0 16px rgba(245, 158, 11, 0.1);
+  overflow: visible;
+}
+.userbar-hof__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.35rem;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+}
+.userbar-hof__header:hover .userbar-hof__title {
+  color: #fde68a;
+}
+.userbar-hof__title {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #fbbf24;
+  transition: color 0.15s ease;
+}
+.userbar-hof__trophy {
+  color: #fbbf24;
+  filter: drop-shadow(0 0 6px rgba(251, 191, 36, 0.55));
+  animation: userbar-trophy-pulse 2.8s ease-in-out infinite;
+}
+@keyframes userbar-trophy-pulse {
+  0%,
+  100% {
+    filter: drop-shadow(0 0 4px rgba(251, 191, 36, 0.4));
+  }
+  50% {
+    filter: drop-shadow(0 0 10px rgba(253, 224, 71, 0.75));
+  }
+}
+.userbar-hof__count {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 7px;
+  color: rgba(251, 191, 36, 0.55);
+  white-space: nowrap;
+}
+.userbar-hof__empty {
+  width: 100%;
+  padding: 0.35rem 0.4rem;
+  border-radius: 8px;
+  border: 1px dashed rgba(251, 191, 36, 0.2);
+  background: rgba(0, 0, 0, 0.2);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 7px;
+  line-height: 1.35;
+  color: rgba(148, 163, 184, 0.75);
+  cursor: pointer;
+  text-align: left;
+  transition:
+    border-color 0.15s ease,
+    color 0.15s ease;
+}
+.userbar-hof__empty:hover {
+  border-color: rgba(251, 191, 36, 0.4);
+  color: #fde68a;
+}
+.userbar-hof__icons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  max-height: 4.2rem;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 0.1rem 0.05rem;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(251, 191, 36, 0.35) transparent;
+}
+.userbar-hof__icon {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.55rem;
+  height: 1.55rem;
+  padding: 0;
+  border-radius: 8px;
+  border: 1px solid rgba(251, 191, 36, 0.35);
+  background: linear-gradient(145deg, rgba(251, 191, 36, 0.18), rgba(15, 23, 42, 0.85));
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.25) inset,
+    0 0 10px rgba(245, 158, 11, 0.12);
+  cursor: pointer;
+  transition:
+    transform 0.15s ease,
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+  z-index: 1;
+}
+.userbar-hof__icon:hover,
+.userbar-hof__icon:focus-visible {
+  z-index: 20;
+  transform: translateY(-2px) scale(1.08);
+  border-color: rgba(253, 224, 71, 0.7);
+  box-shadow:
+    0 0 0 1px rgba(253, 224, 71, 0.2) inset,
+    0 0 16px rgba(251, 191, 36, 0.35);
+  outline: none;
+}
+.userbar-hof__emoji {
+  font-size: 12px;
+  line-height: 1;
+  filter: drop-shadow(0 0 4px rgba(251, 191, 36, 0.35));
+}
+/* CSS-only tooltip — compact & friendly */
+.userbar-hof__tip {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 6px);
+  transform: translateX(-50%) translateY(4px);
+  min-width: 9.5rem;
+  max-width: 12rem;
+  padding: 0.4rem 0.5rem;
+  border-radius: 8px;
+  border: 1px solid rgba(251, 191, 36, 0.4);
+  background: linear-gradient(160deg, rgba(30, 20, 8, 0.98), rgba(12, 13, 18, 0.98));
+  box-shadow:
+    0 8px 24px rgba(0, 0, 0, 0.55),
+    0 0 16px rgba(245, 158, 11, 0.15);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition:
+    opacity 0.14s ease,
+    transform 0.14s ease,
+    visibility 0.14s;
+  z-index: 40;
+  text-align: left;
+}
+.userbar-hof__tip::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 5px solid transparent;
+  border-top-color: rgba(251, 191, 36, 0.45);
+}
+.userbar-hof__icon:hover .userbar-hof__tip,
+.userbar-hof__icon:focus-visible .userbar-hof__tip {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(-50%) translateY(0);
+}
+.userbar-hof__tip-name {
+  display: block;
+  font-size: 9px;
+  font-weight: 700;
+  color: #fde68a;
+  line-height: 1.25;
+  margin-bottom: 0.15rem;
+}
+.userbar-hof__tip-desc {
+  display: block;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 7px;
+  color: rgba(203, 213, 225, 0.85);
+  line-height: 1.35;
+  margin-bottom: 0.2rem;
+}
+.userbar-hof__tip-meta {
+  display: block;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 6.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: rgba(251, 191, 36, 0.55);
 }
 
 /* Profile strip */
@@ -1259,8 +1595,13 @@ a.bot-mention-username:focus-visible {
   .userbar-profile,
   .userbar-cta,
   .userbar-balance__shine,
+  .userbar-balance__glow,
   .userbar-balance__coin,
-  .userbar-balance__coin-face {
+  .userbar-balance__coin-face,
+  .userbar-balance__coin-rim,
+  .userbar-balance__coin-spark,
+  .userbar-balance__amount,
+  .userbar-hof__trophy {
     animation: none !important;
     transition: none !important;
   }

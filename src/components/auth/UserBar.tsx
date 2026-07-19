@@ -3,11 +3,13 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from 'react';
-import { BarChart3, Home, LogIn, LogOut, Settings, Shield, Sparkles, UserPlus } from 'lucide-react';
+import React, { useMemo, useState } from 'react';
+import { BarChart3, Home, LogIn, LogOut, Settings, Shield, Sparkles, Trophy, UserPlus } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { LOGOUT_ARCADE_BLOCKED } from '../../lib/authMessages';
 import { TabId } from '../../config/menuItems';
+import { ACHIEVEMENT_BY_ID } from '../../data/achievements';
+import { LEADERBOARD_AWARD_IDS } from '../../lib/leaderboards';
 import { VipBadge } from './VipGate';
 import { safeAvatarUrl } from '../../lib/safeAvatarUrl';
 import { VerifiedBadge } from './VerifiedBadge';
@@ -17,7 +19,7 @@ type UserBarProps = {
   onNavigate: (tab: TabId, opts?: { profileUsername?: string }) => void;
 };
 
-type NavKey = 'dashboard' | 'activity' | 'profile' | 'admin';
+type NavKey = 'dashboard' | 'activity' | 'profile' | 'admin' | 'leaderboard';
 
 function NavChip({
   label,
@@ -51,6 +53,33 @@ export function UserBar({ onNavigate }: UserBarProps) {
   const { user, isLoggedIn, isAdmin, openAuth, logout, loading } = useAuth();
   const [logoutError, setLogoutError] = useState('');
   const [busyLogout, setBusyLogout] = useState(false);
+
+  const hallOfFame = useMemo(() => {
+    const earned = user?.achievements ?? [];
+    const map = new Map(earned.map((e) => [e.id, e.earnedAt]));
+    return LEADERBOARD_AWARD_IDS
+      .filter((id) => map.has(id))
+      .map((id) => {
+        const def = ACHIEVEMENT_BY_ID[id];
+        if (!def) return null;
+        return {
+          id,
+          icon: def.icon,
+          name: def.name,
+          description: def.description,
+          rarity: def.rarity,
+          earnedAt: map.get(id)!,
+        };
+      })
+      .filter(Boolean) as Array<{
+        id: string;
+        icon: string;
+        name: string;
+        description: string;
+        rarity: string;
+        earnedAt: number;
+      }>;
+  }, [user?.achievements]);
 
   if (loading) {
     return (
@@ -116,6 +145,8 @@ export function UserBar({ onNavigate }: UserBarProps) {
     }
   };
 
+  const balance = user!.lulCoins ?? 0;
+
   return (
     <div className="userbar-shell userbar-shell--authed shrink-0">
       <button
@@ -142,25 +173,86 @@ export function UserBar({ onNavigate }: UserBarProps) {
 
       <div
         className="userbar-balance"
-        title={`${(user!.lulCoins ?? 0).toLocaleString('en-US')} LUL coins`}
         role="status"
-        aria-label={`Balance ${(user!.lulCoins ?? 0).toLocaleString('en-US')} LUL`}
+        aria-label={`Balance ${balance.toLocaleString('en-US')} LUL`}
       >
         <span className="userbar-balance__shine" aria-hidden />
+        <span className="userbar-balance__glow" aria-hidden />
         <span className="userbar-balance__coin" aria-hidden>
+          <span className="userbar-balance__coin-rim" />
           <span className="userbar-balance__coin-face">
+            <span className="userbar-balance__coin-highlight" />
             <span className="userbar-balance__coin-glyph">L</span>
+            <span className="userbar-balance__coin-spark userbar-balance__coin-spark--a" />
+            <span className="userbar-balance__coin-spark userbar-balance__coin-spark--b" />
           </span>
           <span className="userbar-balance__coin-edge" />
         </span>
-        <span className="userbar-balance__label">Balance</span>
-        <LulCoinAmount
-          amount={user!.lulCoins ?? 0}
-          variant="balance"
-          size="sm"
-          suffix="LUL"
-          className="userbar-balance__amount"
-        />
+        <div className="userbar-balance__text min-w-0">
+          <span className="userbar-balance__label">Balance</span>
+          <LulCoinAmount
+            amount={balance}
+            variant="balance"
+            size="sm"
+            suffix="LUL"
+            className="userbar-balance__amount"
+          />
+        </div>
+      </div>
+
+      <div className="userbar-hof">
+        <button
+          type="button"
+          className="userbar-hof__header"
+          onClick={() => go('leaderboard')}
+          title="Open Hall of Fame leaderboards"
+        >
+          <span className="userbar-hof__title">
+            <Trophy size={11} className="userbar-hof__trophy" aria-hidden />
+            Hall of Fame
+          </span>
+          <span className="userbar-hof__count">
+            {hallOfFame.length} award{hallOfFame.length === 1 ? '' : 's'}
+          </span>
+        </button>
+        {hallOfFame.length === 0 ? (
+          <button
+            type="button"
+            className="userbar-hof__empty"
+            onClick={() => go('leaderboard')}
+            title="Climb the leaderboards to earn permanent podium trophies"
+          >
+            No podium awards yet — climb the boards
+          </button>
+        ) : (
+          <div className="userbar-hof__icons" role="list" aria-label="Leaderboard awards">
+            {hallOfFame.map((award) => (
+              <button
+                key={award.id}
+                type="button"
+                role="listitem"
+                className="userbar-hof__icon"
+                onClick={() => go('leaderboard')}
+                aria-label={`${award.name}. ${award.description}`}
+              >
+                <span className="userbar-hof__emoji" aria-hidden>{award.icon}</span>
+                <span className="userbar-hof__tip" role="tooltip">
+                  <span className="userbar-hof__tip-name">{award.name}</span>
+                  <span className="userbar-hof__tip-desc">{award.description}</span>
+                  <span className="userbar-hof__tip-meta">
+                    {award.rarity}
+                    {' · '}
+                    {new Date(award.earnedAt).toLocaleDateString('en-US', {
+                      month: 'short',
+                      day: 'numeric',
+                      year: 'numeric',
+                    })}
+                  </span>
+                </span>
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="userbar-nav" role="navigation" aria-label="Account shortcuts">
