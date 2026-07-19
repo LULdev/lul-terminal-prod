@@ -4,6 +4,8 @@
  */
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
+import { Trash2 } from 'lucide-react';
 import { MatrixOverlay } from '../MatrixOverlay';
 import { ChatUserChip } from './ChatUserChip';
 import { ChatRoleBadges } from './ChatRoleBadges';
@@ -21,6 +23,9 @@ import {
   type ChatMessage,
   type SendChatResult,
 } from '../../lib/chat';
+import { adminDeleteShoutboxMessage } from '../../lib/adminModules';
+import { SessionExpiredError } from '../../lib/sessionFetch';
+import { terminalAppend } from '../../lib/terminalLogBridge';
 import { useAuth } from '../../context/AuthContext';
 import type { LogLine } from '../../types';
 
@@ -29,6 +34,94 @@ const DISPLAY_LIMIT = 200;
 
 function formatTime(ts: number) {
   return new Date(ts).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
+}
+
+/** Classic [BOT] pill with admin right-click → Delete message. */
+function BotBadgeWithDelete({
+  messageId,
+  onMessageDeleted,
+}: {
+  messageId: string;
+  onMessageDeleted?: (messageId: string) => void;
+}) {
+  const { isAdmin, openAuth, refresh } = useAuth();
+  const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
+  const [acting, setActing] = useState(false);
+
+  useEffect(() => {
+    if (!menu) return;
+    const close = () => setMenu(null);
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') close(); };
+    window.addEventListener('keydown', onKey);
+    window.addEventListener('scroll', close, true);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      window.removeEventListener('scroll', close, true);
+    };
+  }, [menu]);
+
+  const onContextMenu = (e: React.MouseEvent) => {
+    if (!isAdmin || !onMessageDeleted) return;
+    e.preventDefault();
+    e.stopPropagation();
+    setMenu({
+      x: Math.min(e.clientX, window.innerWidth - 180),
+      y: Math.min(e.clientY, window.innerHeight - 80),
+    });
+  };
+
+  const deleteMsg = async () => {
+    setMenu(null);
+    if (!confirm('Delete this bot message?')) return;
+    setActing(true);
+    try {
+      await adminDeleteShoutboxMessage(messageId);
+      onMessageDeleted?.(messageId);
+      terminalAppend('✓ Bot message deleted', 'info');
+    } catch (err) {
+      if (err instanceof SessionExpiredError) {
+        void refresh().finally(() => openAuth('login'));
+      } else {
+        terminalAppend(`❌ Delete failed: ${err instanceof Error ? err.message : 'error'}`, 'warn');
+      }
+    } finally {
+      setActing(false);
+    }
+  };
+
+  return (
+    <>
+      <button
+        type="button"
+        onContextMenu={onContextMenu}
+        disabled={acting}
+        className="inline-flex items-center p-0 m-0 border-0 bg-transparent shrink-0 cursor-default"
+        title={isAdmin ? 'Right-click to delete message' : 'System bot'}
+      >
+        <ChatRoleBadges role="bot" compact />
+      </button>
+      {menu && createPortal(
+        <>
+          <div className="fixed inset-0 z-[200]" onClick={() => setMenu(null)} aria-hidden />
+          <div
+            className="fixed z-[201] min-w-[160px] rounded-xl border border-rose-500/25 bg-[#0a0b10]/98 shadow-2xl py-1"
+            style={{ left: menu.x, top: menu.y }}
+            role="menu"
+          >
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => void deleteMsg()}
+              className="w-full flex items-center gap-2 px-3 py-2 text-left text-[9px] font-mono text-rose-300 hover:bg-rose-500/10"
+            >
+              <Trash2 size={12} /> Delete message
+            </button>
+          </div>
+        </>,
+        document.body,
+      )}
+    </>
+  );
 }
 
 function ChatLine({
@@ -51,23 +144,7 @@ function ChatLine({
     <div className={`flex gap-1.5 items-start leading-tight group ${botLine ? 'bot-message-row' : ''}`}>
       <span className="text-slate-600 font-semibold shrink-0 select-none pt-px">[{formatTime(msg.createdAt)}]</span>
       {botLine ? (
-        onOpenProfile ? (
-          <ChatUserChip
-            user={{
-              userId: msg.userId,
-              username: msg.username,
-              displayName: msg.displayName,
-              role: 'bot',
-              avatarUrl: msg.avatarUrl ?? undefined,
-            }}
-            onOpenProfile={onOpenProfile}
-            messageId={msg.id}
-            onMessageDeleted={onMessageDeleted}
-            compact
-          />
-        ) : (
-          <ChatRoleBadges role="bot" compact />
-        )
+        <BotBadgeWithDelete messageId={msg.id} onMessageDeleted={onMessageDeleted} />
       ) : onOpenProfile ? (
         <>
           <ChatUserChip
