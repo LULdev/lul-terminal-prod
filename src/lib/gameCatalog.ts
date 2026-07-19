@@ -6,11 +6,11 @@
 export type GameArenaType = 'rps' | 'ttt' | 'instant' | 'nim' | 'connect4' | 'mines';
 export type GameCategory = 'classic' | 'instant' | 'strategy';
 
-export const GAME_CATEGORIES: { id: GameCategory | 'all'; label: string }[] = [
-  { id: 'all', label: 'All' },
-  { id: 'classic', label: 'Classic' },
-  { id: 'instant', label: 'Instant' },
-  { id: 'strategy', label: 'Strategy' },
+export const GAME_CATEGORIES: { id: GameCategory | 'all'; label: string; hint: string }[] = [
+  { id: 'all', label: 'All', hint: 'Full arcade roster' },
+  { id: 'classic', label: 'Classic', hint: 'Timeless head-to-head' },
+  { id: 'instant', label: 'Instant', hint: 'Fast bets & luck' },
+  { id: 'strategy', label: 'Strategy', hint: 'Think ahead' },
 ];
 
 export type InstantMove = {
@@ -31,6 +31,8 @@ export type GameCatalogEntry = {
   arenaType: GameArenaType;
   category: GameCategory;
   tagline: string;
+  /** Short overview for the games hub card */
+  description: string;
   rules: string[];
   moves?: InstantMove[];
   singleAction?: { id: string; label: string; emoji: string };
@@ -48,6 +50,7 @@ export const GAME_CATALOG: GameCatalogEntry[] = [
     arenaType: 'rps',
     category: 'classic',
     tagline: 'PvP · BOT · Bo3',
+    description: 'The classic hand duel. Queue for PvP or face the BOT, single match or Best-of-3. Winner takes the pot with jackpot spice.',
     rules: ['PvP winner takes both bets', 'Bo3: first to 2 round wins', '0.6% jackpot on PvP win'],
   },
   {
@@ -61,6 +64,7 @@ export const GAME_CATALOG: GameCatalogEntry[] = [
     arenaType: 'ttt',
     category: 'classic',
     tagline: '3×3 · ✕ vs ○',
+    description: 'Line up three marks on a 3×3 board. Perfect for quick strategy — draws refund both stakes so you can rematch cleanly.',
     rules: ['Three in a row wins', 'Draw refunds both bets', 'Streak bonus on wins'],
   },
   {
@@ -74,6 +78,7 @@ export const GAME_CATALOG: GameCatalogEntry[] = [
     arenaType: 'connect4',
     category: 'strategy',
     tagline: '4 in a row',
+    description: 'Drop tokens into columns and force a vertical, horizontal, or diagonal four-in-a-row before your opponent does.',
     rules: ['Drop tokens in columns', 'First to connect 4 wins', 'Full board = draw'],
   },
   {
@@ -87,6 +92,7 @@ export const GAME_CATALOG: GameCatalogEntry[] = [
     arenaType: 'nim',
     category: 'strategy',
     tagline: 'Take stones · last wins',
+    description: 'Math meets mind games. Remove stones from a single pile each turn — the player who takes the last stone claims the pot.',
     rules: ['Piles 3 · 5 · 7', 'Take 1–N stones from one pile', 'Last pick wins the pot'],
   },
   {
@@ -100,6 +106,7 @@ export const GAME_CATALOG: GameCatalogEntry[] = [
     arenaType: 'instant',
     category: 'instant',
     tagline: 'Heads or tails',
+    description: 'Pure binary luck. Call heads or tails before the server flip — instant resolve, perfect for quick LULcoin flips.',
     rules: ['Pick heads or tails', 'Server flips coin', 'Match = win'],
     moves: [
       { id: 'heads', label: 'Heads', emoji: '🙂' },
@@ -117,6 +124,7 @@ export const GAME_CATALOG: GameCatalogEntry[] = [
     arenaType: 'instant',
     category: 'instant',
     tagline: 'Roll 1d6',
+    description: 'Both players roll a six-sided die. Higher face wins the stake; ties refund so nobody leaves empty-handed.',
     rules: ['Both roll a six-sided die', 'Higher roll wins', 'Tie = refund'],
     singleAction: { id: 'roll', label: 'Roll', emoji: '🎲' },
   },
@@ -131,6 +139,7 @@ export const GAME_CATALOG: GameCatalogEntry[] = [
     arenaType: 'instant',
     category: 'instant',
     tagline: 'Parity guess',
+    description: 'Guess the parity of a secret d6 roll. Odd or even — simple call, fast payout when you nail it.',
     rules: ['Pick odd or even', 'Server rolls d6', 'Correct parity wins'],
     moves: [
       { id: 'odd', label: 'Odd', emoji: '1️⃣' },
@@ -148,6 +157,7 @@ export const GAME_CATALOG: GameCatalogEntry[] = [
     arenaType: 'instant',
     category: 'instant',
     tagline: 'High card wins',
+    description: 'One card each, highest rank takes the pot. No hands to manage — pure high-card drama.',
     rules: ['Flip one card each', 'Higher rank wins', 'Same rank = draw'],
     singleAction: { id: 'flip', label: 'Flip', emoji: '🃏' },
   },
@@ -162,6 +172,7 @@ export const GAME_CATALOG: GameCatalogEntry[] = [
     arenaType: 'instant',
     category: 'instant',
     tagline: '5-way duel',
+    description: 'Rock Paper Scissors expanded with Lizard and Spock. Five symbols, more mind games, same one-shot duel energy.',
     rules: ['Extended RPS rules', '5 symbols', 'Classic counter logic'],
     moves: [
       { id: 'rock', label: 'Rock', emoji: '✊' },
@@ -182,6 +193,7 @@ export const GAME_CATALOG: GameCatalogEntry[] = [
     arenaType: 'instant',
     category: 'instant',
     tagline: 'Pick 1–10',
+    description: 'Secretly pick a number from 1 to 10. Highest bid wins — chicken out low or go max and risk the mirror.',
     rules: ['Both pick 1–10 secretly', 'Higher number wins', 'Same = draw'],
     moves: Array.from({ length: 10 }, (_, i) => ({
       id: String(i + 1),
@@ -200,6 +212,7 @@ export const GAME_CATALOG: GameCatalogEntry[] = [
     arenaType: 'instant',
     category: 'instant',
     tagline: 'Lucky color',
+    description: 'Lock in red, blue, green, or yellow. The house picks the winning hue — match it to cash out.',
     rules: ['Pick a color', 'Server picks winning color', 'Match = win'],
     moves: [
       { id: 'red', label: 'Red', emoji: '🔴' },
@@ -219,6 +232,7 @@ export const GAME_CATALOG: GameCatalogEntry[] = [
     arenaType: 'instant',
     category: 'instant',
     tagline: 'Above or below 50',
+    description: 'A random target between 1–100 appears. Call high (above 50) or low — correct call wins the stake.',
     rules: ['Random target 1–100', '>50 = high, else low', 'Correct guess wins'],
     moves: [
       { id: 'high', label: 'High', emoji: '📈' },
@@ -236,6 +250,7 @@ export const GAME_CATALOG: GameCatalogEntry[] = [
     arenaType: 'mines',
     category: 'instant',
     tagline: 'Avoid the mine',
+    description: 'A 3×3 grid hides one mine. Tap a safe cell to win — step on the bomb and the pot is gone.',
     rules: ['3×3 grid, one hidden mine', 'Pick a cell', 'Hit mine = loss'],
   },
   {
@@ -249,6 +264,7 @@ export const GAME_CATALOG: GameCatalogEntry[] = [
     arenaType: 'instant',
     category: 'instant',
     tagline: 'Closest to 21',
+    description: 'Auto-dealt two-card duel. Closest to 21 without busting takes the pot — casino vibes, one button.',
     rules: ['Auto-deal 2 cards each', 'Closest to 21 wins', 'Bust = loss'],
     singleAction: { id: 'deal', label: 'Deal', emoji: '🂡' },
   },

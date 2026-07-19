@@ -823,44 +823,56 @@ export function GamesPage() {
 
         {isLoggedIn && <ArcadeVarietyCard state={state} />}
 
-        <div className="rounded-2xl border border-slate-800/80 bg-black/25 p-3 space-y-3">
-          <div className="flex flex-wrap items-center gap-2">
-            <p className="text-[8px] font-mono uppercase text-slate-600 px-1 shrink-0">
-              Arcade · {filteredGames.length}/{GAME_CATALOG.length}
-            </p>
-            <div className="flex flex-wrap gap-1 flex-1">
-              {GAME_CATEGORIES.map((cat) => (
-                <button
-                  key={cat.id}
-                  type="button"
-                  aria-pressed={categoryFilter === cat.id}
-                  onClick={() => setCategoryFilter(cat.id)}
-                  className={`px-2.5 py-1 rounded-lg text-[8px] font-mono uppercase tracking-wide border transition-all ${
-                    categoryFilter === cat.id
-                      ? 'border-rose-500/40 bg-rose-500/15 text-rose-200'
-                      : 'border-slate-800/80 text-slate-500 hover:border-slate-700 hover:text-slate-400'
-                  }`}
-                >
-                  {cat.label}
-                </button>
-              ))}
+        {/* Game hub — modern overview cards */}
+        <section className="games-hub">
+          <header className="games-hub__header">
+            <div className="min-w-0">
+              <p className="games-hub__eyebrow">
+                <Swords size={11} aria-hidden />
+                Arcade hub · {filteredGames.length}/{GAME_CATALOG.length}
+              </p>
+              <h2 className="games-hub__title">Pick a game</h2>
+              <p className="games-hub__subtitle">
+                Browse the roster, read the rules, then queue PvP or BOT for LULcoins.
+              </p>
             </div>
-            <div className="relative w-full sm:w-auto sm:min-w-[160px]">
-              <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-600" />
+            <div className="games-hub__search">
+              <Search size={13} className="games-hub__search-icon" aria-hidden />
               <input
                 type="search"
                 value={gameSearch}
                 onChange={(e) => setGameSearch(e.target.value)}
                 aria-label="Search games"
                 placeholder="Search games…"
-                className="w-full pl-8 pr-3 py-1.5 rounded-lg border border-slate-800/80 bg-black/30 text-[10px] font-mono text-slate-300 placeholder:text-slate-600 focus:outline-none focus:border-slate-600"
+                className="games-hub__search-input"
               />
             </div>
+          </header>
+
+          <div className="games-hub__filters" role="tablist" aria-label="Game categories">
+            {GAME_CATEGORIES.map((cat) => (
+              <button
+                key={cat.id}
+                type="button"
+                role="tab"
+                aria-selected={categoryFilter === cat.id}
+                aria-pressed={categoryFilter === cat.id}
+                title={cat.hint}
+                onClick={() => setCategoryFilter(cat.id)}
+                className={`games-hub__filter ${categoryFilter === cat.id ? 'games-hub__filter--active' : ''}`}
+              >
+                <span className="games-hub__filter-label">{cat.label}</span>
+                <span className="games-hub__filter-hint">{cat.hint}</span>
+              </button>
+            ))}
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-2 max-h-56 overflow-y-auto pr-1 arcade-game-grid">
+
+          <div className="games-hub__grid arcade-game-grid">
             {filteredGames.map((g) => {
               const played = (getGameSlice(state, g.id)?.myStats?.games ?? 0) >= 1;
               const active = selectedGame === g.id;
+              const wins = getGameSlice(state, g.id)?.myStats?.wins ?? 0;
+              const gamesPlayed = getGameSlice(state, g.id)?.myStats?.games ?? 0;
               return (
                 <button
                   key={g.id}
@@ -869,51 +881,71 @@ export function GamesPage() {
                   aria-pressed={active}
                   aria-label={`${g.label}${active ? ', selected' : ''}`}
                   onClick={() => void selectGame(g.id as GameId)}
-                  className={`group relative py-2.5 px-1.5 rounded-xl border text-center transition-all disabled:opacity-40 disabled:pointer-events-none ${
-                    active
-                      ? `${g.borderClass} ${g.accent} shadow-lg shadow-black/20 scale-[1.02]`
-                      : 'border-slate-800/80 text-slate-500 hover:border-slate-600 hover:text-slate-300'
-                  }`}
+                  className={`games-card ${active ? 'games-card--active' : ''} ${played ? 'games-card--played' : ''}`}
                 >
-                  {played && (
-                    <span className="absolute top-1 right-1 h-1.5 w-1.5 rounded-full bg-emerald-400/90" title="Played" />
-                  )}
-                  <div className="text-xl leading-none group-hover:scale-110 transition-transform">{g.icon}</div>
-                  <div className="text-[7px] font-mono uppercase mt-1.5 truncate">{g.shortLabel}</div>
-                  <div className="text-[6px] font-mono text-slate-600 mt-0.5 truncate opacity-80">{g.tagline}</div>
-                  {isLoggedIn && (
-                    <GameAchievementBadges gameId={g.id as GameId} earnedIds={earnedAchievementIds} />
-                  )}
+                  <span className="games-card__glow" aria-hidden />
+                  <div className="games-card__top">
+                    <span className="games-card__icon" aria-hidden>{g.icon}</span>
+                    <div className="games-card__badges">
+                      <span className={`games-card__cat games-card__cat--${g.category}`}>{g.category}</span>
+                      {played && <span className="games-card__played-dot" title="Played" />}
+                    </div>
+                  </div>
+                  <h3 className="games-card__name">{g.label}</h3>
+                  <p className="games-card__tagline">{g.tagline}</p>
+                  <p className="games-card__desc">{g.description}</p>
+                  <div className="games-card__footer">
+                    {isLoggedIn ? (
+                      <span className="games-card__stats">
+                        {gamesPlayed > 0
+                          ? `${wins}W · ${gamesPlayed} played`
+                          : 'Not played yet'}
+                      </span>
+                    ) : (
+                      <span className="games-card__stats">Sign in to play</span>
+                    )}
+                    {isLoggedIn && (
+                      <GameAchievementBadges gameId={g.id as GameId} earnedIds={earnedAchievementIds} />
+                    )}
+                  </div>
+                  {active && <span className="games-card__selected">Selected</span>}
                 </button>
               );
             })}
             {!filteredGames.length && (
-              <p className="col-span-full text-center text-[9px] font-mono text-slate-600 py-6">
-                No games match your filter
-              </p>
+              <p className="games-hub__empty">No games match your filter</p>
             )}
           </div>
-        </div>
+        </section>
 
         {catalog && (
-          <div className={`rounded-2xl border p-4 relative overflow-hidden bg-gradient-to-r via-[#0c0d12] ${catalog.bgClass}`}>
-            <div className="relative flex flex-wrap items-center gap-4">
-              <div className="flex items-center gap-3">
-                <span className="text-3xl">{catalog.icon}</span>
-                <div>
-                  <div className={`text-sm font-mono font-bold ${catalog.accent}`}>{catalog.label}</div>
-                  <div className="text-[9px] font-mono text-slate-500">{catalog.tagline} · Jackpot 0.6%</div>
+          <div className={`games-selected rounded-2xl border p-4 sm:p-5 relative overflow-hidden bg-gradient-to-br via-[#0c0d12] ${catalog.bgClass}`}>
+            <div className="games-selected__shine" aria-hidden />
+            <div className="relative flex flex-wrap items-start gap-4">
+              <div className="flex items-start gap-3 min-w-0 flex-1">
+                <span className="games-selected__icon text-4xl leading-none">{catalog.icon}</span>
+                <div className="min-w-0">
+                  <div className={`text-base sm:text-lg font-semibold tracking-tight ${catalog.accent}`}>{catalog.label}</div>
+                  <div className="text-[9px] font-mono text-slate-500 mt-0.5">{catalog.tagline} · Jackpot 0.6%</div>
+                  <p className="text-[11px] text-slate-400 leading-relaxed mt-2 max-w-xl">{catalog.description}</p>
+                  <ul className="games-selected__rules mt-2.5">
+                    {catalog.rules.map((r) => (
+                      <li key={r}>{r}</li>
+                    ))}
+                  </ul>
                 </div>
               </div>
-              {isLoggedIn && state?.myCoins != null && <LulCoinDisplay amount={state.myCoins} size="md" />}
-              {state?.jackpot && (
-                <div className="ml-auto text-right">
-                  <div className="lul-coin-label lul-coin-label--sm mb-1">Jackpot Pool</div>
-                  <div className="lul-coin-jackpot-pool">
-                    🎰 <LulCoinAmount amount={state.jackpot.pool} variant="jackpot" size="xl" />
+              <div className="flex flex-wrap items-center gap-3 ml-auto">
+                {isLoggedIn && state?.myCoins != null && <LulCoinDisplay amount={state.myCoins} size="md" />}
+                {state?.jackpot && (
+                  <div className="text-right">
+                    <div className="lul-coin-label lul-coin-label--sm mb-1">Jackpot Pool</div>
+                    <div className="lul-coin-jackpot-pool">
+                      🎰 <LulCoinAmount amount={state.jackpot.pool} variant="jackpot" size="xl" />
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
+              </div>
             </div>
           </div>
         )}
