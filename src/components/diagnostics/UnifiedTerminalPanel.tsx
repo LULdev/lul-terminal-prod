@@ -154,11 +154,6 @@ export function UnifiedTerminalPanel({
   const [loading, setLoading] = useState(true);
   const [chatStatus, setChatStatus] = useState<'ok' | 'offline' | 'rate_limited' | 'gated'>('ok');
   const scrollRef = useRef<HTMLDivElement>(null);
-
-  const handleMessageDeleted = useCallback((messageId: string) => {
-    setMessages((prev) => prev.filter((m) => m.id !== messageId));
-    knownIdsRef.current.delete(messageId);
-  }, []);
   const lastTsRef = useRef(0);
   const lobbyUpdatedAtRef = useRef<string | null>(null);
   const knownIdsRef = useRef(new Set<string>());
@@ -168,6 +163,11 @@ export function UnifiedTerminalPanel({
   const mountedRef = useRef(true);
   const isMutedRef = useRef(isMuted);
   const hadMessagesRef = useRef(false);
+
+  const handleMessageDeleted = useCallback((messageId: string) => {
+    setMessages((prev) => prev.filter((m) => m.id !== messageId));
+    knownIdsRef.current.delete(messageId);
+  }, []);
 
   useEffect(() => {
     mountedRef.current = true;
