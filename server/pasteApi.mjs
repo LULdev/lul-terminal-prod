@@ -297,30 +297,30 @@ async function countPasteViewDeduped(req, pasteId, { consumeBurn = false } = {})
 
 /**
  * True when the route should NOT require the Paste tab (members-only module gate).
- * Public share links, ratings, and public feeds must work even if the Paste tab is members-only.
+ * Public share links MUST work for guests even when the Paste tab is members-only.
  * Auth / ownership is still enforced per-handler via resolvePasteAccess / requireAuth.
+ *
+ * Deny-list approach: only create / my / edit / fork need the members tab.
+ * Everything else under /api/paste is public (so guests never get "Permission denied").
  */
 function skipsPasteTabGate(method, pathname) {
-  if (pathname.startsWith('/api/paste/admin')) return true; // admin has its own gate
-  if (method === 'GET' && (
-    pathname === '/api/paste/stats'
-    || pathname === '/api/paste/public'
-    || pathname === '/api/paste/trending'
-  )) {
-    return true;
-  }
-  // /api/paste/my* and POST /api/paste (create) need the module tab
-  if (pathname === '/api/paste/my' || pathname.startsWith('/api/paste/my/')) return false;
+  if (!pathname.startsWith('/api/paste')) return true;
+
+  // Admin paste panel has its own admin role check
+  if (pathname.startsWith('/api/paste/admin')) return true;
+
+  // Member-only: create paste
   if (method === 'POST' && pathname === '/api/paste') return false;
 
-  // Individual paste by id: read, raw, view, unlock, rate (rate still requires login in handler)
-  const m = pathname.match(/^\/api\/paste\/([A-Za-z0-9_-]{6,32})(\/.*)?$/);
-  if (!m) return false;
-  const sub = m[2] || '';
-  if (method === 'GET' && (sub === '' || sub === '/raw')) return true;
-  if (method === 'POST' && (sub === '/view' || sub === '/unlock' || sub === '/rate')) return true;
-  // PATCH/DELETE own paste still need module tab + ownership
-  return false;
+  // Member-only: my gallery / stats
+  if (pathname === '/api/paste/my' || pathname.startsWith('/api/paste/my/')) return false;
+
+  // Member-only: edit / delete / fork own paste
+  if (method === 'PATCH' || method === 'DELETE') return false;
+  if (method === 'POST' && /\/fork\/?$/.test(pathname)) return false;
+
+  // Public: stats, public archive, trending, GET content, raw, view, unlock, rate
+  return true;
 }
 
 export async function handlePasteRequest(req, res) {
@@ -382,7 +382,7 @@ export async function handlePasteRequest(req, res) {
       });
     }
 
-    const adminIdMatch = pathname.match(/^\/api\/paste\/admin\/([A-Za-z0-9_-]{6,32})$/);
+    const adminIdMatch = pathname.match(/^\/api\/paste\/admin\/([A-Za-z0-9_-]{4,64})$/);
     if (adminIdMatch) {
       const id = adminIdMatch[1];
       await requireAdmin(req);
@@ -472,7 +472,7 @@ export async function handlePasteRequest(req, res) {
       return sendJson(res, 201, payload);
     }
 
-    const rawMatch = pathname.match(/^\/api\/paste\/([A-Za-z0-9_-]{6,32})\/raw$/);
+    const rawMatch = pathname.match(/^\/api\/paste\/([A-Za-z0-9_-]{4,64})\/raw$/);
     if (rawMatch && req.method === 'GET') {
       await checkRateLimit(`paste-pw:${clientIp(req)}:${rawMatch[1]}`, { max: 15, windowMs: 900_000 });
       const meta = await loadAlive(rawMatch[1]);
@@ -517,7 +517,7 @@ export async function handlePasteRequest(req, res) {
       return;
     }
 
-    const viewMatch = pathname.match(/^\/api\/paste\/([A-Za-z0-9_-]{6,32})\/view$/);
+    const viewMatch = pathname.match(/^\/api\/paste\/([A-Za-z0-9_-]{4,64})\/view$/);
     if (viewMatch && req.method === 'POST') {
       await checkRateLimit(`paste-view:${clientIp(req)}:${viewMatch[1]}`, { max: 40, windowMs: 60_000 });
       const meta = await loadAlive(viewMatch[1]);
@@ -552,7 +552,7 @@ export async function handlePasteRequest(req, res) {
       });
     }
 
-    const forkMatch = pathname.match(/^\/api\/paste\/([A-Za-z0-9_-]{6,32})\/fork$/);
+    const forkMatch = pathname.match(/^\/api\/paste\/([A-Za-z0-9_-]{4,64})\/fork$/);
     if (forkMatch && req.method === 'POST') {
       await requireMemberTab(req, 'paste');
       await attachAuth(req);
@@ -572,7 +572,7 @@ export async function handlePasteRequest(req, res) {
       });
     }
 
-    const rateMatch = pathname.match(/^\/api\/paste\/([A-Za-z0-9_-]{6,32})\/rate$/);
+    const rateMatch = pathname.match(/^\/api\/paste\/([A-Za-z0-9_-]{4,64})\/rate$/);
     if (rateMatch && req.method === 'POST') {
       // Guests + members may rate. Logged-in → user: key (owner works). Guests → IP hash, 24h lock.
       try {
@@ -615,7 +615,7 @@ export async function handlePasteRequest(req, res) {
       }
     }
 
-    const unlockMatch = pathname.match(/^\/api\/paste\/([A-Za-z0-9_-]{6,32})\/unlock$/);
+    const unlockMatch = pathname.match(/^\/api\/paste\/([A-Za-z0-9_-]{4,64})\/unlock$/);
     if (unlockMatch && req.method === 'POST') {
       await checkRateLimit(`paste-pw:${clientIp(req)}:${unlockMatch[1]}`, { max: 15, windowMs: 900_000 });
       const meta = await loadAlive(unlockMatch[1]);
@@ -652,7 +652,7 @@ export async function handlePasteRequest(req, res) {
       return sendJson(res, 200, await toClientPasteAsync(outMeta, content, req, { userId: unlockUid }));
     }
 
-    const idMatch = pathname.match(/^\/api\/paste\/([A-Za-z0-9_-]{6,32})$/);
+    const idMatch = pathname.match(/^\/api\/paste\/([A-Za-z0-9_-]{4,64})$/);
     if (idMatch) {
       const id = idMatch[1];
 

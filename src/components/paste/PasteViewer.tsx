@@ -177,8 +177,11 @@ export function PasteViewer({ id, embedded = false }: Props) {
       } catch (e) {
         if (!cancelled) {
           const msg = e instanceof Error ? e.message : '';
-          if (/permission|sign in|not logged/i.test(msg)) {
-            setError(msg || 'Sign in required to view this paste.');
+          if (/permission denied/i.test(msg)) {
+            // Should not happen for public share links after gate fix — try to explain
+            setError('Could not open this paste. If it is public, refresh or try again.');
+          } else if (/sign in|not logged|requires login/i.test(msg)) {
+            setError('Sign in required to view this private paste.');
           } else if (/not found|expired/i.test(msg)) {
             setError('Paste not found or expired.');
           } else if (/too many|429|rate/i.test(msg)) {

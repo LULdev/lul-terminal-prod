@@ -24,7 +24,8 @@ export async function resolvePasteAccess(req, meta, passwordFromQuery = '') {
     await attachAuth(req);
     const user = req.auth?.user;
     if (!user) {
-      return { allowed: false, notFound: true };
+      // Guests cannot open private pastes — prompt sign-in (not a tab Permission denied)
+      return { allowed: false, requiresLogin: true };
     }
     if (!meta.userId || String(meta.userId) !== String(user.id)) {
       return { allowed: false, notFound: true };
@@ -32,5 +33,6 @@ export async function resolvePasteAccess(req, meta, passwordFromQuery = '') {
     return { allowed: true };
   }
 
+  // public (and any unknown → treated as public by normalizeStoredVisibility)
   return { allowed: true };
 }

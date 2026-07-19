@@ -180,15 +180,27 @@ export async function fetchTrendingPastes(limit = 12): Promise<PasteMeta[]> {
 
 async function fetchPasteResponse(id: string, credentialed: boolean) {
   const headers = { 'Content-Type': 'application/json' };
+  // soft401: guests and public share links must never wipe a partial session on 401
   return credentialed
-    ? sessionFetch(`${API}/${id}`, { credentials: 'include', headers })
+    ? sessionFetch(`${API}/${id}`, { credentials: 'include', headers }, { soft401: true })
     : fetch(`${API}/${id}`, { credentials: 'omit', headers });
 }
 
 export async function fetchPaste(id: string, { credentialed = true } = {}): Promise<PasteRecord> {
   const res = await fetchPasteResponse(id, credentialed);
-  if (!res.ok) throw new Error(await parseError(res));
-  return res.json();
+  if (!res.ok) {
+    // Retry once without credentials if a members-only gate mis-fired
+    if (credentialed && (res.status === 403 || res.status === 401)) {
+      const retry = await fetch(`${API}/${id}`, {
+        credentials: 'omit',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      if (retry.ok) return retry.json() as Promise<PasteRecord>;
+      throw new Error(await parseError(retry));
+    }
+    throw new Error(await parseError(res));
+  }
+  return res.json() as Promise<PasteRecord>;
 }
 
 export async function fetchPasteMeta(id: string, { credentialed = false } = {}): Promise<PasteMeta | null> {

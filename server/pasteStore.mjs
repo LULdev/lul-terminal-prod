@@ -15,8 +15,8 @@ export const CONTENT_DIR = path.join(DATA_ROOT, 'content');
 export const STATS_FILE = path.join(DATA_ROOT, 'stats.json');
 
 export const MAX_BYTES = 512 * 1024;
-/** Canonical ID pattern (generateId emits 12 chars). */
-export const ID_PATTERN = /^[A-Za-z0-9_-]{6,32}$/;
+/** Canonical ID pattern (generateId emits 12 chars; accept wider range for share links). */
+export const ID_PATTERN = /^[A-Za-z0-9_-]{4,64}$/;
 
 const EXPIRY_MS = {
   '10m': 10 * 60 * 1000,
