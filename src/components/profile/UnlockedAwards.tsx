@@ -7,7 +7,7 @@ import React, { useMemo } from 'react';
 import { Sparkles } from 'lucide-react';
 import {
   ACHIEVEMENT_BY_ID,
-  TIER_STYLES,
+  achievementBadgeClass,
   type EarnedAchievement,
 } from '../../data/achievements';
 
@@ -28,15 +28,15 @@ export function UnlockedAwards({ earned }: UnlockedAwardsProps) {
   const awards = unlocked.filter((e) => e.def.kind === 'award');
 
   return (
-    <div className="rounded-xl border border-fuchsia-500/20 bg-gradient-to-br from-fuchsia-950/20 via-[#0c0d12] to-indigo-950/15 px-3 py-2.5 relative overflow-hidden">
+    <div className="rounded-xl border border-fuchsia-500/20 bg-gradient-to-br from-fuchsia-950/20 via-[#0c0d12] to-indigo-950/15 px-2.5 py-2 relative overflow-hidden">
       <div className="absolute -top-8 -left-8 w-24 h-24 bg-fuchsia-500/5 rounded-full blur-2xl pointer-events-none" />
       <div className="relative">
-        <div className="flex items-center justify-between gap-2 mb-1.5">
-          <h3 className="text-[9px] font-mono font-bold uppercase tracking-wider text-fuchsia-300 flex items-center gap-1.5">
-            <Sparkles size={11} className="text-fuchsia-400" />
-            Unlocked · Achievements & Awards
+        <div className="flex items-center justify-between gap-2 mb-1">
+          <h3 className="text-[8px] font-mono font-bold uppercase tracking-wider text-fuchsia-300 flex items-center gap-1">
+            <Sparkles size={10} className="text-fuchsia-400" />
+            Unlocked
           </h3>
-          <span className="text-[8px] font-mono text-fuchsia-500/70">{unlocked.length} earned</span>
+          <span className="text-[7px] font-mono text-fuchsia-500/70">{unlocked.length} earned</span>
         </div>
 
         {unlocked.length === 0 ? (
@@ -44,7 +44,7 @@ export function UnlockedAwards({ earned }: UnlockedAwardsProps) {
             No trophies yet — explore the terminal, arcade, and vault.
           </p>
         ) : (
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             {achievements.length > 0 && (
               <UnlockedGroup label="Achievements" items={achievements} />
             )}
@@ -67,21 +67,18 @@ function UnlockedGroup({
 }) {
   return (
     <div>
-      <h4 className="text-[7px] font-mono uppercase tracking-widest text-slate-500 mb-1">{label}</h4>
+      <h4 className="text-[7px] font-mono uppercase tracking-widest text-slate-500 mb-0.5">{label}</h4>
       <div className="flex flex-wrap gap-1">
         {items.map(({ earnedAt, def }) => (
           <div
             key={def.id}
             title={`${def.name} — ${def.description}\n${new Date(earnedAt).toLocaleDateString('en-US')}`}
-            className={`group relative inline-flex items-center gap-1 rounded-lg border px-1.5 py-0.5 transition-all duration-200 hover:scale-[1.03] ${TIER_STYLES[def.tier]} achievement-card-unlocked`}
+            className={`${achievementBadgeClass(def, { compact: true })} inline-flex items-center gap-1 px-1.5 py-0.5`}
           >
-            {def.tier === 'mythic' && (
-              <span className="absolute inset-0 rounded-lg achievement-shimmer pointer-events-none" />
-            )}
-            <span className="text-sm leading-none relative z-10">{def.icon}</span>
-            <div className="relative z-10 min-w-0 max-w-[7.5rem]">
-              <p className="text-[8px] font-semibold text-white leading-tight truncate">{def.name}</p>
-              <p className="text-[6px] font-mono text-slate-500 uppercase leading-none">{def.rarity}</p>
+            <span className="ach-badge__icon text-[13px]">{def.icon}</span>
+            <div className="ach-badge__body max-w-[6.5rem]">
+              <p className="ach-badge__name text-[8px] truncate">{def.name}</p>
+              <p className="ach-badge__meta text-[6px]">{def.rarity}</p>
             </div>
           </div>
         ))}

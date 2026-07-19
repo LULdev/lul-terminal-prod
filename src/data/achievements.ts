@@ -1292,6 +1292,30 @@ export const TIER_STYLES: Record<AchievementTier, string> = {
   admin: 'achievement-tier-admin',
 };
 
+/** Shiny rarity shell — primary visual for awards & achievements. */
+export const RARITY_STYLES: Record<AchievementRarity, string> = {
+  common: 'ach-rarity ach-rarity--common',
+  rare: 'ach-rarity ach-rarity--rare',
+  epic: 'ach-rarity ach-rarity--epic',
+  legendary: 'ach-rarity ach-rarity--legendary',
+  mythic: 'ach-rarity ach-rarity--mythic',
+};
+
+/** Combined badge classes for trophy chips / cards. */
+export function achievementBadgeClass(
+  def: Pick<AchievementDef, 'rarity' | 'tier'>,
+  opts: { unlocked?: boolean; compact?: boolean } = {},
+): string {
+  const unlocked = opts.unlocked !== false;
+  return [
+    'ach-badge',
+    opts.compact ? 'ach-badge--compact' : '',
+    RARITY_STYLES[def.rarity],
+    TIER_STYLES[def.tier],
+    unlocked ? 'ach-badge--live' : 'ach-badge--locked',
+  ].filter(Boolean).join(' ');
+}
+
 export const SOCIAL_PLATFORMS = [
   { id: 'github', label: 'GitHub', icon: '⌨️', placeholder: 'https://github.com/user' },
   { id: 'twitter', label: 'X / Twitter', icon: '𝕏', placeholder: 'https://x.com/user' },

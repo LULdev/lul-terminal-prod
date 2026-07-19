@@ -5,7 +5,7 @@
 
 import React, { useMemo } from 'react';
 import { Coins, Sparkles, X } from 'lucide-react';
-import { ACHIEVEMENT_BY_ID, TIER_STYLES } from '../../data/achievements';
+import { ACHIEVEMENT_BY_ID, achievementBadgeClass } from '../../data/achievements';
 import { LulCoinAmount } from '../games/LulCoinAmount';
 import { AchievementConfetti } from './AchievementConfetti';
 
@@ -76,9 +76,9 @@ export function AchievementNotification({
           {items.map((def) => (
             <div
               key={def.id}
-              className={`flex items-start gap-3 rounded-xl border p-3 ${TIER_STYLES[def.tier]}`}
+              className={`flex items-start gap-3 rounded-xl border p-3 ${achievementBadgeClass(def)}`}
             >
-              <span className="text-2xl shrink-0 achievement-icon-float">{def.icon}</span>
+              <span className="ach-badge__icon text-2xl shrink-0 achievement-icon-float">{def.icon}</span>
               <div className="min-w-0">
                 <div className="text-[10px] font-mono uppercase tracking-wider text-slate-500 mb-0.5">
                   {def.kind === 'award' ? 'Award' : 'Achievement'}

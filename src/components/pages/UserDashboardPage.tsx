@@ -37,7 +37,7 @@ import { fetchReferralInfo } from '../../lib/auth';
 import {
   ACHIEVEMENT_BY_ID,
   ACHIEVEMENT_CATALOG,
-  TIER_STYLES,
+  achievementBadgeClass,
 } from '../../data/achievements';
 import { ROLE_LABELS, type UserRole } from '../../types/auth';
 import { TabId } from '../../config/menuItems';
@@ -346,9 +346,9 @@ export function UserDashboardPage({ onNavigate }: UserDashboardPageProps) {
                 <div
                   key={id}
                   title={def.description}
-                  className={`rounded-xl border p-3 flex flex-col gap-1 ${TIER_STYLES[def.tier]} achievement-card-unlocked`}
+                  className={`rounded-xl border p-2.5 flex flex-col gap-0.5 ${achievementBadgeClass(def, { compact: true })}`}
                 >
-                  <span className="text-2xl">{def.icon}</span>
+                  <span className="ach-badge__icon text-xl">{def.icon}</span>
                   <span className="text-[9px] font-semibold text-white leading-tight">{def.name}</span>
                   <span className="text-[7px] font-mono text-slate-500">{formatRelative(earnedAt)}</span>
                 </div>
