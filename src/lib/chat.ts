@@ -202,6 +202,74 @@ export function playChatNotification(muted = false) {
   } catch { /* ignore */ }
 }
 
+/** Call from a user gesture so Web Audio is allowed to play. */
+export function unlockChatAudio() {
+  try {
+    getChatAudioContext();
+  } catch { /* ignore */ }
+}
+
+/**
+ * Two-tone “sonar” ping — when you /ping someone or receive a ping.
+ * Louder/longer than the soft chat blip.
+ */
+export function playPingSound(muted = false) {
+  if (muted) return;
+  try {
+    const ctx = getChatAudioContext();
+    if (!ctx) return;
+    const t0 = ctx.currentTime;
+    const master = ctx.createGain();
+    master.gain.setValueAtTime(0.22, t0);
+    master.gain.exponentialRampToValueAtTime(0.001, t0 + 0.55);
+    master.connect(ctx.destination);
+
+    const o1 = ctx.createOscillator();
+    const g1 = ctx.createGain();
+    o1.type = 'sine';
+    o1.frequency.setValueAtTime(1175, t0);
+    o1.frequency.exponentialRampToValueAtTime(980, t0 + 0.12);
+    g1.gain.setValueAtTime(0.0001, t0);
+    g1.gain.exponentialRampToValueAtTime(0.35, t0 + 0.015);
+    g1.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.16);
+    o1.connect(g1);
+    g1.connect(master);
+    o1.start(t0);
+    o1.stop(t0 + 0.18);
+
+    const o2 = ctx.createOscillator();
+    const g2 = ctx.createGain();
+    o2.type = 'triangle';
+    o2.frequency.setValueAtTime(1480, t0 + 0.14);
+    o2.frequency.exponentialRampToValueAtTime(880, t0 + 0.32);
+    g2.gain.setValueAtTime(0.0001, t0 + 0.14);
+    g2.gain.exponentialRampToValueAtTime(0.28, t0 + 0.16);
+    g2.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.42);
+    o2.connect(g2);
+    g2.connect(master);
+    o2.start(t0 + 0.14);
+    o2.stop(t0 + 0.45);
+  } catch { /* ignore */ }
+}
+
+export function isPingMessage(msg: Pick<ChatMessage, 'kind'>): boolean {
+  return msg.kind === 'ping';
+}
+
+/** True when a ping message targets this username. */
+export function isPingForUser(
+  msg: Pick<ChatMessage, 'kind' | 'text' | 'segments'>,
+  username: string | undefined | null,
+): boolean {
+  if (!username || msg.kind !== 'ping') return false;
+  const u = String(username).trim().toLowerCase();
+  if (!u) return false;
+  if (msg.segments?.some((s) => s.type === 'user' && String(s.username).toLowerCase() === u)) {
+    return true;
+  }
+  return String(msg.text ?? '').toLowerCase().includes(`@${u}`);
+}
+
 /**
  * Cheerful arpeggio when the BOT posts an achievement congrats in shoutbox.
  * Distinct from the short chat ping so players notice unlocks.

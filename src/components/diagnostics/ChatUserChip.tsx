@@ -24,6 +24,7 @@ import { adminDeleteShoutboxMessage, adminModerateShoutboxUser } from '../../lib
 import { SessionExpiredError } from '../../lib/sessionFetch';
 import { terminalAppend } from '../../lib/terminalLogBridge';
 import { safeAvatarUrl } from '../../lib/safeAvatarUrl';
+import { unlockChatAudio } from '../../lib/chat';
 import type { UserRole } from '../../types/auth';
 
 export type ChatUserChipTarget = {
@@ -121,6 +122,8 @@ export function ChatUserChip({
 
   const pingAndSend = useCallback(async () => {
     if (!requireLogin()) return;
+    // Unlock Web Audio from this click so the ping tone can play after the request
+    unlockChatAudio();
     setActing(true);
     try {
       const result = await sendShoutboxCommand(`/ping ${user.username}`);
@@ -131,6 +134,7 @@ export function ChatUserChip({
       if (result.ok === false) {
         terminalAppend(`❌ Ping failed: ${result.error}`, 'warn');
       }
+      // playPingSound is triggered in UnifiedTerminalPanel sendChat when kind=ping
     } finally {
       if (mountedRef.current) setActing(false);
     }

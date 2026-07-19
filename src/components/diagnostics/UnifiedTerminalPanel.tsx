@@ -17,8 +17,11 @@ import {
   ChatRateLimitError,
   fetchLobbyMessages,
   isBotCongratsMessage,
+  isPingForUser,
+  isPingMessage,
   playBotCongratsSound,
   playChatNotification,
+  playPingSound,
   sendLobbyMessage,
   type ChatMessage,
   type SendChatResult,
@@ -239,7 +242,7 @@ export function UnifiedTerminalPanel({
   onOpenProfile,
   onChatUnlocks,
 }: UnifiedTerminalPanelProps) {
-  const { isLoggedIn, refresh } = useAuth();
+  const { isLoggedIn, refresh, user } = useAuth();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [chatStatus, setChatStatus] = useState<'ok' | 'offline' | 'rate_limited' | 'gated'>('ok');
@@ -253,6 +256,7 @@ export function UnifiedTerminalPanel({
   const mountedRef = useRef(true);
   const isMutedRef = useRef(isMuted);
   const hadMessagesRef = useRef(false);
+  const myUsernameRef = useRef(user?.username ?? '');
 
   const handleMessageDeleted = useCallback((messageId: string) => {
     setMessages((prev) => prev.filter((m) => m.id !== messageId));
@@ -263,6 +267,10 @@ export function UnifiedTerminalPanel({
     mountedRef.current = true;
     return () => { mountedRef.current = false; };
   }, []);
+
+  useEffect(() => {
+    myUsernameRef.current = user?.username ?? '';
+  }, [user?.username]);
 
   useEffect(() => {
     if (isLoggedIn) return;
@@ -288,6 +296,7 @@ export function UnifiedTerminalPanel({
     if (!incoming.length) return;
     let played = false;
     let congrats = false;
+    let pingHit = false;
     setMessages((prev) => {
       const byId = new Map<string, ChatMessage>();
       for (const m of prev) byId.set(m.id, m);
@@ -295,6 +304,7 @@ export function UnifiedTerminalPanel({
         if (!knownIdsRef.current.has(m.id)) {
           played = true;
           if (isBotCongratsMessage(m)) congrats = true;
+          if (isPingForUser(m, myUsernameRef.current)) pingHit = true;
         }
         byId.set(m.id, m);
         knownIdsRef.current.add(m.id);
@@ -307,6 +317,8 @@ export function UnifiedTerminalPanel({
     if (!playNotify || !played) return;
     if (congrats) {
       playBotCongratsSound(isMutedRef.current);
+    } else if (pingHit) {
+      playPingSound(isMutedRef.current);
     } else {
       playChatNotification(isMutedRef.current);
     }
@@ -314,12 +326,14 @@ export function UnifiedTerminalPanel({
 
   const replaceDisplayWindow = useCallback((incoming: ChatMessage[], playNotify = false) => {
     let congrats = false;
+    let pingHit = false;
     let anyNew = false;
     if (playNotify) {
       for (const m of incoming) {
         if (!knownIdsRef.current.has(m.id)) {
           anyNew = true;
           if (isBotCongratsMessage(m)) congrats = true;
+          if (isPingForUser(m, myUsernameRef.current)) pingHit = true;
         }
       }
     }
@@ -329,6 +343,7 @@ export function UnifiedTerminalPanel({
     if (mountedRef.current) setMessages(slice);
     if (playNotify && anyNew) {
       if (congrats) playBotCongratsSound(isMutedRef.current);
+      else if (pingHit) playPingSound(isMutedRef.current);
       else playChatNotification(isMutedRef.current);
     }
   }, []);
@@ -454,6 +469,10 @@ export function UnifiedTerminalPanel({
       hadMessagesRef.current = true;
       lastTsRef.current = Math.max(lastTsRef.current, message.createdAt);
       setChatStatus('ok');
+      // Distinct sound when you successfully /ping someone
+      if (isPingMessage(message)) {
+        playPingSound(isMutedRef.current);
+      }
       const hasUnlocks = Boolean(newUnlocks?.length);
       const hasRewards = Boolean(unlockRewards && Object.keys(unlockRewards).length);
       const hasCoins = Boolean(unlockCoinsTotal && unlockCoinsTotal > 0);
