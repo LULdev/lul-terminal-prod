@@ -10,6 +10,7 @@ import {
   achievementBadgeClass,
   type EarnedAchievement,
 } from '../../data/achievements';
+import { TrophyTip } from './TrophyTip';
 
 type UnlockedAwardsProps = {
   earned: EarnedAchievement[];
@@ -28,7 +29,7 @@ export function UnlockedAwards({ earned }: UnlockedAwardsProps) {
   const awards = unlocked.filter((e) => e.def.kind === 'award');
 
   return (
-    <div className="rounded-xl border border-fuchsia-500/20 bg-gradient-to-br from-fuchsia-950/20 via-[#0c0d12] to-indigo-950/15 px-2.5 py-2 relative overflow-hidden">
+    <div className="trophy-section rounded-xl border border-fuchsia-500/20 bg-gradient-to-br from-fuchsia-950/20 via-[#0c0d12] to-indigo-950/15 px-2.5 py-2 relative">
       <div className="absolute -top-8 -left-8 w-24 h-24 bg-fuchsia-500/5 rounded-full blur-2xl pointer-events-none" />
       <div className="relative">
         <div className="flex items-center justify-between gap-2 mb-1">
@@ -68,18 +69,19 @@ function UnlockedGroup({
   return (
     <div>
       <h4 className="text-[7px] font-mono uppercase tracking-widest text-slate-500 mb-0.5">{label}</h4>
-      <div className="flex flex-wrap gap-1">
+      <div className="trophy-section__row flex flex-wrap gap-1">
         {items.map(({ earnedAt, def }) => (
           <div
             key={def.id}
-            title={`${def.name} — ${def.description}\n${new Date(earnedAt).toLocaleDateString('en-US')}`}
-            className={`${achievementBadgeClass(def, { compact: true })} inline-flex items-center gap-1 px-1.5 py-1 max-w-[9.5rem]`}
+            tabIndex={0}
+            className={`${achievementBadgeClass(def, { compact: true })} trophy-tip-host inline-flex items-center gap-1 px-1.5 py-1 max-w-[9.5rem]`}
           >
             <span className="ach-badge__icon text-[11px]">{def.icon}</span>
             <div className="ach-badge__body min-w-0">
               <p className="ach-badge__name text-[8px] leading-snug break-words">{def.name}</p>
               <p className="ach-badge__meta text-[6px]">{def.rarity}</p>
             </div>
+            <TrophyTip def={def} unlocked earnedAt={earnedAt} />
           </div>
         ))}
       </div>

@@ -12,6 +12,7 @@ import {
 } from '../../data/achievements';
 import { isCoinSensitiveAchievement } from '../../lib/achievementPrivacy';
 import { LEADERBOARD_AWARD_IDS } from '../../lib/leaderboards';
+import { TrophyTip } from './TrophyTip';
 
 type LeaderboardBadgesProps = {
   earned: EarnedAchievement[];
@@ -61,7 +62,7 @@ export function LeaderboardBadges({
   if (inline) {
     if (badges.length === 0) return null;
     return (
-      <div className="profile-hof-inline" role="list" aria-label="Hall of Fame awards">
+      <div className="profile-hof-inline trophy-section__row" role="list" aria-label="Hall of Fame awards">
         <span className="profile-hof-inline__label">
           <Trophy size={9} aria-hidden /> HoF
         </span>
@@ -69,10 +70,11 @@ export function LeaderboardBadges({
           <span
             key={id}
             role="listitem"
-            title={`${def.name} — ${def.description}\n${new Date(earnedAt).toLocaleDateString('en-US')}`}
-            className={achievementBadgeClass(def, { compact: true })}
+            tabIndex={0}
+            className={`${achievementBadgeClass(def, { compact: true })} trophy-tip-host`}
           >
             <span className="ach-badge__icon" aria-hidden>{def.icon}</span>
+            <TrophyTip def={def} unlocked earnedAt={earnedAt} />
           </span>
         ))}
       </div>
@@ -80,7 +82,7 @@ export function LeaderboardBadges({
   }
 
   return (
-    <div className="rounded-xl border border-amber-500/20 bg-gradient-to-br from-amber-950/25 via-[#0c0d12] to-violet-950/15 px-2.5 py-2 relative overflow-hidden">
+    <div className="trophy-section rounded-xl border border-amber-500/20 bg-gradient-to-br from-amber-950/25 via-[#0c0d12] to-violet-950/15 px-2.5 py-2 relative">
       <div className="absolute -top-6 -right-6 w-24 h-24 bg-amber-500/5 rounded-full blur-2xl pointer-events-none" />
       <div className="relative">
         <div className="flex items-center justify-between gap-2 mb-1">
@@ -98,18 +100,19 @@ export function LeaderboardBadges({
             No Hall of Fame awards yet — climb the leaderboards.
           </p>
         ) : (
-          <div className="flex flex-wrap gap-1">
+          <div className="trophy-section__row flex flex-wrap gap-1">
             {badges.map(({ id, earnedAt, def }) => (
               <div
                 key={id}
-                title={`${def.name} — ${def.description}\n${new Date(earnedAt).toLocaleDateString('en-US')}`}
-                className={`${achievementBadgeClass(def, { compact: true })} inline-flex items-center gap-1 px-1.5 py-1 max-w-[9.5rem]`}
+                tabIndex={0}
+                className={`${achievementBadgeClass(def, { compact: true })} trophy-tip-host inline-flex items-center gap-1 px-1.5 py-1 max-w-[9.5rem]`}
               >
                 <span className="ach-badge__icon text-[11px]">{def.icon}</span>
                 <div className="ach-badge__body min-w-0">
                   <p className="ach-badge__name text-[8px] leading-snug break-words">{def.name}</p>
                   <p className="ach-badge__meta text-[6px]">{def.rarity}</p>
                 </div>
+                <TrophyTip def={def} unlocked earnedAt={earnedAt} />
               </div>
             ))}
           </div>

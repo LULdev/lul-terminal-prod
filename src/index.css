@@ -1306,23 +1306,41 @@ a.bot-mention-username:focus-visible {
   filter: drop-shadow(0 0 4px rgba(251, 191, 36, 0.35));
   pointer-events: none;
 }
-/* CSS tooltip below icon (above would clip under balance/profile) */
+/* UserBar HoF tip uses shared trophy-tip styles via class aliases */
+.userbar-hof__icon {
+  /* host for tip — already position:relative */
+}
+.userbar-hof__tip {
+  /* alias to shared trophy tip */
+}
+
+/* —— Shared trophy tooltips (Trophies tab + UserBar HoF) —— */
+.trophy-tip-host {
+  position: relative;
+  overflow: visible !important;
+}
+.trophy-tip-host:hover,
+.trophy-tip-host:focus-visible {
+  z-index: 40;
+}
+.trophy-tip,
 .userbar-hof__tip {
   position: absolute;
   left: 50%;
-  top: calc(100% + 7px);
+  top: calc(100% + 8px);
   bottom: auto;
-  transform: translateX(-50%) translateY(-3px);
+  transform: translateX(-50%) translateY(-4px);
   width: max-content;
-  min-width: 8.5rem;
-  max-width: min(11.5rem, 46vw);
-  padding: 0.4rem 0.5rem;
+  min-width: 9rem;
+  max-width: min(14rem, 70vw);
+  padding: 0.45rem 0.55rem;
   border-radius: 8px;
-  border: 1px solid rgba(251, 191, 36, 0.45);
-  background: linear-gradient(160deg, rgba(30, 20, 8, 0.99), rgba(12, 13, 18, 0.99));
+  border: 1px solid rgba(251, 191, 36, 0.5);
+  background: linear-gradient(165deg, rgba(28, 18, 6, 0.98) 0%, rgba(12, 13, 18, 0.99) 55%, rgba(10, 12, 18, 0.99) 100%);
   box-shadow:
-    0 10px 28px rgba(0, 0, 0, 0.65),
-    0 0 14px rgba(245, 158, 11, 0.12);
+    0 12px 32px rgba(0, 0, 0, 0.7),
+    0 0 0 1px rgba(0, 0, 0, 0.35) inset,
+    0 0 18px rgba(245, 158, 11, 0.12);
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
@@ -1330,15 +1348,33 @@ a.bot-mention-username:focus-visible {
     opacity 0.12s ease,
     transform 0.12s ease,
     visibility 0.12s;
-  z-index: 60;
+  z-index: 80;
   text-align: left;
   white-space: normal;
 }
-/* Keep tip inside sidebar when near left/right edges */
+.trophy-tip::before,
+.userbar-hof__tip::before {
+  content: '';
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 6px solid transparent;
+  border-bottom-color: rgba(251, 191, 36, 0.55);
+}
+.trophy-tip-host:hover > .trophy-tip,
+.trophy-tip-host:focus-visible > .trophy-tip,
+.userbar-hof__icon:hover .userbar-hof__tip,
+.userbar-hof__icon:focus-visible .userbar-hof__tip {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(-50%) translateY(0);
+}
+/* First icons in UserBar — tip left-aligned so it stays in sidebar */
 .userbar-hof__icon:nth-child(1) .userbar-hof__tip,
 .userbar-hof__icon:nth-child(2) .userbar-hof__tip {
   left: 0;
-  transform: translateX(0) translateY(-3px);
+  transform: translateX(0) translateY(-4px);
 }
 .userbar-hof__icon:nth-child(1):hover .userbar-hof__tip,
 .userbar-hof__icon:nth-child(1):focus-visible .userbar-hof__tip,
@@ -1348,47 +1384,51 @@ a.bot-mention-username:focus-visible {
 }
 .userbar-hof__icon:nth-child(1) .userbar-hof__tip::before,
 .userbar-hof__icon:nth-child(2) .userbar-hof__tip::before {
-  left: 0.55rem;
+  left: 0.6rem;
   transform: none;
 }
-.userbar-hof__tip::before {
-  content: '';
-  position: absolute;
-  bottom: 100%;
-  left: 50%;
-  transform: translateX(-50%);
-  border: 5px solid transparent;
-  border-bottom-color: rgba(251, 191, 36, 0.5);
-}
-.userbar-hof__icon:hover .userbar-hof__tip,
-.userbar-hof__icon:focus-visible .userbar-hof__tip {
-  opacity: 1;
-  visibility: visible;
-  transform: translateX(-50%) translateY(0);
-}
+.trophy-tip__name,
 .userbar-hof__tip-name {
   display: block;
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 700;
   color: #fde68a;
   line-height: 1.25;
-  margin-bottom: 0.15rem;
+  margin-bottom: 0.2rem;
+  letter-spacing: 0.01em;
 }
+.trophy-tip__desc,
 .userbar-hof__tip-desc {
   display: block;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  font-size: 7px;
-  color: rgba(203, 213, 225, 0.85);
-  line-height: 1.35;
-  margin-bottom: 0.2rem;
+  font-size: 8px;
+  color: rgba(203, 213, 225, 0.9);
+  line-height: 1.4;
+  margin-bottom: 0.25rem;
 }
+.trophy-tip__meta,
 .userbar-hof__tip-meta {
   display: block;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  font-size: 6.5px;
+  font-size: 7px;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: rgba(251, 191, 36, 0.55);
+  letter-spacing: 0.05em;
+  color: rgba(251, 191, 36, 0.6);
+  line-height: 1.2;
+}
+.trophy-tip__meta--common { color: rgba(148, 163, 184, 0.75); }
+.trophy-tip__meta--rare { color: rgba(125, 211, 252, 0.75); }
+.trophy-tip__meta--epic { color: rgba(196, 181, 253, 0.8); }
+.trophy-tip__meta--legendary { color: rgba(252, 211, 77, 0.85); }
+.trophy-tip__meta--mythic { color: rgba(244, 114, 182, 0.85); }
+
+/* Trophy sections must not clip hover tips */
+.trophy-section {
+  overflow: visible !important;
+}
+.trophy-section__row {
+  overflow: visible;
+  position: relative;
 }
 
 /* Profile strip */
@@ -1672,11 +1712,17 @@ a.bot-mention-username:focus-visible {
 /* —— Rarity shiny badges (awards & achievements) — soft glow —— */
 .ach-badge {
   position: relative;
-  overflow: hidden;
+  /* visible so rich .trophy-tip children are not clipped */
+  overflow: visible;
   isolation: isolate;
   border-style: solid;
   border-width: 1px;
   transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;
+}
+/* Clip shine layers without clipping tooltips */
+.ach-badge.ach-badge--live::before,
+.ach-badge.ach-badge--live::after {
+  border-radius: inherit;
 }
 .ach-badge--compact {
   border-radius: 0.4rem;

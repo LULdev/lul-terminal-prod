@@ -236,20 +236,19 @@ export function UserBar({ onNavigate }: UserBarProps) {
                   className="userbar-hof__icon"
                   onClick={() => go('leaderboard')}
                   aria-label={tipText}
-                  title={tipText}
                 >
                   <span className="userbar-hof__emoji" aria-hidden>{award.icon}</span>
                   <span className="userbar-hof__tip" role="tooltip">
                     <span className="userbar-hof__tip-name">{award.name}</span>
                     <span className="userbar-hof__tip-desc">{award.description}</span>
                     <span className="userbar-hof__tip-meta">
-                      {award.rarity}
+                      {String(award.rarity).toUpperCase()}
                       {' · '}
                       {new Date(award.earnedAt).toLocaleDateString('en-US', {
                         month: 'short',
                         day: 'numeric',
                         year: 'numeric',
-                      })}
+                      }).toUpperCase()}
                     </span>
                   </span>
                 </button>
