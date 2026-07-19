@@ -504,8 +504,8 @@ export function PasteViewer({ id, embedded = false }: Props) {
           </div>
         </div>
 
-        {/* Views + rating — box below author card */}
-        <div className="rounded-xl border border-slate-800/80 bg-black/40 px-3 py-2.5 sm:px-4 sm:py-3 flex flex-wrap items-center gap-3 sm:gap-5">
+        {/* Views + rating — centered box below author card */}
+        <div className="rounded-xl border border-slate-800/80 bg-black/40 px-3 py-2.5 sm:px-4 sm:py-3 flex flex-wrap items-center justify-center gap-3 sm:gap-5">
           <div
             className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-emerald-500/20 bg-emerald-500/10 transition-opacity duration-500 ${
               viewsReady ? 'opacity-100' : 'opacity-60'
