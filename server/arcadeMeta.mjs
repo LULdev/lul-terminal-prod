@@ -22,6 +22,7 @@ export const ARCADE_GAMES_META = [
   { id: 'highlow', statKey: 'Highlow', flag: 'highlow_played', label: 'High or Low', shortLabel: 'Hi/Lo', icon: '📈', category: 'instant', accent: 'cyan' },
   { id: 'mines', statKey: 'Mines', flag: 'mines_played', label: 'Minefield', shortLabel: 'Mines', icon: '💣', category: 'instant', accent: 'orange' },
   { id: 'blackjack', statKey: 'Blackjack', flag: 'blackjack_played', label: 'Blackjack Duel', shortLabel: 'BJ', icon: '🂡', category: 'instant', accent: 'emerald' },
+  { id: 'dice100', statKey: 'Dice100', flag: 'dice100_played', label: 'Dice 100', shortLabel: 'D100', icon: '🎯', category: 'instant', accent: 'amber' },
 ];
 
 export function lbWinsAwardId(gameId) {

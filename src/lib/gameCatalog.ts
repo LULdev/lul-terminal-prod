@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-export type GameArenaType = 'rps' | 'ttt' | 'instant' | 'nim' | 'connect4' | 'mines';
+export type GameArenaType = 'rps' | 'ttt' | 'instant' | 'nim' | 'connect4' | 'mines' | 'dice100';
 export type GameCategory = 'classic' | 'instant' | 'strategy';
 
 export const GAME_CATEGORIES: { id: GameCategory | 'all'; label: string; hint: string }[] = [
@@ -267,6 +267,26 @@ export const GAME_CATALOG: GameCatalogEntry[] = [
     description: 'Auto-dealt two-card duel. Closest to 21 without busting takes the pot — casino vibes, one button.',
     rules: ['Auto-deal 2 cards each', 'Closest to 21 wins', 'Bust = loss'],
     singleAction: { id: 'deal', label: 'Deal', emoji: '🂡' },
+  },
+  {
+    id: 'dice100',
+    label: 'Dice 100',
+    shortLabel: 'D100',
+    icon: '🎯',
+    accent: 'text-amber-200',
+    borderClass: 'border-amber-500/40 bg-amber-500/15',
+    bgClass: 'border-amber-500/20 from-amber-950/40 to-yellow-950/30',
+    arenaType: 'dice100',
+    category: 'instant',
+    tagline: 'Over · Under · Mult',
+    description:
+      'Single-player over/under dice on a 0–100 scale. Slide your target, pick Over or Under, watch the multiplier and win chance update — then roll. Instant result, jackpot spice, house edge 1%.',
+    rules: [
+      'Solo vs terminal (instant roll)',
+      'Set target 1–99 · Over or Under',
+      'Payout = bet × multiplier (1% edge)',
+      'Losses feed the jackpot pool',
+    ],
   },
 ];
 

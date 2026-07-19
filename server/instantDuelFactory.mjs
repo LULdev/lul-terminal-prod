@@ -73,6 +73,7 @@ export function createInstantDuelGame(cfg) {
       botDifficulty: m.botDifficulty ?? null,
       roomCode: m.roomCode ?? null,
       reveal: done ? (m.reveal ?? null) : null,
+      payoutMultiplier: done && Number(m.payoutMultiplier) > 0 ? Number(m.payoutMultiplier) : null,
       player1: {
         userId: m.player1.userId,
         username: m.player1.username,

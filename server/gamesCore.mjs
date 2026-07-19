@@ -392,14 +392,28 @@ export async function settleMatch({
       bumpGameStats(p1, statKey, 'draw');
     } else if (r === 'p1') {
       outcome = 'win';
-      p1Delta = bet * 2;
+      // Optional variable payout (e.g. Dice 100 over/under multiplier); default 2× pot
+      const mult = Number(m.payoutMultiplier);
+      if (Number.isFinite(mult) && mult > 1) {
+        p1Delta = Math.max(0, Math.round(bet * mult));
+      } else {
+        p1Delta = bet * 2;
+      }
       logGameWinCredit(p1, { ...ledgerCtx, mode: 'bot', amount: p1Delta });
-      p1.gameTotalWon = (Number(p1.gameTotalWon) || 0) + bet;
+      p1.gameTotalWon = (Number(p1.gameTotalWon) || 0) + Math.max(0, p1Delta - bet);
       bumpGameStats(p1, statKey, 'win');
       streakBonus = calcStreakBonus(bet, p1[f.streak]);
       if (streakBonus > 0) {
         logStreakCredit(p1, { ...ledgerCtx, amount: streakBonus });
         p1.gameTotalWon = (Number(p1.gameTotalWon) || 0) + streakBonus;
+      }
+      // Same jackpot spice as PvP wins
+      if (Math.random() < JACKPOT_CHANCE) {
+        jackpotHit = true;
+        jackpotAmount = await payoutJackpot(p1.username);
+        logJackpotCredit(p1, { ...ledgerCtx, amount: jackpotAmount });
+        p1.gameJackpotsWon = (Number(p1.gameJackpotsWon) || 0) + 1;
+        postBotArcadeJackpot({ username: p1.username, amount: jackpotAmount }).catch(() => {});
       }
     } else {
       outcome = 'loss';

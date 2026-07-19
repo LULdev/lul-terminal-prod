@@ -17,6 +17,7 @@ export const ARCADE_STAT_KEYS = [
   'Highlow',
   'Mines',
   'Blackjack',
+  'Dice100',
   'Nim',
   'Connect4',
 ];

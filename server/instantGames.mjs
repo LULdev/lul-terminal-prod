@@ -256,6 +256,64 @@ function handValue(cards) {
   return total;
 }
 
+/** Stake-style over/under dice: move = "over:50" | "under:50" (target 1–99). */
+const DICE100_HOUSE_EDGE = 0.01;
+
+export function parseDice100Move(raw) {
+  const s = String(raw ?? '').trim().toLowerCase();
+  const m = s.match(/^(over|under):(\d{1,2}(?:\.\d{1,2})?)$/);
+  if (!m) return null;
+  const dir = m[1];
+  const target = Number(m[2]);
+  if (!Number.isFinite(target) || target < 1 || target > 99) return null;
+  return { dir, target: Math.round(target * 100) / 100 };
+}
+
+export function dice100Odds(dir, target) {
+  const t = Number(target);
+  const chance = dir === 'over'
+    ? Math.max(0.01, (100 - t) / 100)
+    : Math.max(0.01, t / 100);
+  const multiplier = Math.max(1.01, Math.floor(((1 - DICE100_HOUSE_EDGE) / chance) * 10000) / 10000);
+  return { chance, chancePct: Math.round(chance * 10000) / 100, multiplier };
+}
+
+const dice100Base = createInstantDuelGame({
+  gameId: 'dice100',
+  statKey: 'Dice100',
+  achievementFlag: 'dice100_played',
+  chatLabel: 'Dice 100',
+  validateMove: (m) => Boolean(parseDice100Move(m)),
+  resolveWinner: (m) => {
+    const parsed = parseDice100Move(m.player1.move);
+    if (!parsed) return 'p2';
+    // Roll 0.00–100.00 inclusive (2 decimals)
+    const roll = Math.floor(Math.random() * 10001) / 100;
+    const { dir, target } = parsed;
+    const won = dir === 'over' ? roll > target : roll < target;
+    const { chancePct, multiplier } = dice100Odds(dir, target);
+    m.payoutMultiplier = won ? multiplier : 0;
+    m.player2.move = roll.toFixed(2);
+    m.reveal = {
+      roll,
+      dir,
+      target,
+      chancePct,
+      multiplier,
+      won,
+    };
+    return won ? 'p1' : 'p2';
+  },
+  botMove: () => 'house',
+});
+
+/** Single-player house game — always bot mode (instant result vs terminal). */
+export const dice100 = {
+  ...dice100Base,
+  joinQueue: (userId, opts = {}) =>
+    dice100Base.joinQueue(userId, { ...opts, mode: 'bot' }),
+};
+
 export const blackjack = createInstantDuelGame({
   gameId: 'blackjack',
   statKey: 'Blackjack',
@@ -296,4 +354,5 @@ export const INSTANT_GAMES = {
   highlow,
   mines,
   blackjack,
+  dice100,
 };

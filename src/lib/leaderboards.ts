@@ -73,6 +73,7 @@ export const LEADERBOARD_AWARD_IDS = [
   'lb_top_highlow_wins',
   'lb_top_mines_wins',
   'lb_top_blackjack_wins',
+  'lb_top_dice100_wins',
 ] as const;
 
 export type LeaderboardAccent =

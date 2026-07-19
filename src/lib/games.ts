@@ -50,6 +50,8 @@ export type InstantMatch = {
   streakBonus: number;
   jackpotHit: boolean;
   jackpotAmount: number;
+  /** Variable house-game payout (e.g. Dice 100) */
+  payoutMultiplier?: number | null;
   createdAt: number;
   expiresAt: number;
   timeLeftMs: number;

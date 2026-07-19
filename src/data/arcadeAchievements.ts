@@ -26,6 +26,7 @@ export const ARCADE_GAMES_FOR_ACHIEVEMENTS: ArcadeGameMeta[] = [
   { id: 'highlow', label: 'High or Low', shortLabel: 'Hi/Lo', icon: '📈' },
   { id: 'mines', label: 'Minefield', shortLabel: 'Mines', icon: '💣' },
   { id: 'blackjack', label: 'Blackjack Duel', shortLabel: 'BJ', icon: '🂡' },
+  { id: 'dice100', label: 'Dice 100', shortLabel: 'D100', icon: '🎯' },
 ];
 
 export const ARCADE_STANDARD_ACHIEVEMENTS: AchievementDef[] = ARCADE_GAMES_FOR_ACHIEVEMENTS.flatMap((g) => [
