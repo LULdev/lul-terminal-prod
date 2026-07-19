@@ -1526,26 +1526,12 @@ a.bot-mention-username:focus-visible {
   height: 100%;
   border-radius: inherit;
   background: linear-gradient(90deg, #6366f1, #a855f7, #22d3ee);
-  background-size: 200% 100%;
-  animation: ach-vault-bar 4s linear infinite;
-  box-shadow: 0 0 12px rgba(167, 139, 250, 0.45);
-  transition: width 0.4s ease;
+  box-shadow: 0 0 8px rgba(167, 139, 250, 0.25);
+  transition: width 0.35s ease;
 }
-@keyframes ach-vault-bar {
-  0% { background-position: 0% 50%; }
-  100% { background-position: 200% 50%; }
-}
+/* optional end-cap — no continuous animation (perf) */
 .ach-vault__bar-glow {
-  position: absolute;
-  top: 50%;
-  width: 10px;
-  height: 10px;
-  margin-top: -5px;
-  border-radius: 50%;
-  background: #e9d5ff;
-  box-shadow: 0 0 10px 3px rgba(192, 132, 252, 0.7);
-  pointer-events: none;
-  opacity: 0.85;
+  display: none;
 }
 .ach-vault__rarity-strip {
   display: grid;
@@ -2240,8 +2226,7 @@ a.bot-mention-username:focus-visible {
 .achievement-tier-plasma {
   border-color: rgba(56, 189, 248, 0.5);
   background: linear-gradient(145deg, rgba(14, 165, 233, 0.2), rgba(88, 28, 135, 0.15));
-  box-shadow: 0 0 22px rgba(56, 189, 248, 0.2);
-  animation: plasma-pulse 3s ease-in-out infinite;
+  box-shadow: 0 0 12px rgba(56, 189, 248, 0.15);
 }
 .achievement-tier-mythic {
   border-color: rgba(251, 191, 36, 0.55);
@@ -2258,20 +2243,15 @@ a.bot-mention-username:focus-visible {
   50% { box-shadow: 0 0 28px rgba(56, 189, 248, 0.35); }
 }
 
-/* —— Rarity shiny badges (awards & achievements) — soft glow —— */
+/* —— Rarity badges (static, low-cost — no infinite animations) —— */
 .ach-badge {
   position: relative;
-  /* visible so rich .trophy-tip children are not clipped */
   overflow: visible;
-  isolation: isolate;
   border-style: solid;
   border-width: 1px;
-  transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;
-}
-/* Clip shine layers without clipping tooltips */
-.ach-badge.ach-badge--live::before,
-.ach-badge.ach-badge--live::after {
-  border-radius: inherit;
+  transition: border-color 0.12s ease, filter 0.12s ease, box-shadow 0.12s ease;
+  /* contain paint where possible without clipping tips (tips are children — keep visible) */
+  contain: layout style;
 }
 .ach-badge--compact {
   border-radius: 0.4rem;
@@ -2280,148 +2260,75 @@ a.bot-mention-username:focus-visible {
   cursor: default;
 }
 .ach-badge--live:hover {
-  transform: translateY(-1px);
   z-index: 2;
-  filter: brightness(1.06);
+  filter: brightness(1.05);
 }
 .ach-badge--locked {
-  opacity: 0.4;
-  filter: grayscale(0.95) saturate(0.2);
+  opacity: 0.42;
+  filter: grayscale(0.9) saturate(0.25);
   box-shadow: none !important;
-  animation: none !important;
 }
-.ach-badge--locked::before,
-.ach-badge--locked::after {
+/* Kill leftover pseudo shine layers (were causing diagonal stripe glitches) */
+.ach-badge::before,
+.ach-badge::after,
+.ach-rarity::before,
+.ach-rarity::after {
+  content: none !important;
   display: none !important;
-}
-
-/* Soft shine sweep */
-.ach-rarity.ach-badge--live::before {
-  content: '';
-  position: absolute;
-  inset: -40% -60%;
-  background: linear-gradient(
-    115deg,
-    transparent 38%,
-    rgba(255, 255, 255, 0.05) 46%,
-    rgba(255, 255, 255, 0.14) 50%,
-    rgba(255, 255, 255, 0.05) 54%,
-    transparent 62%
-  );
-  transform: translateX(-40%) rotate(8deg);
-  pointer-events: none;
-  z-index: 1;
-  animation: ach-shine-sweep 6s ease-in-out infinite;
-}
-.ach-rarity.ach-badge--live::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  pointer-events: none;
-  z-index: 0;
-  opacity: 0.35;
-}
-
-@keyframes ach-shine-sweep {
-  0%, 60% { transform: translateX(-55%) rotate(8deg); opacity: 0; }
-  65% { opacity: 0.7; }
-  80% { transform: translateX(55%) rotate(8deg); opacity: 0.5; }
-  100% { transform: translateX(55%) rotate(8deg); opacity: 0; }
+  animation: none !important;
 }
 
 /* COMMON */
 .ach-rarity--common.ach-badge--live {
   border-color: rgba(148, 163, 184, 0.4);
   background: linear-gradient(145deg, rgba(71, 85, 105, 0.28), rgba(15, 23, 42, 0.94));
-  box-shadow: 0 0 0 1px rgba(148, 163, 184, 0.05) inset, 0 1px 4px rgba(0, 0, 0, 0.3);
-}
-.ach-rarity--common.ach-badge--live::after {
-  background: radial-gradient(circle at 20% 15%, rgba(255, 255, 255, 0.08), transparent 50%);
+  box-shadow: 0 0 0 1px rgba(148, 163, 184, 0.05) inset, 0 1px 3px rgba(0, 0, 0, 0.28);
 }
 
 /* RARE */
 .ach-rarity--rare.ach-badge--live {
   border-color: rgba(56, 189, 248, 0.45);
-  background: linear-gradient(145deg, rgba(14, 165, 233, 0.22), rgba(15, 23, 42, 0.95));
-  box-shadow: 0 0 0 1px rgba(125, 211, 252, 0.08) inset, 0 0 8px rgba(56, 189, 248, 0.12);
-  animation: ach-glow-rare 3.5s ease-in-out infinite;
-}
-.ach-rarity--rare.ach-badge--live::after {
-  background: radial-gradient(circle at 18% 12%, rgba(186, 230, 253, 0.18), transparent 45%);
+  background: linear-gradient(145deg, rgba(14, 165, 233, 0.2), rgba(15, 23, 42, 0.95));
+  box-shadow: 0 0 0 1px rgba(125, 211, 252, 0.08) inset, 0 0 6px rgba(56, 189, 248, 0.1);
 }
 .ach-rarity--rare.ach-badge--live .ach-badge__icon {
-  filter: drop-shadow(0 0 2px rgba(125, 211, 252, 0.35));
-}
-@keyframes ach-glow-rare {
-  0%, 100% { box-shadow: 0 0 0 1px rgba(125, 211, 252, 0.06) inset, 0 0 6px rgba(56, 189, 248, 0.1); }
-  50% { box-shadow: 0 0 0 1px rgba(125, 211, 252, 0.12) inset, 0 0 10px rgba(56, 189, 248, 0.2); }
+  filter: drop-shadow(0 0 1px rgba(125, 211, 252, 0.3));
 }
 
 /* EPIC */
 .ach-rarity--epic.ach-badge--live {
   border-color: rgba(192, 132, 252, 0.5);
-  background: linear-gradient(145deg, rgba(168, 85, 247, 0.24), rgba(15, 10, 30, 0.96));
-  box-shadow: 0 0 0 1px rgba(216, 180, 254, 0.1) inset, 0 0 8px rgba(168, 85, 247, 0.14);
-  animation: ach-glow-epic 3.2s ease-in-out infinite;
-}
-.ach-rarity--epic.ach-badge--live::after {
-  background: radial-gradient(circle at 22% 10%, rgba(237, 233, 254, 0.18), transparent 42%);
+  background: linear-gradient(145deg, rgba(168, 85, 247, 0.22), rgba(15, 10, 30, 0.96));
+  box-shadow: 0 0 0 1px rgba(216, 180, 254, 0.08) inset, 0 0 6px rgba(168, 85, 247, 0.12);
 }
 .ach-rarity--epic.ach-badge--live .ach-badge__icon {
-  filter: drop-shadow(0 0 2px rgba(216, 180, 254, 0.4));
-}
-@keyframes ach-glow-epic {
-  0%, 100% { box-shadow: 0 0 0 1px rgba(216, 180, 254, 0.06) inset, 0 0 6px rgba(168, 85, 247, 0.12); }
-  50% { box-shadow: 0 0 0 1px rgba(216, 180, 254, 0.12) inset, 0 0 11px rgba(192, 132, 252, 0.22); }
+  filter: drop-shadow(0 0 1px rgba(216, 180, 254, 0.35));
 }
 
 /* LEGENDARY */
 .ach-rarity--legendary.ach-badge--live {
   border-color: rgba(251, 191, 36, 0.55);
-  background: linear-gradient(145deg, rgba(251, 191, 36, 0.22), rgba(120, 53, 15, 0.35), rgba(20, 12, 5, 0.96));
-  box-shadow: 0 0 0 1px rgba(254, 243, 199, 0.1) inset, 0 0 8px rgba(251, 191, 36, 0.16);
-  animation: ach-glow-legendary 3s ease-in-out infinite;
-}
-.ach-rarity--legendary.ach-badge--live::after {
-  background: radial-gradient(circle at 25% 8%, rgba(254, 249, 195, 0.2), transparent 42%);
+  background: linear-gradient(145deg, rgba(251, 191, 36, 0.2), rgba(120, 53, 15, 0.32), rgba(20, 12, 5, 0.96));
+  box-shadow: 0 0 0 1px rgba(254, 243, 199, 0.08) inset, 0 0 6px rgba(251, 191, 36, 0.12);
 }
 .ach-rarity--legendary.ach-badge--live .ach-badge__icon {
-  filter: drop-shadow(0 0 2px rgba(253, 224, 71, 0.45));
-}
-@keyframes ach-glow-legendary {
-  0%, 100% { box-shadow: 0 0 0 1px rgba(254, 243, 199, 0.08) inset, 0 0 6px rgba(251, 191, 36, 0.12); }
-  50% { box-shadow: 0 0 0 1px rgba(254, 243, 199, 0.14) inset, 0 0 12px rgba(251, 191, 36, 0.24); }
+  filter: drop-shadow(0 0 1px rgba(253, 224, 71, 0.4));
 }
 
-/* MYTHIC */
+/* MYTHIC — static prism gradient (no holo animation) */
 .ach-rarity--mythic.ach-badge--live {
   border-color: rgba(244, 114, 182, 0.5);
   background: linear-gradient(
     135deg,
-    rgba(251, 191, 36, 0.16) 0%,
-    rgba(244, 114, 182, 0.18) 30%,
-    rgba(167, 139, 250, 0.2) 60%,
+    rgba(251, 191, 36, 0.14) 0%,
+    rgba(244, 114, 182, 0.16) 32%,
+    rgba(167, 139, 250, 0.18) 64%,
     rgba(15, 10, 30, 0.96) 100%
   );
-  background-size: 180% 180%;
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08) inset, 0 0 9px rgba(244, 114, 182, 0.16);
-  animation: ach-holo-shift 8s linear infinite, ach-glow-mythic 3s ease-in-out infinite;
-}
-.ach-rarity--mythic.ach-badge--live::after {
-  background: radial-gradient(circle at 20% 15%, rgba(255, 255, 255, 0.16), transparent 40%);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.06) inset, 0 0 7px rgba(244, 114, 182, 0.12);
 }
 .ach-rarity--mythic.ach-badge--live .ach-badge__icon {
-  filter: drop-shadow(0 0 2px rgba(244, 114, 182, 0.4));
-}
-@keyframes ach-holo-shift {
-  0% { background-position: 0% 40%; }
-  50% { background-position: 100% 60%; }
-  100% { background-position: 0% 40%; }
-}
-@keyframes ach-glow-mythic {
-  0%, 100% { box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.06) inset, 0 0 6px rgba(244, 114, 182, 0.12); }
-  50% { box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.12) inset, 0 0 12px rgba(167, 139, 250, 0.2); }
+  filter: drop-shadow(0 0 1px rgba(244, 114, 182, 0.35));
 }
 
 .ach-badge__icon {
@@ -2524,26 +2431,14 @@ a.bot-mention-username:focus-visible {
   color: #c4b5fd;
 }
 .achievement-card-unlocked:hover {
-  transform: translateY(-2px) scale(1.02);
+  filter: brightness(1.04);
 }
+/* Shimmer / float disabled by default — too many chips = heavy paint */
 .achievement-shimmer::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(105deg, transparent 40%, rgba(255, 255, 255, 0.12) 50%, transparent 60%);
-  animation: achievement-sweep 2.5s ease-in-out infinite;
-}
-@keyframes achievement-sweep {
-  0% { transform: translateX(-100%); }
-  100% { transform: translateX(100%); }
+  display: none;
 }
 .achievement-icon-float {
   display: inline-block;
-  animation: achievement-float 2.5s ease-in-out infinite;
-}
-@keyframes achievement-float {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-3px); }
 }
 .achievement-confetti-canvas {
   position: fixed;

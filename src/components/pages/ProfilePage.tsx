@@ -4,7 +4,7 @@
  */
 
 import React, { useCallback, useMemo, useRef, useState } from 'react';
-import { Check, Crown, Gamepad2, LogOut, Settings, Sparkles, Trophy, User } from 'lucide-react';
+import { Archive, Check, Crown, Gamepad2, LogOut, Settings, Sparkles, Trophy, User } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import * as authApi from '../../lib/auth';
 import { LOGOUT_ARCADE_BLOCKED } from '../../lib/authMessages';
@@ -40,12 +40,13 @@ type ProfilePageProps = {
   onNavigateTab?: (tab: string) => void;
 };
 
-type ProfileTab = 'overview' | 'arcade' | 'trophies' | 'settings';
+type ProfileTab = 'overview' | 'arcade' | 'trophies' | 'vault' | 'settings';
 
 const TABS: { id: ProfileTab; label: string; icon: React.ReactNode; ownOnly?: boolean }[] = [
   { id: 'overview', label: 'Overview', icon: <User size={12} /> },
   { id: 'arcade', label: 'Arcade', icon: <Gamepad2 size={12} /> },
   { id: 'trophies', label: 'Trophies', icon: <Trophy size={12} /> },
+  { id: 'vault', label: 'Vault', icon: <Archive size={12} /> },
   { id: 'settings', label: 'Settings', icon: <Settings size={12} />, ownOnly: true },
 ];
 
@@ -482,6 +483,16 @@ export function ProfilePage({ routeUsername, profileTabReadyTick = 0, onNavigate
                   showCoins={customization.privacy.showCoins}
                 />
                 <UnlockedAwards earned={previewAchievements} />
+              </div>
+            )}
+
+            {activeTab === 'vault' && (
+              <div className="space-y-2">
+                {!customization.privacy.showActivityStats && (
+                  <div className="profile-glass rounded-xl px-3 py-2 text-center text-[9px] font-mono text-slate-500">
+                    Arcade & coin trophies are hidden from your public profile — preview below.
+                  </div>
+                )}
                 <AchievementShowcase earned={previewAchievements} />
               </div>
             )}
@@ -666,8 +677,11 @@ function PublicProfileView({
               showCoins={custom.privacy.showCoins}
             />
             <UnlockedAwards earned={publicAchievements} />
-            <AchievementShowcase earned={publicAchievements} />
           </div>
+        )}
+
+        {activeTab === 'vault' && (
+          <AchievementShowcase earned={publicAchievements} />
         )}
 
         {!isLoggedIn && (

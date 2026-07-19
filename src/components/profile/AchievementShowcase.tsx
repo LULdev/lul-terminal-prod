@@ -142,7 +142,6 @@ export function AchievementShowcase({ earned, compact }: AchievementShowcaseProp
 
         <div className="ach-vault__bar" role="progressbar" aria-valuenow={stats.pct} aria-valuemin={0} aria-valuemax={100}>
           <div className="ach-vault__bar-fill" style={{ width: `${stats.pct}%` }} />
-          <div className="ach-vault__bar-glow" style={{ left: `calc(${stats.pct}% - 6px)` }} />
         </div>
 
         <div className="ach-vault__rarity-strip" aria-label="Progress by rarity">
