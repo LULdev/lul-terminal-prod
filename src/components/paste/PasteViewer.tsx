@@ -8,12 +8,14 @@ import {
   ChevronDown,
   ChevronUp,
   Copy,
+  Crown,
   Eraser,
   Eye,
   Lock,
   LogIn,
   RotateCcw,
   Search,
+  Shield,
   User,
 } from 'lucide-react';
 import {
@@ -36,7 +38,7 @@ import { useAuth } from '../../context/AuthContext';
 import { safeAvatarUrl } from '../../lib/safeAvatarUrl';
 import { safePasteAssetUrl } from '../../lib/safePasteUrl';
 import { AdminUsername } from '../profile/AdminUsername';
-import { ChatRoleBadges } from '../diagnostics/ChatRoleBadges';
+import { VerifiedBadge } from '../auth/VerifiedBadge';
 import type { UserRole } from '../../types/auth';
 import { PasteCodeView } from './PasteCodeView';
 import { PasteStarRating } from './PasteStarRating';
@@ -359,7 +361,7 @@ export function PasteViewer({ id, embedded = false }: Props) {
                 <p className="text-[8px] font-mono uppercase tracking-widest text-slate-500 mb-0.5">Paste</p>
                 <h1 className="text-base sm:text-lg font-semibold text-white truncate">{paste.title}</h1>
                 {paste.username ? (
-                  <div className="mt-1.5 flex flex-wrap items-center gap-1.5 min-w-0">
+                  <div className="mt-1.5 flex flex-wrap items-center gap-2 min-w-0">
                     {authorRole === 'admin' ? (
                       <AdminUsername username={paste.username} size="sm" />
                     ) : authorRole === 'bot' ? (
@@ -373,12 +375,24 @@ export function PasteViewer({ id, embedded = false }: Props) {
                         @{paste.username}
                       </span>
                     )}
-                    {authorRole && (
-                      <ChatRoleBadges
-                        role={authorRole}
-                        verified={Boolean(paste.authorVerified)}
-                        compact
-                      />
+                    {/* Profile-style badges (same as profile hero) */}
+                    <VerifiedBadge
+                      verified={Boolean(paste.authorVerified)}
+                      size={14}
+                      showLabel
+                      animated={Boolean(paste.authorVerified)}
+                    />
+                    {authorRole === 'admin' && (
+                      <span className="profile-admin-badge" title="Administrator">
+                        <Shield size={11} aria-hidden />
+                        <span>Admin</span>
+                      </span>
+                    )}
+                    {authorRole === 'vip' && (
+                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md border border-amber-500/35 bg-amber-500/10 text-[8px] font-mono text-amber-300 uppercase tracking-wide">
+                        <Crown size={10} aria-hidden />
+                        VIP
+                      </span>
                     )}
                   </div>
                 ) : (
