@@ -31,11 +31,13 @@ export function PasteStarRating({
   const [mine, setMine] = useState(userRating ?? 0);
   const [hover, setHover] = useState(0);
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     setAvg(ratingAvg);
     setCount(ratingCount);
     setMine(userRating ?? 0);
+    setError('');
   }, [pasteId, ratingAvg, ratingCount, userRating]);
 
   const iconSize = size === 'sm' ? 14 : 18;
@@ -44,13 +46,17 @@ export function PasteStarRating({
   const submit = async (stars: number) => {
     if (!isLoggedIn || busy) return;
     setBusy(true);
+    setError('');
     try {
       const result = await ratePaste(pasteId, stars);
       setAvg(result.ratingAvg);
       setCount(result.ratingCount);
       setMine(result.userRating);
       onRated?.(result.ratingAvg, result.ratingCount, result.userRating);
-    } catch { /* ignore */ } finally {
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'Rating failed';
+      setError(msg === 'Session expired' ? 'Sign in again to rate' : msg);
+    } finally {
       setBusy(false);
     }
   };
@@ -93,8 +99,11 @@ export function PasteStarRating({
       {!isLoggedIn && (
         <p className="text-[7px] font-mono text-slate-600">Sign in to rate this paste</p>
       )}
-      {isLoggedIn && mine > 0 && (
+      {isLoggedIn && mine > 0 && !error && (
         <p className="text-[7px] font-mono text-amber-400/70">Your rating: {mine}★</p>
+      )}
+      {error && (
+        <p className="text-[7px] font-mono text-rose-400" role="alert">{error}</p>
       )}
     </div>
   );

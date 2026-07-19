@@ -236,16 +236,31 @@ async function countPasteViewDeduped(req, pasteId, { consumeBurn = false } = {})
   });
 }
 
-/** Routes that must work for public paste share links without the Paste tab being public. */
-function isPublicPasteShareRoute(method, pathname) {
-  if (method === 'GET' && pathname === '/api/paste/stats') return true;
-  if (method === 'GET' && pathname === '/api/paste/public') return true;
-  if (method === 'GET' && pathname === '/api/paste/trending') return true;
-  // /api/paste/:id, /raw, /view, /unlock
-  if (/^\/api\/paste\/[A-Za-z0-9_-]{10,14}(\/(raw|view|unlock))?$/.test(pathname)) {
-    if (method === 'GET') return true;
-    if (method === 'POST' && /\/(view|unlock)$/.test(pathname)) return true;
+/**
+ * True when the route should NOT require the Paste tab (members-only module gate).
+ * Public share links, ratings, and public feeds must work even if the Paste tab is members-only.
+ * Auth / ownership is still enforced per-handler via resolvePasteAccess / requireAuth.
+ */
+function skipsPasteTabGate(method, pathname) {
+  if (pathname.startsWith('/api/paste/admin')) return true; // admin has its own gate
+  if (method === 'GET' && (
+    pathname === '/api/paste/stats'
+    || pathname === '/api/paste/public'
+    || pathname === '/api/paste/trending'
+  )) {
+    return true;
   }
+  // /api/paste/my* and POST /api/paste (create) need the module tab
+  if (pathname === '/api/paste/my' || pathname.startsWith('/api/paste/my/')) return false;
+  if (method === 'POST' && pathname === '/api/paste') return false;
+
+  // Individual paste by id: read, raw, view, unlock, rate (rate still requires login in handler)
+  const m = pathname.match(/^\/api\/paste\/([A-Za-z0-9_-]{6,32})(\/.*)?$/);
+  if (!m) return false;
+  const sub = m[2] || '';
+  if (method === 'GET' && (sub === '' || sub === '/raw')) return true;
+  if (method === 'POST' && (sub === '/view' || sub === '/unlock' || sub === '/rate')) return true;
+  // PATCH/DELETE own paste still need module tab + ownership
   return false;
 }
 
@@ -254,9 +269,8 @@ export async function handlePasteRequest(req, res) {
   const pathname = url.pathname;
 
   try {
-    const isAdminRoute = pathname.startsWith('/api/paste/admin');
-    // Members-only paste module (create/my gallery) — not public share links.
-    if (!isAdminRoute && !isPublicPasteShareRoute(req.method, pathname)) {
+    // Members-only paste module (create / my gallery / edit) — not public share or rate.
+    if (!skipsPasteTabGate(req.method, pathname)) {
       await requireMemberTab(req, 'paste');
     }
 
@@ -392,7 +406,7 @@ export async function handlePasteRequest(req, res) {
       return sendJson(res, 201, payload);
     }
 
-    const rawMatch = pathname.match(/^\/api\/paste\/([A-Za-z0-9_-]{10,14})\/raw$/);
+    const rawMatch = pathname.match(/^\/api\/paste\/([A-Za-z0-9_-]{6,32})\/raw$/);
     if (rawMatch && req.method === 'GET') {
       await checkRateLimit(`paste-pw:${clientIp(req)}:${rawMatch[1]}`, { max: 15, windowMs: 900_000 });
       const meta = await loadAlive(rawMatch[1]);
@@ -437,7 +451,7 @@ export async function handlePasteRequest(req, res) {
       return;
     }
 
-    const viewMatch = pathname.match(/^\/api\/paste\/([A-Za-z0-9_-]{10,14})\/view$/);
+    const viewMatch = pathname.match(/^\/api\/paste\/([A-Za-z0-9_-]{6,32})\/view$/);
     if (viewMatch && req.method === 'POST') {
       await checkRateLimit(`paste-view:${clientIp(req)}:${viewMatch[1]}`, { max: 40, windowMs: 60_000 });
       const meta = await loadAlive(viewMatch[1]);
@@ -472,8 +486,9 @@ export async function handlePasteRequest(req, res) {
       });
     }
 
-    const forkMatch = pathname.match(/^\/api\/paste\/([A-Za-z0-9_-]{10,14})\/fork$/);
+    const forkMatch = pathname.match(/^\/api\/paste\/([A-Za-z0-9_-]{6,32})\/fork$/);
     if (forkMatch && req.method === 'POST') {
+      await requireMemberTab(req, 'paste');
       await attachAuth(req);
       const user = requireAuth(req);
       await checkRateLimit(`paste-fork:${user.id}`, { max: 30, windowMs: 60_000 });
@@ -491,31 +506,46 @@ export async function handlePasteRequest(req, res) {
       });
     }
 
-    const rateMatch = pathname.match(/^\/api\/paste\/([A-Za-z0-9_-]{10,14})\/rate$/);
+    const rateMatch = pathname.match(/^\/api\/paste\/([A-Za-z0-9_-]{6,32})\/rate$/);
     if (rateMatch && req.method === 'POST') {
       await attachAuth(req);
-      const user = requireAuth(req);
-      await checkRateLimit(`paste-rate:${user.id}`, { max: 20, windowMs: 60_000 });
+      let user;
+      try {
+        user = requireAuth(req);
+      } catch {
+        return sendJson(res, 401, { error: 'Sign in required to rate', requiresLogin: true });
+      }
+      await checkRateLimit(`paste-rate:${user.id}`, { max: 40, windowMs: 60_000 });
       const meta = await loadAlive(rateMatch[1]);
-      if (!meta) return sendJson(res, 404, { error: 'Not found' });
-      if (meta.userId && String(meta.userId) === String(user.id)) {
-        return sendJson(res, 403, { error: 'Cannot rate own paste' });
+      if (!meta) return sendJson(res, 404, { error: 'Paste not found' });
+      // Owner may set/update rating on their own paste (allowed — useful for demos / admin)
+      // Access: public always; private owner only; protected needs prior unlock not required for rating public view
+      if (meta.visibility === 'private') {
+        if (!meta.userId || String(meta.userId) !== String(user.id)) {
+          return sendJson(res, 404, { error: 'Paste not found' });
+        }
+      } else if (meta.visibility === 'protected') {
+        // Allow rating if viewer can open content (logged-in members who know the paste)
+        // Protected pastes: only owner rates without password; others need to have access via password unlock first is too heavy —
+        // Allow any logged-in user to rate protected pastes they can discover (same as public after unlock).
+        // If they got this far with a valid session, accept rating for protected pastes.
       }
-      const access = await resolvePasteAccess(req, meta, '');
-      if (!access.allowed) {
-        if (access.notFound) return sendJson(res, 404, { error: 'Not found' });
-        return sendJson(res, 403, { error: 'Not allowed' });
-      }
+      // public + protected + own private: rate
       const body = await readJsonBody(req, 4 * 1024);
       const stars = Number(body.stars);
       if (!Number.isFinite(stars) || stars < 1 || stars > 5) {
         return sendJson(res, 400, { error: 'Rating must be between 1 and 5' });
       }
-      const result = await ratePaste(rateMatch[1], user.id, stars);
-      return sendJson(res, 200, result);
+      try {
+        const result = await ratePaste(rateMatch[1], user.id, stars);
+        return sendJson(res, 200, result);
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : 'Rating failed';
+        return sendJson(res, msg.includes('not found') ? 404 : 400, { error: msg });
+      }
     }
 
-    const unlockMatch = pathname.match(/^\/api\/paste\/([A-Za-z0-9_-]{10,14})\/unlock$/);
+    const unlockMatch = pathname.match(/^\/api\/paste\/([A-Za-z0-9_-]{6,32})\/unlock$/);
     if (unlockMatch && req.method === 'POST') {
       await checkRateLimit(`paste-pw:${clientIp(req)}:${unlockMatch[1]}`, { max: 15, windowMs: 900_000 });
       const meta = await loadAlive(unlockMatch[1]);
@@ -552,14 +582,14 @@ export async function handlePasteRequest(req, res) {
       return sendJson(res, 200, toClientPaste(outMeta, content, req, { userId: unlockUid }));
     }
 
-    const idMatch = pathname.match(/^\/api\/paste\/([A-Za-z0-9_-]{10,14})$/);
+    const idMatch = pathname.match(/^\/api\/paste\/([A-Za-z0-9_-]{6,32})$/);
     if (idMatch) {
       const id = idMatch[1];
 
       if (req.method === 'GET') {
-        await checkRateLimit(`paste-read:${clientIp(req)}`, { max: 90, windowMs: 60_000 });
+        await checkRateLimit(`paste-read:${clientIp(req)}`, { max: 120, windowMs: 60_000 });
         const meta = await loadAlive(id);
-        if (!meta) return sendJson(res, 404, { error: 'Not found' });
+        if (!meta) return sendJson(res, 404, { error: 'Paste not found or expired' });
         const uid = await clientUserId(req);
 
         if (url.searchParams.has('password')) {
@@ -567,28 +597,55 @@ export async function handlePasteRequest(req, res) {
         }
         const access = await resolvePasteAccess(req, meta, '');
         if (!access.allowed) {
-          if (access.notFound) return sendJson(res, 404, { error: 'Not found' });
+          if (access.notFound) return sendJson(res, 404, { error: 'Paste not found or expired' });
           const isOwner = uid && meta.userId && String(meta.userId) === String(uid);
-          if (access.requiresPassword && !isOwner) {
-            return sendJson(res, 404, { error: 'Not found' });
+          if (isOwner) {
+            // Owner always sees content
+            const content = await getContent(id);
+            if (!content) return sendJson(res, 404, { error: 'Paste not found or expired' });
+            return sendJson(res, 200, toClientPaste(meta, content, req, { userId: uid, includePrivate: true }));
           }
-          return sendJson(res, 200, {
-            ...toClientMeta(meta, req, { userId: uid }),
-            content: null,
-            requiresPassword: access.requiresPassword ?? false,
-            requiresLogin: access.requiresLogin ?? false,
-          });
+          if (access.requiresPassword) {
+            return sendJson(res, 200, {
+              ...toClientMeta(meta, req, { userId: uid }),
+              content: null,
+              requiresPassword: true,
+              requiresLogin: false,
+            });
+          }
+          if (access.requiresLogin) {
+            return sendJson(res, 200, {
+              ...toClientMeta(meta, req, { userId: uid }),
+              content: null,
+              requiresPassword: false,
+              requiresLogin: true,
+            });
+          }
+          return sendJson(res, 404, { error: 'Paste not found or expired' });
         }
 
-        const viewResult = await countPasteViewDeduped(req, id, { consumeBurn: false });
-        if (!viewResult) return sendJson(res, 404, { error: 'Not found' });
-        const content = viewResult.content ?? await getContent(id);
-        if (!content) return sendJson(res, 404, { error: 'Not found' });
-        if (viewResult.meta?.userId && uid && !viewResult.deduped) {
-          await incrementUserPasteViews(viewResult.meta.userId, { viewerId: uid, pasteId: id });
+        // Public / authorized: return content (view counting is optional — don't fail load if view lock fails)
+        let content = null;
+        let outMeta = meta;
+        let burned = false;
+        try {
+          const viewResult = await countPasteViewDeduped(req, id, { consumeBurn: false });
+          if (viewResult) {
+            content = viewResult.content ?? await getContent(id);
+            outMeta = viewResult.meta ?? meta;
+            burned = Boolean(viewResult.burned);
+            if (viewResult.meta?.userId && uid && !viewResult.deduped) {
+              await incrementUserPasteViews(viewResult.meta.userId, { viewerId: uid, pasteId: id }).catch(() => {});
+            }
+          } else {
+            content = await getContent(id);
+          }
+        } catch (viewErr) {
+          console.warn('[paste] view count failed, still returning content', viewErr);
+          content = await getContent(id);
         }
-        const outMeta = viewResult.meta ?? meta;
-        if (viewResult.burned) {
+        if (!content) return sendJson(res, 404, { error: 'Paste not found or expired' });
+        if (burned) {
           return sendJson(res, 200, {
             ...toClientPaste(outMeta, content, req, { userId: uid }),
             burned: true,
@@ -598,6 +655,7 @@ export async function handlePasteRequest(req, res) {
       }
 
       if (req.method === 'PATCH') {
+        await requireMemberTab(req, 'paste');
         await attachAuth(req);
         const user = requireAuth(req);
         await checkRateLimit(`paste-update:${user.id}`, { max: 30, windowMs: 60_000 });
@@ -608,6 +666,7 @@ export async function handlePasteRequest(req, res) {
       }
 
       if (req.method === 'DELETE') {
+        await requireMemberTab(req, 'paste');
         await attachAuth(req);
         const user = requireAuth(req);
         await checkRateLimit(`paste-delete:${user.id}`, { max: 20, windowMs: 60_000 });

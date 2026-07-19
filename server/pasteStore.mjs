@@ -27,7 +27,8 @@ const EXPIRY_MS = {
 };
 
 export function isValidId(id) {
-  return typeof id === 'string' && ID_PATTERN.test(id);
+  // Accept 6–32 chars so older/shorter IDs still load; generateId still emits 12.
+  return typeof id === 'string' && /^[A-Za-z0-9_-]{6,32}$/.test(id);
 }
 
 export function generateId() {

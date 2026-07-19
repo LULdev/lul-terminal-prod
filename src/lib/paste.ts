@@ -394,12 +394,18 @@ export async function ratePaste(id: string, stars: number): Promise<{
   ratingCount: number;
   userRating: number;
 }> {
-  const res = await sessionFetch(`${API}/${id}/rate`, {
-    method: 'POST',
-    body: JSON.stringify({ stars }),
-  });
+  // soft401: do not wipe session on 401 from rate — show sign-in instead
+  const res = await sessionFetch(
+    `${API}/${id}/rate`,
+    { method: 'POST', body: JSON.stringify({ stars }) },
+    { soft401: true },
+  );
   if (!res.ok) throw new Error(await parseError(res));
-  return res.json();
+  return res.json() as Promise<{
+    ratingAvg: number;
+    ratingCount: number;
+    userRating: number;
+  }>;
 }
 
 export function dedupePasteLines(content: string): { content: string; removed: number } {
