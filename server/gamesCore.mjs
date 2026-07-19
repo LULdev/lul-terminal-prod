@@ -387,7 +387,9 @@ export async function settleMatch({
   }
 
   if (m.mode === 'bot') {
-    // Dice family: every wager seeds the community pot (win or lose)
+    // Dice family (Dice Duel + Dice 100):
+    //  1) every bet seeds a small % into the jackpot pot
+    //  2) losses feed the full remaining stake into the pot (net 100% of lost wager)
     const isDiceFamily = gameId === 'dice100' || gameId === 'dice';
     const dicePotSeed = isDiceFamily
       ? Math.max(1, Math.floor(bet * DICE_POT_SEED_RATE))
@@ -427,7 +429,7 @@ export async function settleMatch({
       }
     } else {
       outcome = 'loss';
-      // Remaining stake after the per-bet seed also feeds the pot
+      // Losses always feed the jackpot: remaining stake after the per-bet seed (or full bet)
       if (dicePotSeed > 0) {
         const rest = bet - dicePotSeed;
         if (rest > 0) await addToJackpot(rest);

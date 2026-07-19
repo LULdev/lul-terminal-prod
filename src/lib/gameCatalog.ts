@@ -286,7 +286,7 @@ export const GAME_CATALOG: GameCatalogEntry[] = [
       'Set target 1–99 · Over or Under',
       'Payout = bet × multiplier (1% edge)',
       '2% of every bet seeds the jackpot pot',
-      'Full loss still feeds the remaining pot',
+      'Losses feed the full stake into the jackpot',
     ],
   },
 ];
