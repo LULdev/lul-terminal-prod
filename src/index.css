@@ -739,8 +739,24 @@ a.bot-mention-username:focus-visible {
   color: #c4b5fd;
   font-weight: 600;
 }
+/* Shoutbox line: message sits on the same vertical center as the username chip */
+.shoutbox-line {
+  align-items: center;
+}
+.shoutbox-line__time,
+.shoutbox-line__colon {
+  line-height: 1.25;
+  font-size: inherit;
+}
+.shoutbox-line__msg {
+  line-height: 1.25;
+  /* First line of multi-line messages stays level with @username */
+  align-self: center;
+}
 .chat-user-chip {
   cursor: pointer;
+  align-items: center;
+  line-height: 1.25;
 }
 .chat-user-chip:focus-visible {
   outline: 1px solid rgba(217, 70, 239, 0.45);

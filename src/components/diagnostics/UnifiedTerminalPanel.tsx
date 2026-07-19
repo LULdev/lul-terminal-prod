@@ -144,8 +144,10 @@ function ChatLine({
       : 'text-indigo-200/90';
 
   return (
-    <div className={`flex gap-1.5 items-start leading-tight group ${botLine ? 'bot-message-row' : ''}`}>
-      <span className="text-slate-600 font-semibold shrink-0 select-none pt-px">[{formatTime(msg.createdAt)}]</span>
+    <div className={`shoutbox-line flex gap-1.5 items-center leading-none group ${botLine ? 'bot-message-row' : ''}`}>
+      <span className="shoutbox-line__time text-slate-600 font-semibold shrink-0 select-none">
+        [{formatTime(msg.createdAt)}]
+      </span>
       {botLine ? (
         <BotBadgeWithDelete messageId={msg.id} onMessageDeleted={onMessageDeleted} />
       ) : onOpenProfile ? (
@@ -163,12 +165,12 @@ function ChatLine({
             messageId={msg.id}
             onMessageDeleted={onMessageDeleted}
           />
-          <span className="text-slate-600 shrink-0 select-none">:</span>
+          <span className="shoutbox-line__colon text-slate-600 shrink-0 select-none">:</span>
         </>
       ) : (
         <span className="text-slate-400 shrink-0">{msg.username}:</span>
       )}
-      <span className={`whitespace-pre-wrap leading-tight break-all ${textClass}`}>
+      <span className={`shoutbox-line__msg min-w-0 whitespace-pre-wrap break-all ${textClass}`}>
         <ChatMessageBody msg={msg} onOpenProfile={onOpenProfile} botMessage={botLine} />
       </span>
     </div>
