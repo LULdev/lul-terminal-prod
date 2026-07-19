@@ -35,8 +35,18 @@ import { languageLabel } from '../../data/pasteLanguages';
 import { useAuth } from '../../context/AuthContext';
 import { safeAvatarUrl } from '../../lib/safeAvatarUrl';
 import { safePasteAssetUrl } from '../../lib/safePasteUrl';
+import { AdminUsername } from '../profile/AdminUsername';
+import { ChatRoleBadges } from '../diagnostics/ChatRoleBadges';
+import type { UserRole } from '../../types/auth';
 import { PasteCodeView } from './PasteCodeView';
 import { PasteStarRating } from './PasteStarRating';
+
+const AUTHOR_RING: Record<string, string> = {
+  user: 'ring-slate-600/70',
+  vip: 'ring-amber-500/50',
+  admin: 'ring-violet-500/55',
+  bot: 'ring-cyan-500/45',
+};
 
 type Props = {
   id: string;
@@ -223,7 +233,11 @@ export function PasteViewer({ id, embedded = false }: Props) {
     setDedupeActive(true);
   };
 
-  const avatarUrl = paste?.username ? safeAvatarUrl(paste.avatarUrl, paste.username) : null;
+  const authorRole = (paste?.authorRole as UserRole | null | undefined) ?? null;
+  const avatarUrl = paste?.username
+    ? safeAvatarUrl(paste.avatarUrl ?? undefined, paste.username)
+    : null;
+  const avatarRing = AUTHOR_RING[authorRole ?? 'user'] ?? AUTHOR_RING.user;
 
   if (loading) {
     return (
@@ -332,11 +346,12 @@ export function PasteViewer({ id, embedded = false }: Props) {
               {avatarUrl ? (
                 <img
                   src={avatarUrl}
-                  alt=""
-                  className="w-11 h-11 sm:w-12 sm:h-12 rounded-full ring-2 ring-emerald-500/30 border-2 border-[#0c0d12] shrink-0"
+                  alt={paste.username ? `@${paste.username}` : 'Author'}
+                  className={`w-11 h-11 sm:w-12 sm:h-12 rounded-full object-cover ring-2 ${avatarRing} border-2 border-[#0c0d12] shrink-0 bg-slate-900`}
+                  loading="lazy"
                 />
               ) : (
-                <div className="w-11 h-11 rounded-full bg-slate-800 flex items-center justify-center shrink-0">
+                <div className={`w-11 h-11 rounded-full bg-slate-800 flex items-center justify-center shrink-0 ring-2 ${avatarRing}`}>
                   <User size={18} className="text-slate-500" />
                 </div>
               )}
@@ -344,7 +359,28 @@ export function PasteViewer({ id, embedded = false }: Props) {
                 <p className="text-[8px] font-mono uppercase tracking-widest text-slate-500 mb-0.5">Paste</p>
                 <h1 className="text-base sm:text-lg font-semibold text-white truncate">{paste.title}</h1>
                 {paste.username ? (
-                  <p className="text-[10px] font-mono text-emerald-300/90 mt-1">@{paste.username}</p>
+                  <div className="mt-1.5 flex flex-wrap items-center gap-1.5 min-w-0">
+                    {authorRole === 'admin' ? (
+                      <AdminUsername username={paste.username} size="sm" />
+                    ) : authorRole === 'bot' ? (
+                      <span className="bot-username-style text-[12px]">@{paste.username}</span>
+                    ) : (
+                      <span
+                        className={`profile-display-name text-[12px] sm:text-[13px] font-semibold truncate ${
+                          authorRole === 'vip' ? 'text-amber-200' : ''
+                        }`}
+                      >
+                        @{paste.username}
+                      </span>
+                    )}
+                    {authorRole && (
+                      <ChatRoleBadges
+                        role={authorRole}
+                        verified={Boolean(paste.authorVerified)}
+                        compact
+                      />
+                    )}
+                  </div>
                 ) : (
                   <p className="text-[10px] font-mono text-slate-500 mt-1">Anonymous</p>
                 )}
@@ -359,21 +395,20 @@ export function PasteViewer({ id, embedded = false }: Props) {
               </div>
             </div>
 
-            <div className="flex flex-wrap items-center gap-3 sm:gap-4">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
               <div
-                className={`flex items-center gap-2.5 px-3 py-2 rounded-xl border border-emerald-500/25 bg-emerald-500/10 transition-all duration-500 ${
+                className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-md border border-emerald-500/20 bg-emerald-500/8 transition-opacity duration-500 ${
                   viewsReady ? 'opacity-100' : 'opacity-60'
                 }`}
+                title={`${formatPasteViews(views)} views`}
               >
-                <div className="w-9 h-9 rounded-lg bg-emerald-500/15 flex items-center justify-center">
-                  <Eye size={16} className="text-emerald-300" />
-                </div>
-                <div className="leading-none">
-                  <p className="text-[15px] font-mono font-bold text-emerald-200 tabular-nums">{formatPasteViews(views)}</p>
-                  <p className="text-[8px] font-mono text-emerald-400/70 uppercase tracking-wider mt-0.5">
-                    {views === 1 ? 'view' : 'views'}
-                  </p>
-                </div>
+                <Eye size={11} className="text-emerald-400/90 shrink-0" />
+                <span className="text-[10px] font-mono font-semibold text-emerald-200/95 tabular-nums leading-none">
+                  {formatPasteViews(views)}
+                </span>
+                <span className="text-[7px] font-mono text-emerald-500/70 uppercase tracking-wide leading-none">
+                  {views === 1 ? 'view' : 'views'}
+                </span>
               </div>
 
               <PasteStarRating
@@ -383,6 +418,7 @@ export function PasteViewer({ id, embedded = false }: Props) {
                 userRating={userRating}
                 canRate={canRate}
                 ratingLockedUntil={ratingLockedUntil}
+                size="sm"
                 onRated={(avg, count, ur, lockedUntil) => {
                   setRatingAvg(avg);
                   setRatingCount(count);

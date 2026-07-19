@@ -32,6 +32,11 @@ export type PasteMeta = {
   canRate?: boolean;
   ratingLockedUntil?: number | null;
   username: string | null;
+  /** Live uploaded avatar path from author profile (`/api/auth/avatars/...`). */
+  avatarUrl?: string | null;
+  /** Author role for username styling (admin → animated gradient CSS). */
+  authorRole?: 'user' | 'vip' | 'admin' | 'bot' | null;
+  authorVerified?: boolean;
   viewUrl: string;
   rawUrl: string;
   userId?: string | null;
@@ -209,6 +214,9 @@ export async function fetchPasteMeta(id: string, { credentialed = false } = {}):
       ratingAvg: data.ratingAvg ?? 0,
       ratingCount: data.ratingCount ?? 0,
       username: data.username,
+      avatarUrl: data.avatarUrl ?? null,
+      authorRole: data.authorRole ?? null,
+      authorVerified: Boolean(data.authorVerified),
       viewUrl: data.viewUrl,
       rawUrl: data.rawUrl,
     };

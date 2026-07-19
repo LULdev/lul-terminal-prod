@@ -23,6 +23,17 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '3.48.4',
+    title: 'Paste author avatar + username CSS, compact views',
+    date: 'Jul 19, 2026 - 17:15',
+    highlight: true,
+    items: [
+      { priority: 'P1', text: 'P1 — Paste viewer shows live uploaded author avatar (not dicebear-only).' },
+      { priority: 'P1', text: 'P1 — Author username uses admin-username / bot / profile CSS styles + role badges.' },
+      { priority: 'P2', text: 'P2 — View counter on paste page is compact (smaller pill).' },
+    ],
+  },
+  {
     version: '3.48.3',
     title: 'Fix paste own views + voting (dedup & voter keys)',
     date: 'Jul 19, 2026 - 16:00',

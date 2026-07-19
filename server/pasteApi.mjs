@@ -12,6 +12,8 @@ import { requireMemberTab } from './tabAccessGuard.mjs';
 import { canAccessAdmin } from './auth/permissions.mjs';
 import { pasteViewLink, postBotPastePublished } from './chatBot.mjs';
 import { incrementUserPasteCount, incrementUserPasteViews } from './auth/authService.mjs';
+import { loadUsersDb } from './auth/authStore.mjs';
+import { sanitizeAvatarUrl } from './auth/safeMediaUrl.mjs';
 import { resolvePasteAccess } from './pasteAccess.mjs';
 import {
   adminDeletePaste,
@@ -63,9 +65,54 @@ async function requireAdmin(req) {
   requireRole(req, canAccessAdmin);
 }
 
-function toAdminClientMeta(meta, req) {
+/** Short-lived author lookup so paste lists show live uploaded avatars + roles. */
+let authorLookupCache = { at: 0, byId: null, byName: null };
+const AUTHOR_LOOKUP_TTL_MS = 15_000;
+
+async function getAuthorLookup() {
+  const now = Date.now();
+  if (authorLookupCache.byId && now - authorLookupCache.at < AUTHOR_LOOKUP_TTL_MS) {
+    return authorLookupCache;
+  }
+  try {
+    const db = await loadUsersDb();
+    const byId = new Map();
+    const byName = new Map();
+    for (const u of db.users ?? []) {
+      if (u?.id) byId.set(String(u.id), u);
+      if (u?.username) byName.set(String(u.username).toLowerCase(), u);
+    }
+    authorLookupCache = { at: now, byId, byName };
+    return authorLookupCache;
+  } catch (err) {
+    console.warn('[paste] author lookup unavailable', err);
+    return { at: now, byId: new Map(), byName: new Map() };
+  }
+}
+
+function resolveAuthorFields(meta, authorLookup) {
+  const fallbackName = meta?.username ?? null;
+  if (!authorLookup) {
+    return { username: fallbackName, avatarUrl: null, authorRole: null, authorVerified: false };
+  }
+  let user = null;
+  if (meta?.userId) user = authorLookup.byId.get(String(meta.userId)) ?? null;
+  if (!user && fallbackName) user = authorLookup.byName.get(String(fallbackName).toLowerCase()) ?? null;
+  if (!user) {
+    return { username: fallbackName, avatarUrl: null, authorRole: null, authorVerified: false };
+  }
+  const avatar = sanitizeAvatarUrl(user.avatarUrl);
   return {
-    ...toClientMeta(meta, req, { includePrivate: true }),
+    username: user.username ?? fallbackName,
+    avatarUrl: avatar || null,
+    authorRole: user.role ?? 'user',
+    authorVerified: Boolean(user.verified),
+  };
+}
+
+function toAdminClientMeta(meta, req, opts = {}) {
+  return {
+    ...toClientMeta(meta, req, { ...opts, includePrivate: true }),
     hasPassword: Boolean(meta.passwordHash),
   };
 }
@@ -75,10 +122,11 @@ function ratingKeyFromReq(req) {
   return pasteVoterKey({ userId, ip: clientIp(req) });
 }
 
-function toClientMeta(meta, req, { includePrivate = false, userId = null } = {}) {
+function toClientMeta(meta, req, { includePrivate = false, userId = null, authorLookup = null } = {}) {
   const origin = originFromReq(req);
   const locked = meta.visibility === 'protected';
   const ownerOnly = meta.visibility === 'private';
+  const author = resolveAuthorFields(meta, authorLookup);
   const base = {
     id: meta.id,
     title: meta.title,
@@ -95,7 +143,10 @@ function toClientMeta(meta, req, { includePrivate = false, userId = null } = {})
     size: meta.size ?? 0,
     lineCount: meta.lineCount ?? 0,
     pinned: Boolean(meta.pinned),
-    username: meta.username ?? null,
+    username: author.username,
+    avatarUrl: author.avatarUrl,
+    authorRole: author.authorRole,
+    authorVerified: author.authorVerified,
     ratingAvg: meta.ratingAvg ?? 0,
     ratingCount: meta.ratingCount ?? 0,
     viewUrl: `${origin}/p/${meta.id}`,
@@ -119,6 +170,22 @@ function toClientPaste(meta, content, req, opts = {}) {
     ...toClientMeta(meta, req, opts),
     content,
   };
+}
+
+/** Await author lookup then build client meta (lists + single paste). */
+async function toClientMetaAsync(meta, req, opts = {}) {
+  const authorLookup = opts.authorLookup ?? await getAuthorLookup();
+  return toClientMeta(meta, req, { ...opts, authorLookup });
+}
+
+async function toClientPasteAsync(meta, content, req, opts = {}) {
+  const authorLookup = opts.authorLookup ?? await getAuthorLookup();
+  return toClientPaste(meta, content, req, { ...opts, authorLookup });
+}
+
+async function toAdminClientMetaAsync(meta, req, opts = {}) {
+  const authorLookup = opts.authorLookup ?? await getAuthorLookup();
+  return toAdminClientMeta(meta, req, { ...opts, authorLookup });
 }
 
 async function clientUserId(req) {
@@ -257,8 +324,9 @@ export async function handlePasteRequest(req, res) {
       await checkRateLimit(`paste-public:${clientIp(req)}`, { max: 60, windowMs: 60_000 });
       const limit = Math.min(80, Math.max(1, Number(url.searchParams.get('limit')) || 40));
       const items = await listPublicArchive(limit);
+      const authorLookup = await getAuthorLookup();
       return sendJson(res, 200, {
-        pastes: items.map((m) => toClientMeta(m, req)),
+        pastes: items.map((m) => toClientMeta(m, req, { authorLookup })),
         total: items.length,
       });
     }
@@ -267,8 +335,9 @@ export async function handlePasteRequest(req, res) {
       await checkRateLimit(`paste-trending:${clientIp(req)}`, { max: 60, windowMs: 60_000 });
       const limit = Math.min(40, Math.max(1, Number(url.searchParams.get('limit')) || 12));
       const items = await listTrendingPublic(limit);
+      const authorLookup = await getAuthorLookup();
       return sendJson(res, 200, {
-        pastes: items.map((m) => toClientMeta(m, req)),
+        pastes: items.map((m) => toClientMeta(m, req, { authorLookup })),
         total: items.length,
       });
     }
@@ -288,8 +357,9 @@ export async function handlePasteRequest(req, res) {
       const limit = Math.min(500, Math.max(1, Number(url.searchParams.get('limit')) || 100));
       const offset = Math.max(0, Number(url.searchParams.get('offset')) || 0);
       const result = await listAllPastes({ q, visibility, sort, limit, offset });
+      const authorLookup = await getAuthorLookup();
       return sendJson(res, 200, {
-        pastes: result.pastes.map((m) => toAdminClientMeta(m, req)),
+        pastes: result.pastes.map((m) => toAdminClientMeta(m, req, { authorLookup })),
         total: result.total,
       });
     }
@@ -307,7 +377,7 @@ export async function handlePasteRequest(req, res) {
         const content = await getContent(id);
         if (!content) return sendJson(res, 404, { error: 'Paste not found' });
         return sendJson(res, 200, {
-          ...toAdminClientMeta(meta, req),
+          ...(await toAdminClientMetaAsync(meta, req)),
           content,
         });
       }
@@ -318,7 +388,7 @@ export async function handlePasteRequest(req, res) {
         const updated = await adminUpdatePaste(id, body);
         const content = await getContent(id);
         return sendJson(res, 200, {
-          ...toAdminClientMeta(updated, req),
+          ...(await toAdminClientMetaAsync(updated, req)),
           content,
         });
       }
@@ -343,8 +413,9 @@ export async function handlePasteRequest(req, res) {
       await checkRateLimit(`paste-my-list:${user.id}`, { max: 60, windowMs: 60_000 });
       const sort = url.searchParams.get('sort') ?? 'newest';
       const items = await listByUser(user.id, sort);
+      const authorLookup = await getAuthorLookup();
       return sendJson(res, 200, {
-        pastes: items.map((m) => toClientMeta(m, req, { includePrivate: true })),
+        pastes: items.map((m) => toClientMeta(m, req, { includePrivate: true, authorLookup })),
         total: items.length,
       });
     }
@@ -375,7 +446,7 @@ export async function handlePasteRequest(req, res) {
           visibility: meta.visibility,
         }).catch(() => {});
       }
-      const payload = toClientPaste(meta, content, req, { includePrivate: true });
+      const payload = await toClientPasteAsync(meta, content, req, { includePrivate: true });
       if (unlocks.length) payload.achievementUnlocks = unlocks;
       return sendJson(res, 201, payload);
     }
@@ -546,7 +617,7 @@ export async function handlePasteRequest(req, res) {
           await incrementUserPasteViews(viewResult.meta.userId, { viewerId: unlockUid, pasteId: meta.id });
         }
         return sendJson(res, 200, {
-          ...toClientPaste(viewResult.meta, content, req, { userId: unlockUid }),
+          ...(await toClientPasteAsync(viewResult.meta, content, req, { userId: unlockUid })),
           burned: true,
         });
       }
@@ -557,7 +628,7 @@ export async function handlePasteRequest(req, res) {
       if (viewResult?.meta?.userId && unlockUid && !viewResult.deduped) {
         await incrementUserPasteViews(viewResult.meta.userId, { viewerId: unlockUid, pasteId: meta.id });
       }
-      return sendJson(res, 200, toClientPaste(outMeta, content, req, { userId: unlockUid }));
+      return sendJson(res, 200, await toClientPasteAsync(outMeta, content, req, { userId: unlockUid }));
     }
 
     const idMatch = pathname.match(/^\/api\/paste\/([A-Za-z0-9_-]{6,32})$/);
@@ -600,13 +671,13 @@ export async function handlePasteRequest(req, res) {
             }
             if (!content) return sendJson(res, 404, { error: 'Paste not found or expired' });
             return sendJson(res, 200, {
-              ...toClientPaste(outMeta, content, req, { userId: uid, includePrivate: true }),
+              ...(await toClientPasteAsync(outMeta, content, req, { userId: uid, includePrivate: true })),
               burned,
             });
           }
           if (access.requiresPassword) {
             return sendJson(res, 200, {
-              ...toClientMeta(meta, req, { userId: uid }),
+              ...(await toClientMetaAsync(meta, req, { userId: uid })),
               content: null,
               requiresPassword: true,
               requiresLogin: false,
@@ -614,7 +685,7 @@ export async function handlePasteRequest(req, res) {
           }
           if (access.requiresLogin) {
             return sendJson(res, 200, {
-              ...toClientMeta(meta, req, { userId: uid }),
+              ...(await toClientMetaAsync(meta, req, { userId: uid })),
               content: null,
               requiresPassword: false,
               requiresLogin: true,
@@ -651,7 +722,7 @@ export async function handlePasteRequest(req, res) {
         }
         if (!content) return sendJson(res, 404, { error: 'Paste not found or expired' });
         return sendJson(res, 200, {
-          ...toClientPaste(outMeta, content, req, { userId: uid, includePrivate: isOwner }),
+          ...(await toClientPasteAsync(outMeta, content, req, { userId: uid, includePrivate: isOwner })),
           burned,
         });
       }
@@ -664,7 +735,7 @@ export async function handlePasteRequest(req, res) {
         const body = await readJsonBody(req);
         const meta = await updatePaste(id, user.id, body);
         const content = await getContent(id);
-        return sendJson(res, 200, toClientPaste(meta, content, req, { includePrivate: true }));
+        return sendJson(res, 200, await toClientPasteAsync(meta, content, req, { includePrivate: true }));
       }
 
       if (req.method === 'DELETE') {
