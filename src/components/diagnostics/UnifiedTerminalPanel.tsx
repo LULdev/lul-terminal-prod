@@ -4,6 +4,8 @@
  */
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
+import { Trash2 } from 'lucide-react';
 import { MatrixOverlay } from '../MatrixOverlay';
 import { ChatUserChip } from './ChatUserChip';
 import { ChatRoleBadges } from './ChatRoleBadges';
@@ -24,6 +26,9 @@ import {
   type ChatMessage,
   type SendChatResult,
 } from '../../lib/chat';
+import { adminDeleteShoutboxMessage } from '../../lib/adminModules';
+import { SessionExpiredError } from '../../lib/sessionFetch';
+import { terminalAppend } from '../../lib/terminalLogBridge';
 import { useAuth } from '../../context/AuthContext';
 import type { LogLine } from '../../types';
 
@@ -32,6 +37,95 @@ const DISPLAY_LIMIT = 200;
 
 function formatTime(ts: number) {
   return new Date(ts).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
+}
+
+/** Classic BOT identity pill — right-click Delete for admins. */
+function BotBadgeChip({
+  messageId,
+  onMessageDeleted,
+}: {
+  messageId: string;
+  onMessageDeleted?: (messageId: string) => void;
+}) {
+  const { isAdmin, openAuth, refresh } = useAuth();
+  const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
+  const [acting, setActing] = useState(false);
+
+  useEffect(() => {
+    if (!menu) return;
+    const close = () => setMenu(null);
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') close(); };
+    window.addEventListener('keydown', onKey);
+    window.addEventListener('scroll', close, true);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      window.removeEventListener('scroll', close, true);
+    };
+  }, [menu]);
+
+  const onContextMenu = (e: React.MouseEvent) => {
+    if (!isAdmin || !onMessageDeleted) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const pad = 8;
+    setMenu({
+      x: Math.min(e.clientX, window.innerWidth - 180 - pad),
+      y: Math.min(e.clientY, window.innerHeight - 80 - pad),
+    });
+  };
+
+  const deleteMsg = async () => {
+    setMenu(null);
+    if (!confirm('Delete this bot message?')) return;
+    setActing(true);
+    try {
+      await adminDeleteShoutboxMessage(messageId);
+      onMessageDeleted?.(messageId);
+      terminalAppend(`✓ Bot message deleted`, 'info');
+    } catch (err) {
+      if (err instanceof SessionExpiredError) {
+        void refresh().finally(() => openAuth('login'));
+      } else {
+        terminalAppend(`❌ Delete failed: ${err instanceof Error ? err.message : 'error'}`, 'warn');
+      }
+    } finally {
+      setActing(false);
+    }
+  };
+
+  return (
+    <>
+      <button
+        type="button"
+        className="shoutbox-msg__bot-badge-btn"
+        onContextMenu={onContextMenu}
+        disabled={acting}
+        title={isAdmin ? 'Right-click to delete message' : 'System bot'}
+      >
+        <ChatRoleBadges role="bot" />
+      </button>
+      {menu && createPortal(
+        <>
+          <div className="fixed inset-0 z-[200]" onClick={() => setMenu(null)} aria-hidden />
+          <div
+            className="chat-user-context-menu fixed z-[201] min-w-[160px] rounded-xl border border-rose-500/25 bg-[#0a0b10]/98 backdrop-blur-md shadow-2xl overflow-hidden py-1"
+            style={{ left: menu.x, top: menu.y }}
+            role="menu"
+          >
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => void deleteMsg()}
+              className="w-full flex items-center gap-2 px-3 py-2 text-left text-[9px] font-mono text-rose-300 hover:bg-rose-500/10"
+            >
+              <Trash2 size={12} /> Delete message
+            </button>
+          </div>
+        </>,
+        document.body,
+      )}
+    </>
+  );
 }
 
 function ChatLine({
@@ -50,8 +144,23 @@ function ChatLine({
       ? 'shoutbox-msg-text shoutbox-msg-text--action'
       : 'shoutbox-msg-text';
 
+  // Classic bot: [time] [BOT] message…  (no avatar / @name)
+  if (botLine) {
+    return (
+      <div className="shoutbox-msg shoutbox-msg--bot bot-message-row group">
+        <span className="shoutbox-msg__time">[{formatTime(msg.createdAt)}]</span>
+        <BotBadgeChip messageId={msg.id} onMessageDeleted={onMessageDeleted} />
+        <span className="shoutbox-msg__body shoutbox-msg__body--bot">
+          <span className={textClass}>
+            <ChatMessageBody msg={msg} onOpenProfile={onOpenProfile} botMessage />
+          </span>
+        </span>
+      </div>
+    );
+  }
+
   return (
-    <div className={`shoutbox-msg group ${botLine ? 'bot-message-row' : ''}`}>
+    <div className="shoutbox-msg group">
       <span className="shoutbox-msg__time">[{formatTime(msg.createdAt)}]</span>
 
       {onOpenProfile ? (
@@ -70,15 +179,14 @@ function ChatLine({
         />
       ) : (
         <span className="shoutbox-msg__identity">
-          <span className={`shoutbox-msg__name ${botLine ? 'bot-username-style' : ''}`}>@{msg.username}</span>
+          <span className="shoutbox-msg__name">@{msg.username}</span>
         </span>
       )}
 
-      {/* Role badge + message on one line; message uses a different (non-mono) font */}
       <span className="shoutbox-msg__body">
-        <ChatRoleBadges role={botLine ? 'bot' : msg.role} verified={msg.verified} compact />
+        <ChatRoleBadges role={msg.role} verified={msg.verified} compact />
         <span className={textClass}>
-          <ChatMessageBody msg={msg} onOpenProfile={onOpenProfile} botMessage={botLine} />
+          <ChatMessageBody msg={msg} onOpenProfile={onOpenProfile} botMessage={false} />
         </span>
       </span>
     </div>
