@@ -82,9 +82,9 @@ export function LeaderboardBadges({
   }
 
   return (
-    <div className="trophy-section rounded-xl border border-amber-500/20 bg-gradient-to-br from-amber-950/25 via-[#0c0d12] to-violet-950/15 px-2.5 py-2 relative">
+    <div className="trophy-section rounded-xl border border-amber-500/20 bg-gradient-to-br from-amber-950/25 via-[#0c0d12] to-violet-950/15 px-2.5 py-2 relative overflow-visible">
       <div className="absolute -top-6 -right-6 w-24 h-24 bg-amber-500/5 rounded-full blur-2xl pointer-events-none" />
-      <div className="relative">
+      <div className="relative overflow-visible">
         <div className="flex items-center justify-between gap-2 mb-1">
           <h3 className="text-[8px] font-mono font-bold uppercase tracking-wider text-amber-300 flex items-center gap-1">
             <Trophy size={10} className="text-amber-400" />

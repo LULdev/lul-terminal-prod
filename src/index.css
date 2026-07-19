@@ -2202,7 +2202,7 @@ a.bot-mention-username:focus-visible {
   .userbar-balance__coin-spark,
   .userbar-balance__amount,
   .userbar-hof__trophy,
-  .ach-rarity.ach-badge--live::before {
+  .profile-scroll-area .ach-rarity.ach-badge--live::before {
     animation: none !important;
     transition: none !important;
   }

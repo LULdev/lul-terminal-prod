@@ -29,9 +29,9 @@ export function UnlockedAwards({ earned }: UnlockedAwardsProps) {
   const awards = unlocked.filter((e) => e.def.kind === 'award');
 
   return (
-    <div className="trophy-section rounded-xl border border-fuchsia-500/20 bg-gradient-to-br from-fuchsia-950/20 via-[#0c0d12] to-indigo-950/15 px-2.5 py-2 relative">
+    <div className="trophy-section rounded-xl border border-fuchsia-500/20 bg-gradient-to-br from-fuchsia-950/20 via-[#0c0d12] to-indigo-950/15 px-2.5 py-2 relative overflow-visible">
       <div className="absolute -top-8 -left-8 w-24 h-24 bg-fuchsia-500/5 rounded-full blur-2xl pointer-events-none" />
-      <div className="relative">
+      <div className="relative overflow-visible">
         <div className="flex items-center justify-between gap-2 mb-1">
           <h3 className="text-[8px] font-mono font-bold uppercase tracking-wider text-fuchsia-300 flex items-center gap-1">
             <Sparkles size={10} className="text-fuchsia-400" />
