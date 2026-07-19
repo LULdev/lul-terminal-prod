@@ -226,31 +226,35 @@ export function UserBar({ onNavigate }: UserBarProps) {
           </button>
         ) : (
           <div className="userbar-hof__icons" role="list" aria-label="Leaderboard awards">
-            {hallOfFame.map((award) => (
-              <button
-                key={award.id}
-                type="button"
-                role="listitem"
-                className="userbar-hof__icon"
-                onClick={() => go('leaderboard')}
-                aria-label={`${award.name}. ${award.description}`}
-              >
-                <span className="userbar-hof__emoji" aria-hidden>{award.icon}</span>
-                <span className="userbar-hof__tip" role="tooltip">
-                  <span className="userbar-hof__tip-name">{award.name}</span>
-                  <span className="userbar-hof__tip-desc">{award.description}</span>
-                  <span className="userbar-hof__tip-meta">
-                    {award.rarity}
-                    {' · '}
-                    {new Date(award.earnedAt).toLocaleDateString('en-US', {
-                      month: 'short',
-                      day: 'numeric',
-                      year: 'numeric',
-                    })}
+            {hallOfFame.map((award) => {
+              const tipText = `${award.name} — ${award.description}`;
+              return (
+                <button
+                  key={award.id}
+                  type="button"
+                  role="listitem"
+                  className="userbar-hof__icon"
+                  onClick={() => go('leaderboard')}
+                  aria-label={tipText}
+                  title={tipText}
+                >
+                  <span className="userbar-hof__emoji" aria-hidden>{award.icon}</span>
+                  <span className="userbar-hof__tip" role="tooltip">
+                    <span className="userbar-hof__tip-name">{award.name}</span>
+                    <span className="userbar-hof__tip-desc">{award.description}</span>
+                    <span className="userbar-hof__tip-meta">
+                      {award.rarity}
+                      {' · '}
+                      {new Date(award.earnedAt).toLocaleDateString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric',
+                      })}
+                    </span>
                   </span>
-                </span>
-              </button>
-            ))}
+                </button>
+              );
+            })}
           </div>
         )}
       </div>

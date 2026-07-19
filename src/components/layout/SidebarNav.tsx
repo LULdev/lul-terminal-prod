@@ -23,8 +23,8 @@ export const SidebarNav = memo(function SidebarNav({ activeTab, onTabClick, hudP
   const { changelogUnread, newsUnread } = useFeedUnread();
 
   return (
-    <nav className="w-[220px] bg-[#0a0c10] border-r border-slate-800/50 flex flex-col p-4 shrink-0 z-10 min-h-0 h-full" id="sidebar-rail">
-      {/* Account dock — top of sidebar, above menu */}
+    <nav className="w-[220px] bg-[#0a0c10] border-r border-slate-800/50 flex flex-col p-4 shrink-0 z-20 min-h-0 h-full overflow-visible" id="sidebar-rail">
+      {/* Account dock — top of sidebar, above menu (tooltips need overflow visible) */}
       <UserBar onNavigate={onTabClick} />
 
       <div className="text-[10px] text-slate-500 uppercase tracking-[2px] font-bold mb-3 mt-3 px-2 shrink-0">
