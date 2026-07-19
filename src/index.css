@@ -2244,7 +2244,7 @@ a.bot-mention-username:focus-visible {
   50% { box-shadow: 0 0 28px rgba(56, 189, 248, 0.35); }
 }
 
-/* —— Rarity badges: static fill/icon, animated border ring only —— */
+/* —— Trophy badges: static icon; animated border ONLY in profile —— */
 @property --ach-border-angle {
   syntax: '<angle>';
   inherits: false;
@@ -2256,51 +2256,85 @@ a.bot-mention-username:focus-visible {
   overflow: visible;
   border-style: solid;
   border-width: 1px;
+  border-color: rgba(71, 85, 105, 0.55);
   transition: filter 0.12s ease;
-  contain: layout style;
-  isolation: isolate;
 }
-.ach-badge--compact {
-  border-radius: 0.4rem;
-}
-.ach-badge--live {
-  cursor: default;
-}
-.ach-badge--live:hover {
-  z-index: 2;
-  filter: brightness(1.04);
-}
+.ach-badge--compact { border-radius: 0.45rem; }
+.ach-badge--live { cursor: default; }
+.ach-badge--live:hover { z-index: 2; filter: brightness(1.04); }
 .ach-badge--locked {
   opacity: 0.42;
   filter: grayscale(0.9) saturate(0.25);
   box-shadow: none !important;
 }
-.ach-badge--locked::before {
+.ach-badge--locked::before,
+.ach-badge--live::after {
   display: none !important;
+  content: none !important;
   animation: none !important;
 }
 
-/*
- * Animated border only: masked conic ring sits on the edge.
- * Does not animate background, text, or icon (icon stays still).
- */
-.ach-rarity.ach-badge--live {
+/* Static fills everywhere */
+.ach-rarity--common.ach-badge--live {
+  --ach-border-a: #475569;
+  --ach-border-b: #e2e8f0;
+  --ach-border-c: #64748b;
+  border-color: rgba(148, 163, 184, 0.45);
+  background: linear-gradient(145deg, rgba(71, 85, 105, 0.3), rgba(15, 23, 42, 0.95));
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.28);
+}
+.ach-rarity--rare.ach-badge--live {
+  --ach-border-a: #0369a1;
+  --ach-border-b: #7dd3fc;
+  --ach-border-c: #0ea5e9;
+  border-color: rgba(56, 189, 248, 0.5);
+  background: linear-gradient(145deg, rgba(14, 165, 233, 0.2), rgba(15, 23, 42, 0.95));
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.28);
+}
+.ach-rarity--epic.ach-badge--live {
+  --ach-border-a: #6b21a8;
+  --ach-border-b: #e9d5ff;
+  --ach-border-c: #a855f7;
+  border-color: rgba(192, 132, 252, 0.55);
+  background: linear-gradient(145deg, rgba(168, 85, 247, 0.22), rgba(15, 10, 30, 0.96));
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.28);
+}
+.ach-rarity--legendary.ach-badge--live {
+  --ach-border-a: #b45309;
+  --ach-border-b: #fef08a;
+  --ach-border-c: #f59e0b;
+  border-color: rgba(251, 191, 36, 0.55);
+  background: linear-gradient(145deg, rgba(251, 191, 36, 0.2), rgba(120, 53, 15, 0.32), rgba(20, 12, 5, 0.96));
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.28);
+}
+.ach-rarity--mythic.ach-badge--live {
+  --ach-border-a: #f472b6;
+  --ach-border-b: #67e8f9;
+  --ach-border-c: #c084fc;
+  border-color: rgba(244, 114, 182, 0.55);
+  background: linear-gradient(135deg, rgba(251, 191, 36, 0.12), rgba(244, 114, 182, 0.14), rgba(167, 139, 250, 0.16), rgba(15, 10, 30, 0.96));
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.28);
+}
+
+/* Animated border ring — PROFILE PAGE ONLY */
+.profile-scroll-area .ach-rarity.ach-badge--live {
   border-color: transparent;
 }
-.ach-rarity.ach-badge--live::before {
+.profile-scroll-area .ach-rarity.ach-badge--live::before {
   content: '';
+  display: block;
   position: absolute;
-  inset: 0;
+  inset: -1px;
   border-radius: inherit;
   padding: 1.5px;
   pointer-events: none;
   z-index: 0;
   background: conic-gradient(
-    from var(--ach-border-angle),
+    from var(--ach-border-angle, 0deg),
     var(--ach-border-a, #64748b) 0%,
-    var(--ach-border-b, #94a3b8) 25%,
-    var(--ach-border-c, #64748b) 50%,
-    var(--ach-border-b, #94a3b8) 75%,
+    var(--ach-border-b, #94a3b8) 22%,
+    var(--ach-border-c, #64748b) 45%,
+    var(--ach-border-b, #94a3b8) 70%,
     var(--ach-border-a, #64748b) 100%
   );
   -webkit-mask:
@@ -2311,82 +2345,16 @@ a.bot-mention-username:focus-visible {
     linear-gradient(#fff 0 0);
   -webkit-mask-composite: xor;
   mask-composite: exclude;
-  animation: ach-border-spin 5s linear infinite;
+  animation: ach-border-spin 4.5s linear infinite;
 }
-.ach-badge--live::after {
-  display: none !important;
-  content: none !important;
-}
-@keyframes ach-border-spin {
-  to { --ach-border-angle: 360deg; }
-}
-
-/* COMMON — soft steel border */
-.ach-rarity--common.ach-badge--live {
-  --ach-border-a: #64748b;
-  --ach-border-b: #cbd5e1;
-  --ach-border-c: #475569;
-  background: linear-gradient(145deg, rgba(71, 85, 105, 0.28), rgba(15, 23, 42, 0.94));
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.28);
-}
-.ach-rarity--common.ach-badge--live::before {
-  animation-duration: 7s;
-}
-
-/* RARE — sapphire */
-.ach-rarity--rare.ach-badge--live {
-  --ach-border-a: #0ea5e9;
-  --ach-border-b: #7dd3fc;
-  --ach-border-c: #0369a1;
-  background: linear-gradient(145deg, rgba(14, 165, 233, 0.2), rgba(15, 23, 42, 0.95));
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.28);
-}
-.ach-rarity--rare.ach-badge--live::before {
-  animation-duration: 4.5s;
-}
-
-/* EPIC — violet */
-.ach-rarity--epic.ach-badge--live {
-  --ach-border-a: #a855f7;
-  --ach-border-b: #e9d5ff;
-  --ach-border-c: #6b21a8;
-  background: linear-gradient(145deg, rgba(168, 85, 247, 0.22), rgba(15, 10, 30, 0.96));
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.28);
-}
-.ach-rarity--epic.ach-badge--live::before {
-  animation-duration: 4s;
-}
-
-/* LEGENDARY — gold */
-.ach-rarity--legendary.ach-badge--live {
-  --ach-border-a: #d97706;
-  --ach-border-b: #fde68a;
-  --ach-border-c: #b45309;
-  background: linear-gradient(145deg, rgba(251, 191, 36, 0.2), rgba(120, 53, 15, 0.32), rgba(20, 12, 5, 0.96));
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.28);
-}
-.ach-rarity--legendary.ach-badge--live::before {
-  animation-duration: 3.5s;
-}
-
-/* MYTHIC — prism border */
-.ach-rarity--mythic.ach-badge--live {
-  --ach-border-a: #f472b6;
-  --ach-border-b: #67e8f9;
-  --ach-border-c: #c084fc;
-  background: linear-gradient(
-    135deg,
-    rgba(251, 191, 36, 0.12) 0%,
-    rgba(244, 114, 182, 0.14) 32%,
-    rgba(167, 139, 250, 0.16) 64%,
-    rgba(15, 10, 30, 0.96) 100%
-  );
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.28);
-}
-.ach-rarity--mythic.ach-badge--live::before {
+.profile-scroll-area .ach-rarity--common.ach-badge--live::before { animation-duration: 6.5s; }
+.profile-scroll-area .ach-rarity--rare.ach-badge--live::before { animation-duration: 4.2s; }
+.profile-scroll-area .ach-rarity--epic.ach-badge--live::before { animation-duration: 3.8s; }
+.profile-scroll-area .ach-rarity--legendary.ach-badge--live::before { animation-duration: 3.4s; }
+.profile-scroll-area .ach-rarity--mythic.ach-badge--live::before {
   animation-duration: 3s;
   background: conic-gradient(
-    from var(--ach-border-angle),
+    from var(--ach-border-angle, 0deg),
     #fbbf24 0%,
     #f472b6 25%,
     #a78bfa 50%,
@@ -2394,11 +2362,19 @@ a.bot-mention-username:focus-visible {
     #fbbf24 100%
   );
 }
+@keyframes ach-border-spin {
+  to { --ach-border-angle: 360deg; }
+}
 
-/* Icon / image: never animated */
-.ach-badge__icon {
+/* Icon / text never animated */
+.ach-badge__icon,
+.ach-badge__body,
+.ach-badge__name,
+.ach-badge__meta {
   position: relative;
   z-index: 2;
+}
+.ach-badge__icon {
   display: inline-block;
   line-height: 1;
   flex-shrink: 0;
@@ -2406,11 +2382,7 @@ a.bot-mention-username:focus-visible {
   animation: none !important;
   transform: none !important;
 }
-.ach-badge__body {
-  position: relative;
-  z-index: 2;
-  min-width: 0;
-}
+.ach-badge__body { min-width: 0; }
 .ach-badge__name {
   font-weight: 600;
   color: #f1f5f9;
