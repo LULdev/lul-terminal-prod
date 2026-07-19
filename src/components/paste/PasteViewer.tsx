@@ -110,17 +110,23 @@ export function PasteViewer({ id }: Props) {
           return;
         }
         setPaste(data);
+        // Server already counted this view on GET (including owner's first view)
         setViews(data.views ?? 0);
         setRatingAvg(data.ratingAvg ?? 0);
         setRatingCount(data.ratingCount ?? 0);
         setUserRating(data.userRating ?? null);
-        const viewResult = await recordPasteView(id);
-        if (cancelled) return;
-        setViews(viewResult.views);
         setViewsReady(true);
-        if (viewResult.burned || data.burned) {
+        // Only show burn warning when the paste was actually burn-after-read and consumed
+        if (data.burned && data.burnAfterRead) {
           setError('This paste was burn-after-read and has been consumed.');
         }
+        // Soft refresh of count (does not double-count or invent burn state)
+        const viewResult = await recordPasteView(id, {
+          knownViews: data.views ?? 0,
+          burnAfterRead: Boolean(data.burnAfterRead),
+        });
+        if (cancelled) return;
+        if (typeof viewResult.views === 'number') setViews(viewResult.views);
       } catch (e) {
         if (!cancelled) {
           const msg = e instanceof Error ? e.message : '';

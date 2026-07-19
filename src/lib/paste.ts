@@ -223,30 +223,27 @@ export async function unlockPaste(id: string, password: string): Promise<PasteRe
   return res.json();
 }
 
-export async function recordPasteView(id: string): Promise<{ views: number; burned: boolean }> {
+/**
+ * Sync view count after load. GET /api/paste/:id already increments views server-side
+ * (including the owner's first view). This only refreshes the number — never fabricates "burned".
+ */
+export async function recordPasteView(
+  id: string,
+  opts: { knownViews?: number; burnAfterRead?: boolean } = {},
+): Promise<{ views: number; burned: boolean }> {
   const pending = viewInflight.get(id);
   if (pending) return pending;
 
-  const canUseSession = typeof sessionStorage !== 'undefined';
   const run = (async () => {
-    const sessionKey = `${VIEW_SESSION_PREFIX}${id}`;
-    if (!canUseSession || !sessionStorage.getItem(sessionKey)) {
-      try {
-        const res = await fetch(`${API}/${id}/view`, {
-          method: 'POST',
-          credentials: 'include',
-          headers: { 'Content-Type': 'application/json' },
-        });
-        if (res.ok) {
-          const data = await res.json() as { views: number; burned: boolean; deduped?: boolean };
-          if (canUseSession) sessionStorage.setItem(sessionKey, '1');
-          return data;
-        }
-      } catch { /* fall through */ }
+    // Prefer views already returned by the GET paste payload
+    if (typeof opts.knownViews === 'number' && opts.knownViews >= 0) {
+      return { views: opts.knownViews, burned: false };
     }
-    const meta = await fetchPasteMeta(id);
-    if (!meta) return { views: 0, burned: true };
-    return { views: meta.views ?? 0, burned: false };
+    try {
+      const meta = await fetchPasteMeta(id, { credentialed: true });
+      if (meta) return { views: meta.views ?? 0, burned: false };
+    } catch { /* ignore */ }
+    return { views: 0, burned: false };
   })();
 
   viewInflight.set(id, run);

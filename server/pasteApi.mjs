@@ -129,107 +129,76 @@ async function loadAlive(id) {
   return meta;
 }
 
-/** Shared view counter with per-user flags + guest IP dedup (used by /view POST and /raw GET). */
+/**
+ * Count a paste view with dedup.
+ * - First view from owner counts (user asked for first own view).
+ * - Later visits by same user / guest IP are deduped.
+ * - consumeBurn only when explicitly requested (POST /view for burn-after-read).
+ */
 async function countPasteViewDeduped(req, pasteId, { consumeBurn = false } = {}) {
   await attachAuth(req);
   const viewerId = req.auth?.user?.id ?? null;
+  const flagKey = `paste_meta_view_${pasteId}`;
+
   return runCoinTransaction(async () => {
     const earlyMeta = await loadAlive(pasteId);
     if (!earlyMeta) return null;
-    if (viewerId && earlyMeta.userId && String(earlyMeta.userId) === String(viewerId)) {
-      if (consumeBurn && earlyMeta.burnAfterRead) {
-        const burnResult = await recordView(pasteId, { consumeBurn: true });
-        if (!burnResult) return null;
-        return {
-          views: burnResult.meta.views ?? 0,
-          burned: burnResult.burned,
-          deduped: false,
-          selfView: true,
-          meta: burnResult.meta,
-          content: burnResult.content,
-        };
-      }
-      return { views: earlyMeta.views ?? 0, burned: false, deduped: true, selfView: true, meta: earlyMeta };
-    }
-    let countMeta = true;
-    let guestAlreadyViewed = false;
+
+    const isOwner = Boolean(
+      viewerId && earlyMeta.userId && String(earlyMeta.userId) === String(viewerId),
+    );
+
+    // --- already counted? ---
+    let alreadyCounted = false;
     if (viewerId) {
       const db = await loadUsersDb();
       const viewer = db.users.find((u) => u.id === viewerId);
       if (viewer) {
-        const flagKey = `paste_meta_view_${pasteId}`;
         const act = ensureActivity(viewer);
-        if (act.flags[flagKey]) {
-          countMeta = false;
-        }
+        if (act.flags[flagKey]) alreadyCounted = true;
       }
-      if (countMeta && !(await claimGuestView('paste', clientIp(req), pasteId))) {
-        guestAlreadyViewed = true;
-        countMeta = false;
-      }
+    } else {
+      // Guest: claim returns false if this IP already viewed
+      const firstTime = await claimGuestView('paste', clientIp(req), pasteId);
+      alreadyCounted = !firstTime;
     }
-    if (!countMeta) {
-      const meta = await loadAlive(pasteId);
-      if (!meta) return null;
-      if (guestAlreadyViewed && viewerId) {
-        const db = await loadUsersDb();
-        const viewer = db.users.find((u) => u.id === viewerId);
-        if (viewer) {
-          const flagKey = `paste_meta_view_${pasteId}`;
-          const act = ensureActivity(viewer);
-          if (!act.flags[flagKey]) {
-            act.flags[flagKey] = true;
-            viewer.updatedAt = Date.now();
-            await saveUsersDb(db);
-          }
-        }
-      }
-      return { views: meta.views ?? 0, burned: false, deduped: true, meta };
+
+    if (alreadyCounted && !(consumeBurn && earlyMeta.burnAfterRead)) {
+      return {
+        views: earlyMeta.views ?? 0,
+        burned: false,
+        deduped: true,
+        selfView: isOwner,
+        meta: earlyMeta,
+        content: null,
+      };
     }
-    if (!viewerId && !(await claimGuestView('paste', clientIp(req), pasteId))) {
-      const meta = await loadAlive(pasteId);
-      if (!meta) return null;
-      return { views: meta.views ?? 0, burned: false, deduped: true, meta };
-    }
-    let reservedDb = null;
-    let reservedViewer = null;
-    let reservedFlagKey = null;
+
+    // --- mark user flag before increment (idempotent for retries) ---
     if (viewerId) {
-      reservedDb = await loadUsersDb();
-      reservedViewer = reservedDb.users.find((u) => u.id === viewerId);
-      if (reservedViewer) {
-        reservedFlagKey = `paste_meta_view_${pasteId}`;
-        const act = ensureActivity(reservedViewer);
-        act.flags[reservedFlagKey] = true;
-        reservedViewer.updatedAt = Date.now();
-        await saveUsersDb(reservedDb);
+      const db = await loadUsersDb();
+      const viewer = db.users.find((u) => u.id === viewerId);
+      if (viewer) {
+        const act = ensureActivity(viewer);
+        if (!act.flags[flagKey]) {
+          act.flags[flagKey] = true;
+          viewer.updatedAt = Date.now();
+          await saveUsersDb(db);
+        }
       }
     }
-    let result;
-    try {
-      result = await recordView(pasteId, { consumeBurn });
-    } catch (e) {
-      if (reservedViewer && reservedFlagKey && reservedDb) {
-        const act = ensureActivity(reservedViewer);
-        delete act.flags[reservedFlagKey];
-        reservedViewer.updatedAt = Date.now();
-        await saveUsersDb(reservedDb);
-      }
-      throw e;
-    }
-    if (!result) {
-      if (reservedViewer && reservedFlagKey && reservedDb) {
-        const act = ensureActivity(reservedViewer);
-        delete act.flags[reservedFlagKey];
-        reservedViewer.updatedAt = Date.now();
-        await saveUsersDb(reservedDb);
-      }
-      return null;
-    }
+
+    // Owner first view counts the same as any other first view
+    const result = await recordView(pasteId, {
+      consumeBurn: Boolean(consumeBurn && earlyMeta.burnAfterRead),
+    });
+    if (!result) return null;
+
     return {
       views: result.meta.views ?? 0,
       burned: result.burned,
       deduped: false,
+      selfView: isOwner,
       meta: result.meta,
       content: result.content,
     };
@@ -624,18 +593,20 @@ export async function handlePasteRequest(req, res) {
           return sendJson(res, 404, { error: 'Paste not found or expired' });
         }
 
-        // Public / authorized: return content (view counting is optional — don't fail load if view lock fails)
+        // Public / authorized: return content. Count view here (including owner's first view).
+        // Never consume burn-after-read on plain GET — only POST /view does that intentionally.
         let content = null;
         let outMeta = meta;
-        let burned = false;
         try {
           const viewResult = await countPasteViewDeduped(req, id, { consumeBurn: false });
           if (viewResult) {
             content = viewResult.content ?? await getContent(id);
             outMeta = viewResult.meta ?? meta;
-            burned = Boolean(viewResult.burned);
             if (viewResult.meta?.userId && uid && !viewResult.deduped) {
-              await incrementUserPasteViews(viewResult.meta.userId, { viewerId: uid, pasteId: id }).catch(() => {});
+              await incrementUserPasteViews(viewResult.meta.userId, {
+                viewerId: uid,
+                pasteId: id,
+              }).catch(() => {});
             }
           } else {
             content = await getContent(id);
@@ -645,13 +616,10 @@ export async function handlePasteRequest(req, res) {
           content = await getContent(id);
         }
         if (!content) return sendJson(res, 404, { error: 'Paste not found or expired' });
-        if (burned) {
-          return sendJson(res, 200, {
-            ...toClientPaste(outMeta, content, req, { userId: uid }),
-            burned: true,
-          });
-        }
-        return sendJson(res, 200, toClientPaste(outMeta, content, req, { userId: uid }));
+        return sendJson(res, 200, {
+          ...toClientPaste(outMeta, content, req, { userId: uid }),
+          burned: false,
+        });
       }
 
       if (req.method === 'PATCH') {
