@@ -1962,17 +1962,6 @@ a.bot-mention-username:focus-visible {
   text-shadow: 0 0 10px rgba(251, 191, 36, 0.45);
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .ach-rarity.ach-badge--live,
-  .ach-rarity.ach-badge--live::before,
-  .ach-rarity.ach-badge--live::after,
-  .ach-rarity--mythic.ach-badge--live .ach-badge__icon,
-  .ach-rarity--legendary.ach-badge--live .ach-badge__icon,
-  .ach-rarity--mythic .ach-badge__meta {
-    animation: none !important;
-  }
-}
-
 /* —— Achievement difficulty badges —— */
 .achievement-diff-trivial {
   border-color: rgba(148, 163, 184, 0.35);
