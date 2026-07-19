@@ -167,7 +167,8 @@ export function ProfileHero({ user, isOwn = false, showCoins = true, onNavigateG
       </div>
 
       <div className="relative px-4 sm:px-6 pb-5 -mt-16 sm:-mt-20">
-        <div className="flex flex-col sm:flex-row gap-4 sm:items-end">
+        {/* Top-align avatar + identity so name row sits on the same line as the avatar top */}
+        <div className="flex flex-col sm:flex-row gap-4 sm:items-start">
           <div className={`relative shrink-0 ring-4 ${theme.ring} rounded-2xl ${frame.className}`}>
             <img
               src={safeAvatarUrl(user.avatarUrl, user.username)}
@@ -184,7 +185,7 @@ export function ProfileHero({ user, isOwn = false, showCoins = true, onNavigateG
             )}
           </div>
 
-          <div className="flex-1 min-w-0 space-y-2.5">
+          <div className="flex-1 min-w-0 space-y-2.5 sm:pt-1">
             <div className="flex flex-wrap items-center gap-2.5 sm:gap-3">
               <h2
                 className={`profile-display-name text-2xl sm:text-3xl md:text-4xl font-bold truncate tracking-tight ${
