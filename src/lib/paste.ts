@@ -226,8 +226,9 @@ export async function unlockPaste(id: string, password: string): Promise<PasteRe
 }
 
 /**
- * Sync view count after load. GET /api/paste/:id already increments views server-side
- * (including the owner's first view). This only refreshes the number — never fabricates "burned".
+ * Count a paste view via POST /view (server dedupes).
+ * GET may also count; POST is the reliable fallback so owner/self views never stick at 0.
+ * Never fabricates "burned" when the request fails.
  */
 export async function recordPasteView(
   id: string,
@@ -237,7 +238,20 @@ export async function recordPasteView(
   if (pending) return pending;
 
   const run = (async () => {
-    // Prefer views already returned by the GET paste payload
+    try {
+      const res = await sessionFetch(
+        `${API}/${id}/view`,
+        { method: 'POST', body: JSON.stringify({}) },
+        { soft401: true },
+      );
+      if (res.ok) {
+        const data = await res.json() as { views?: number; burned?: boolean };
+        return {
+          views: typeof data.views === 'number' ? data.views : (opts.knownViews ?? 0),
+          burned: Boolean(data.burned),
+        };
+      }
+    } catch { /* fall through */ }
     if (typeof opts.knownViews === 'number' && opts.knownViews >= 0) {
       return { views: opts.knownViews, burned: false };
     }

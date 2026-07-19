@@ -78,10 +78,12 @@ export function PasteStarRating({
 
   const iconSize = size === 'sm' ? 14 : 18;
   const display = hover || mine || Math.round(avg);
-  const interactive = allowRate && !busy;
+  // Allow click even when "locked" so a re-click surfaces the server message (or succeeds after unlock)
+  const interactive = !busy;
 
   const submit = async (stars: number) => {
-    if (!allowRate || busy) return;
+    if (busy) return;
+    // Always attempt the API — server enforces 24h lock; never soft-block owner/guests in UI only
     setBusy(true);
     setError('');
     try {
@@ -89,8 +91,8 @@ export function PasteStarRating({
       setAvg(result.ratingAvg);
       setCount(result.ratingCount);
       setMine(result.userRating);
-      setAllowRate(result.canRate !== false ? Boolean(result.canRate) : false);
-      setLockedUntil(result.lockedUntil ?? null);
+      setAllowRate(result.canRate === true);
+      setLockedUntil(result.lockedUntil ?? Date.now() + 24 * 60 * 60 * 1000);
       onRated?.(result.ratingAvg, result.ratingCount, result.userRating, result.lockedUntil ?? null);
     } catch (e) {
       const err = e as Error & {
@@ -108,7 +110,12 @@ export function PasteStarRating({
         if (typeof err.lockedUntil === 'number') {
           setLockedUntil(err.lockedUntil);
           setAllowRate(false);
+        } else {
+          setAllowRate(false);
         }
+      } else {
+        // Network/server error — keep stars clickable
+        setAllowRate(true);
       }
       setError(msg);
     } finally {

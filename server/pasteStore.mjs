@@ -554,7 +554,7 @@ export async function computeAdminPasteStats() {
   };
 }
 
-/** One vote per IP per paste; locked for 24h after each vote (guests + members, incl. owner). */
+/** One vote per voter key per paste; locked for 24h after each vote (guests + members, incl. owner). */
 export const PASTE_RATE_LOCK_MS = 24 * 60 * 60 * 1000;
 
 /** Stable privacy-safe key from client IP (no raw IP stored in meta). */
@@ -563,9 +563,16 @@ export function pasteRatingKeyFromIp(ip) {
   return `ip:${crypto.createHash('sha256').update(`paste-rate:${raw}`).digest('hex').slice(0, 24)}`;
 }
 
+/** Logged-in voters use user id; guests use IP hash. Owner always has a stable user key. */
+export function pasteVoterKey({ userId = null, ip = '' } = {}) {
+  if (userId) return `user:${String(userId).slice(0, 32)}`;
+  return pasteRatingKeyFromIp(ip);
+}
+
 function normalizeVoteEntry(entry) {
   if (entry == null) return null;
   if (typeof entry === 'number' && entry >= 1 && entry <= 5) {
+    // Legacy plain number — treat as unlocked so owner can re-rate once under new system
     return { stars: Math.round(entry), at: 0 };
   }
   if (typeof entry === 'object') {
@@ -576,6 +583,21 @@ function normalizeVoteEntry(entry) {
   return null;
 }
 
+/** Resolve vote for primary key + legacy aliases (raw userId, old ip-only). */
+function lookupVoteEntry(votes, voterKey) {
+  if (!votes || !voterKey) return { entry: null, storageKey: voterKey };
+  const keys = [String(voterKey).slice(0, 40)];
+  if (voterKey.startsWith('user:')) {
+    keys.push(voterKey.slice(5)); // legacy: bare userId
+  }
+  for (const k of keys) {
+    if (Object.prototype.hasOwnProperty.call(votes, k)) {
+      return { entry: normalizeVoteEntry(votes[k]), storageKey: k };
+    }
+  }
+  return { entry: null, storageKey: String(voterKey).slice(0, 40) };
+}
+
 /**
  * @returns {{ userRating: number|null, canRate: boolean, lockedUntil: number|null }}
  */
@@ -583,10 +605,14 @@ export function getPasteRatingStatus(meta, voterKey) {
   if (!meta?.ratingVotes || !voterKey) {
     return { userRating: null, canRate: true, lockedUntil: null };
   }
-  const entry = normalizeVoteEntry(meta.ratingVotes[String(voterKey).slice(0, 40)]);
+  const { entry } = lookupVoteEntry(meta.ratingVotes, voterKey);
   if (!entry) return { userRating: null, canRate: true, lockedUntil: null };
-  const lockedUntil = entry.at > 0 ? entry.at + PASTE_RATE_LOCK_MS : null;
-  const locked = lockedUntil != null && Date.now() < lockedUntil;
+  // at === 0 → legacy vote, allow one free re-rate under new lock rules
+  if (!entry.at) {
+    return { userRating: entry.stars, canRate: true, lockedUntil: null };
+  }
+  const lockedUntil = entry.at + PASTE_RATE_LOCK_MS;
+  const locked = Date.now() < lockedUntil;
   return {
     userRating: entry.stars,
     canRate: !locked,
@@ -594,15 +620,15 @@ export function getPasteRatingStatus(meta, voterKey) {
   };
 }
 
-/** @deprecated use getPasteRatingStatus — kept for legacy call sites */
+/** @deprecated use getPasteRatingStatus */
 export function getUserPasteRating(meta, userId) {
-  const status = getPasteRatingStatus(meta, userId);
-  return status.userRating;
+  if (!userId) return null;
+  return getPasteRatingStatus(meta, pasteVoterKey({ userId })).userRating;
 }
 
 /**
- * Rate a paste by IP-derived voter key (guests allowed).
- * Re-rate only after 24h lock expires; within lock returns error with previous rating.
+ * Rate a paste (guest IP or logged-in user key). 24h lock per voter key.
+ * Owner rates with user: key — always independent of shared NAT IPs.
  */
 export async function ratePaste(id, voterKey, stars) {
   return withPasteWrite(async () => {
@@ -615,13 +641,13 @@ export async function ratePaste(id, voterKey, stars) {
     const value = Math.min(5, Math.max(1, Math.round(raw)));
     if (!meta.ratingVotes || typeof meta.ratingVotes !== 'object') meta.ratingVotes = {};
 
-    const prev = normalizeVoteEntry(meta.ratingVotes[key]);
+    const { entry: prev, storageKey } = lookupVoteEntry(meta.ratingVotes, key);
     if (prev && prev.at > 0) {
       const lockedUntil = prev.at + PASTE_RATE_LOCK_MS;
       if (Date.now() < lockedUntil) {
         const remainingMs = lockedUntil - Date.now();
         const hours = Math.max(1, Math.ceil(remainingMs / (60 * 60 * 1000)));
-        const err = new Error(`Already rated from this network — try again in ~${hours}h`);
+        const err = new Error(`Already rated — try again in ~${hours}h`);
         err.code = 'RATE_LOCKED';
         err.statusCode = 429;
         err.retryAfterMs = remainingMs;
@@ -642,6 +668,10 @@ export async function ratePaste(id, voterKey, stars) {
       count += 1;
     }
     const now = Date.now();
+    // Canonical key going forward; drop legacy bare userId slot if present
+    if (storageKey !== key && meta.ratingVotes[storageKey] != null) {
+      delete meta.ratingVotes[storageKey];
+    }
     meta.ratingVotes[key] = { stars: value, at: now };
     meta.ratingSum = sum;
     meta.ratingCount = count;

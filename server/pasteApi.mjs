@@ -11,10 +11,7 @@ import { claimGuestView } from './viewDedup.mjs';
 import { requireMemberTab } from './tabAccessGuard.mjs';
 import { canAccessAdmin } from './auth/permissions.mjs';
 import { pasteViewLink, postBotPastePublished } from './chatBot.mjs';
-import { ensureActivity } from './auth/achievements.mjs';
-import { loadUsersDb, saveUsersDb } from './auth/authStore.mjs';
 import { incrementUserPasteCount, incrementUserPasteViews } from './auth/authService.mjs';
-import { runCoinTransaction } from './gamesCoinLock.mjs';
 import { resolvePasteAccess } from './pasteAccess.mjs';
 import {
   adminDeletePaste,
@@ -31,7 +28,7 @@ import {
   purgeIfExpired,
   readStats,
   getPasteRatingStatus,
-  pasteRatingKeyFromIp,
+  pasteVoterKey,
   ratePaste,
   recordView,
   savePaste,
@@ -74,7 +71,8 @@ function toAdminClientMeta(meta, req) {
 }
 
 function ratingKeyFromReq(req) {
-  return pasteRatingKeyFromIp(clientIp(req));
+  const userId = req.auth?.user?.id ?? null;
+  return pasteVoterKey({ userId, ip: clientIp(req) });
 }
 
 function toClientMeta(meta, req, { includePrivate = false, userId = null } = {}) {
@@ -106,13 +104,13 @@ function toClientMeta(meta, req, { includePrivate = false, userId = null } = {})
   if (includePrivate) {
     base.userId = meta.userId ?? null;
   }
-  // Rating identity is IP-based (guests + members); userId kept for ownership only.
-  const ratingKey = ratingKeyFromReq(req);
+  // Prefer logged-in user key (owner can always rate); guests fall back to IP hash.
+  const uid = userId ?? req.auth?.user?.id ?? null;
+  const ratingKey = pasteVoterKey({ userId: uid, ip: clientIp(req) });
   const status = getPasteRatingStatus(meta, ratingKey);
   if (status.userRating) base.userRating = status.userRating;
-  base.canRate = status.canRate;
+  base.canRate = status.canRate !== false;
   if (status.lockedUntil) base.ratingLockedUntil = status.lockedUntil;
-  void userId;
   return base;
 }
 
@@ -139,69 +137,58 @@ async function loadAlive(id) {
 
 /**
  * Count a paste view with dedup.
- * - First view from owner counts (user asked for first own view).
- * - Later visits by same user / guest IP are deduped.
- * - consumeBurn only when explicitly requested (POST /view for burn-after-read).
+ * - Owner's first view counts (same as any viewer).
+ * - Dedup: logged-in user id OR guest IP (file/redis claim — NOT user activity flags).
+ * - Does NOT run inside withUsersWrite (avoids view-count deadlocks / silent failures).
  */
 async function countPasteViewDeduped(req, pasteId, { consumeBurn = false } = {}) {
-  await attachAuth(req);
+  try {
+    await attachAuth(req);
+  } catch {
+    /* guest */
+  }
   const viewerId = req.auth?.user?.id ?? null;
-  const flagKey = `paste_meta_view_${pasteId}`;
+  const earlyMeta = await loadAlive(pasteId);
+  if (!earlyMeta) return null;
 
-  return runCoinTransaction(async () => {
-    const earlyMeta = await loadAlive(pasteId);
-    if (!earlyMeta) return null;
+  const isOwner = Boolean(
+    viewerId && earlyMeta.userId && String(earlyMeta.userId) === String(viewerId),
+  );
 
-    const isOwner = Boolean(
-      viewerId && earlyMeta.userId && String(earlyMeta.userId) === String(viewerId),
-    );
-
-    // --- already counted? ---
-    let alreadyCounted = false;
+  let firstTime = true;
+  try {
     if (viewerId) {
-      const db = await loadUsersDb();
-      const viewer = db.users.find((u) => u.id === viewerId);
-      if (viewer) {
-        const act = ensureActivity(viewer);
-        if (act.flags[flagKey]) alreadyCounted = true;
-      }
+      // Fresh scope "paste-u" — old paste_meta_view_* achievement flags no longer block counting
+      firstTime = await claimGuestView('paste-u', String(viewerId), pasteId);
     } else {
-      // Guest: claim returns false if this IP already viewed
-      const firstTime = await claimGuestView('paste', clientIp(req), pasteId);
-      alreadyCounted = !firstTime;
+      firstTime = await claimGuestView('paste', clientIp(req), pasteId);
     }
+  } catch (err) {
+    console.warn('[paste] view dedup claim failed — counting view anyway', err);
+    firstTime = true;
+  }
 
-    if (alreadyCounted && !(consumeBurn && earlyMeta.burnAfterRead)) {
-      return {
-        views: earlyMeta.views ?? 0,
-        burned: false,
-        deduped: true,
-        selfView: isOwner,
-        meta: earlyMeta,
-        content: null,
-      };
+  if (!firstTime) {
+    // Already counted — still load content when burn path needs it
+    let content = null;
+    if (consumeBurn && earlyMeta.burnAfterRead) {
+      content = await getContent(pasteId);
     }
+    return {
+      views: earlyMeta.views ?? 0,
+      burned: false,
+      deduped: true,
+      selfView: isOwner,
+      meta: earlyMeta,
+      content,
+    };
+  }
 
-    // --- mark user flag before increment (idempotent for retries) ---
-    if (viewerId) {
-      const db = await loadUsersDb();
-      const viewer = db.users.find((u) => u.id === viewerId);
-      if (viewer) {
-        const act = ensureActivity(viewer);
-        if (!act.flags[flagKey]) {
-          act.flags[flagKey] = true;
-          viewer.updatedAt = Date.now();
-          await saveUsersDb(db);
-        }
-      }
-    }
-
-    // Owner first view counts the same as any other first view
+  try {
     const result = await recordView(pasteId, {
       consumeBurn: Boolean(consumeBurn && earlyMeta.burnAfterRead),
     });
     if (!result) return null;
-
     return {
       views: result.meta.views ?? 0,
       burned: result.burned,
@@ -210,7 +197,17 @@ async function countPasteViewDeduped(req, pasteId, { consumeBurn = false } = {})
       meta: result.meta,
       content: result.content,
     };
-  });
+  } catch (err) {
+    console.warn('[paste] recordView failed after claim', err);
+    return {
+      views: earlyMeta.views ?? 0,
+      burned: false,
+      deduped: false,
+      selfView: isOwner,
+      meta: earlyMeta,
+      content: await getContent(pasteId),
+    };
+  }
 }
 
 /**
@@ -485,21 +482,22 @@ export async function handlePasteRequest(req, res) {
 
     const rateMatch = pathname.match(/^\/api\/paste\/([A-Za-z0-9_-]{6,32})\/rate$/);
     if (rateMatch && req.method === 'POST') {
-      // Guests + members may rate; 24h IP lock enforced in pasteStore.ratePaste
-      await attachAuth(req);
+      // Guests + members may rate. Logged-in → user: key (owner works). Guests → IP hash, 24h lock.
+      try {
+        await attachAuth(req);
+      } catch { /* guest */ }
       const ip = clientIp(req);
-      const voterKey = pasteRatingKeyFromIp(ip);
-      await checkRateLimit(`paste-rate:${ip}`, { max: 40, windowMs: 60_000 });
+      const user = req.auth?.user ?? null;
+      const voterKey = pasteVoterKey({ userId: user?.id ?? null, ip });
+      await checkRateLimit(`paste-rate:${user?.id ?? ip}`, { max: 40, windowMs: 60_000 });
       const meta = await loadAlive(rateMatch[1]);
       if (!meta) return sendJson(res, 404, { error: 'Paste not found' });
-      const user = req.auth?.user ?? null;
-      // Private pastes: only the owner may rate (must be signed in as owner)
+      // Private pastes: only the owner may rate
       if (meta.visibility === 'private') {
         if (!user?.id || !meta.userId || String(meta.userId) !== String(user.id)) {
           return sendJson(res, 404, { error: 'Paste not found' });
         }
       }
-      // public + protected + own private: rate by IP (owner included)
       const body = await readJsonBody(req, 4 * 1024);
       const stars = Number(body.stars);
       if (!Number.isFinite(stars) || stars < 1 || stars > 5) {
@@ -576,14 +574,35 @@ export async function handlePasteRequest(req, res) {
           return sendJson(res, 400, { error: 'Password must be sent via POST /api/paste/:id/view or /unlock' });
         }
         const access = await resolvePasteAccess(req, meta, '');
+        const isOwner = Boolean(uid && meta.userId && String(meta.userId) === String(uid));
+
         if (!access.allowed) {
           if (access.notFound) return sendJson(res, 404, { error: 'Paste not found or expired' });
-          const isOwner = uid && meta.userId && String(meta.userId) === String(uid);
+          // Owner may open protected pastes without password — still count their view
           if (isOwner) {
-            // Owner always sees content
-            const content = await getContent(id);
+            let content = null;
+            let outMeta = meta;
+            let burned = false;
+            try {
+              const viewResult = await countPasteViewDeduped(req, id, {
+                consumeBurn: Boolean(meta.burnAfterRead),
+              });
+              if (viewResult) {
+                content = viewResult.content ?? await getContent(id);
+                outMeta = viewResult.meta ?? meta;
+                burned = Boolean(viewResult.burned);
+              } else {
+                content = await getContent(id);
+              }
+            } catch (viewErr) {
+              console.warn('[paste] owner view count failed, still returning content', viewErr);
+              content = await getContent(id);
+            }
             if (!content) return sendJson(res, 404, { error: 'Paste not found or expired' });
-            return sendJson(res, 200, toClientPaste(meta, content, req, { userId: uid, includePrivate: true }));
+            return sendJson(res, 200, {
+              ...toClientPaste(outMeta, content, req, { userId: uid, includePrivate: true }),
+              burned,
+            });
           }
           if (access.requiresPassword) {
             return sendJson(res, 200, {
@@ -604,8 +623,7 @@ export async function handlePasteRequest(req, res) {
           return sendJson(res, 404, { error: 'Paste not found or expired' });
         }
 
-        // Public / authorized: return content. Count view here (including owner's first view).
-        // Burn-after-read: first successful content delivery consumes (GET is the read).
+        // Public / authorized (incl. owner on private): count view (owner first view included).
         let content = null;
         let outMeta = meta;
         let burned = false;
@@ -617,7 +635,8 @@ export async function handlePasteRequest(req, res) {
             content = viewResult.content ?? await getContent(id);
             outMeta = viewResult.meta ?? meta;
             burned = Boolean(viewResult.burned);
-            if (viewResult.meta?.userId && uid && !viewResult.deduped) {
+            // Profile pasteViewsTotal: only non-self viewers
+            if (viewResult.meta?.userId && uid && !viewResult.deduped && !viewResult.selfView) {
               await incrementUserPasteViews(viewResult.meta.userId, {
                 viewerId: uid,
                 pasteId: id,
@@ -632,7 +651,7 @@ export async function handlePasteRequest(req, res) {
         }
         if (!content) return sendJson(res, 404, { error: 'Paste not found or expired' });
         return sendJson(res, 200, {
-          ...toClientPaste(outMeta, content, req, { userId: uid }),
+          ...toClientPaste(outMeta, content, req, { userId: uid, includePrivate: isOwner }),
           burned,
         });
       }

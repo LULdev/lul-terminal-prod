@@ -23,6 +23,19 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '3.48.3',
+    title: 'Fix paste own views + voting (dedup & voter keys)',
+    date: 'Jul 19, 2026 - 16:00',
+    highlight: true,
+    items: [
+      { priority: 'P0', text: 'P0 — View counter no longer stuck at 0: removed user-DB lock + achievement flags that blocked owner first view forever.' },
+      { priority: 'P0', text: 'P0 — Client always POSTs /api/paste/:id/view after open (server-side dedupe); owner protected bypass also counts views.' },
+      { priority: 'P0', text: 'P0 — Ratings: logged-in voters use user: key (owner can always vote); guests use IP hash + 24h lock; stars always clickable.' },
+      { priority: 'P1', text: 'P1 — Dedup scopes paste-u / paste (fresh); legacy rating entries allow one free re-rate under new keys.' },
+      { priority: 'P9', text: 'P9 — Store-level view/rate smoke test (owner + guest) green.' },
+    ],
+  },
+  {
     version: '3.48.2',
     title: 'Paste viewer in App shell + guest ratings (24h IP lock)',
     date: 'Jul 19, 2026 - 14:30',
