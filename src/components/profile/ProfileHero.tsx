@@ -48,6 +48,7 @@ import { safeCoverStyle } from '../../lib/safeCoverStyle';
 import { VerifiedBadge } from '../auth/VerifiedBadge';
 import { LulCoinDisplay } from '../games/LulCoinDisplay';
 import { AdminUsername } from './AdminUsername';
+import { LeaderboardBadges } from './LeaderboardBadges';
 import './profile.css';
 
 type HeroUser = {
@@ -310,6 +311,13 @@ export function ProfileHero({ user, isOwn = false, showCoins = true, onNavigateG
             <p className="text-[9px] font-mono text-slate-600 italic">
               🔮 {randomFortuneTip(user.username)}
             </p>
+
+            <LeaderboardBadges
+              earned={user.achievements ?? []}
+              showActivityStats={showActivity}
+              showCoins={showCoins}
+              inline
+            />
 
             <div className="flex flex-wrap gap-1.5">
               {user.website && safeHref(user.website.startsWith('http') ? user.website : `https://${user.website}`) && (

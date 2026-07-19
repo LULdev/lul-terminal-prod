@@ -470,9 +470,9 @@ export function ProfilePage({ routeUsername, profileTabReadyTick = 0, onNavigate
             )}
 
             {activeTab === 'trophies' && (
-              <>
+              <div className="space-y-2">
                 {!customization.privacy.showActivityStats && (
-                  <div className="profile-glass rounded-2xl p-4 text-center text-[10px] font-mono text-slate-500 mb-3">
+                  <div className="profile-glass rounded-xl px-3 py-2 text-center text-[9px] font-mono text-slate-500">
                     Arcade & coin trophies are hidden from your public profile — preview below.
                   </div>
                 )}
@@ -483,7 +483,7 @@ export function ProfilePage({ routeUsername, profileTabReadyTick = 0, onNavigate
                 />
                 <UnlockedAwards earned={previewAchievements} />
                 <AchievementShowcase earned={previewAchievements} />
-              </>
+              </div>
             )}
 
             {activeTab === 'settings' && (
@@ -659,7 +659,7 @@ function PublicProfileView({
         )}
 
         {activeTab === 'trophies' && (
-          <>
+          <div className="space-y-2">
             <LeaderboardBadges
               earned={publicAchievements}
               showActivityStats={custom.privacy.showActivityStats}
@@ -667,7 +667,7 @@ function PublicProfileView({
             />
             <UnlockedAwards earned={publicAchievements} />
             <AchievementShowcase earned={publicAchievements} />
-          </>
+          </div>
         )}
 
         {!isLoggedIn && (
