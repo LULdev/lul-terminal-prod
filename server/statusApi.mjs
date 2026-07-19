@@ -4,7 +4,6 @@
  */
 
 import { wrapAsyncHandler } from './asyncMiddleware.mjs';
-import { requireMemberTab } from './tabAccessGuard.mjs';
 import { buildSystemStatus } from './statusService.mjs';
 import { checkRateLimit, clientIp, isRateLimitError } from './rateLimit.mjs';
 
@@ -23,8 +22,8 @@ export async function handleStatusRequest(req, res) {
     return;
   }
   try {
+    // Public status endpoint — guests may load system health
     await checkRateLimit(`status:${clientIp(req)}`, { max: 60, windowMs: 60_000 });
-    await requireMemberTab(req, 'status');
     sendJson(res, 200, await buildSystemStatus());
   } catch (e) {
     if (isRateLimitError(e)) return sendJson(res, 429, { error: 'Too many requests' });

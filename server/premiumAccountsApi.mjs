@@ -85,8 +85,8 @@ export async function handlePremiumAccountsRequest(req, res) {
     const isAdmin = Boolean(req.auth?.user && canAccessAdmin(req.auth.user));
 
     if (req.method === 'GET' && pathname === '/api/premium-accounts/public-stats') {
+      // Public dashboard counters — no login / tab gate
       await checkRateLimit(`premium-public-stats:${clientIp(req)}`, { max: 60, windowMs: 60_000 });
-      await requireMemberTab(req, 'premiumaccounts');
       return sendJson(res, 200, await getPublicAccountStats());
     }
 
@@ -276,10 +276,12 @@ export async function handlePremiumAccountsRequest(req, res) {
     res.end('Not found');
   } catch (e) {
     const msg = e instanceof Error ? e.message : 'Server error';
+    const lower = msg.toLowerCase();
     const status = isRateLimitError(e) ? 429
       : msg === 'Not logged in'
         ? 401
-        : msg.includes('VIP') || msg.includes('permission') || msg.includes('Verification') || msg.includes('Admin')
+        : msg === 'Permission denied' || lower.includes('vip') || lower.includes('permission')
+          || lower.includes('verification') || lower.includes('admin')
           ? 403
           : 400;
     sendJson(res, status, { error: msg });

@@ -4,7 +4,6 @@
  */
 
 import { wrapAsyncHandler } from './asyncMiddleware.mjs';
-import { requireMemberTab } from './tabAccessGuard.mjs';
 import { attachAuth } from './auth/authApi.mjs';
 import { canAccessAdmin } from './auth/permissions.mjs';
 import { checkRateLimit, clientIp, isRateLimitError } from './rateLimit.mjs';
@@ -25,8 +24,8 @@ export async function handleTerminalStatsRequest(req, res) {
     return;
   }
   try {
+    // Public stats endpoint (guest-safe); sensitive fields only for admins
     await checkRateLimit(`terminal-stats:${clientIp(req)}`, { max: 60, windowMs: 60_000 });
-    await requireMemberTab(req, 'stats');
     await attachAuth(req);
     const includeSensitive = Boolean(req.auth?.user && canAccessAdmin(req.auth.user));
     sendJson(res, 200, await buildTerminalStats({ includeSensitive }));

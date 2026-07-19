@@ -38,8 +38,8 @@ export async function handleProxyDatabaseRequest(req, res) {
 
   try {
     if (req.method === 'GET' && pathname === '/api/proxy-db/stats') {
+      // Public dashboard counter — guests may read totals
       await checkRateLimit(`proxy-db:${clientIp(req)}`, { max: 60, windowMs: 60_000 });
-      await requireMemberTab(req, 'proxydatabase');
       const stats = await getDatabaseStats();
       return sendJson(res, 200, stats);
     }

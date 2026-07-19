@@ -60,83 +60,10 @@ export async function handleImageHostRequest(req, res) {
   const pathname = url.pathname;
 
   try {
-    if (req.method === 'POST' && pathname === '/api/images/meme-upload') {
-      await requireMemberTab(req, 'memegen');
-      await attachAuth(req);
-      const user = requireAuth(req);
-      await checkRateLimit(`image-meme-upload:${user.id}`, { max: 20, windowMs: 60_000 });
-      const body = await readJsonBody(req);
-      const buffer = decodeImageUploadData(body.data);
-      const meta = await saveImage({
-        name: body.name,
-        mime: body.mime,
-        size: body.size ?? buffer.length,
-        width: body.width,
-        height: body.height,
-        buffer,
-        userId: user.id,
-        source: 'meme',
-      });
-      return sendJson(res, 201, toClientMeta(meta, req));
-    }
-
-    await requireMemberTab(req, 'imagehost');
-
+    // ── Public (guests + members) — never require imagehost tab ─────────────
     if (req.method === 'GET' && pathname === '/api/images/stats') {
-      // Public totals bar — polled every ~8s; allow headroom for multi-tab
       await checkRateLimit(`image-stats:${clientIp(req)}`, { max: 120, windowMs: 60_000 });
       return sendJson(res, 200, await readStats());
-    }
-
-    if (req.method === 'GET' && pathname === '/api/images/my/stats') {
-      await attachAuth(req);
-      const user = requireAuth(req);
-      // Separate bucket from list so a list+stats pair does not double-count the same key
-      await checkRateLimit(`image-my-stats:${user.id}`, { max: 90, windowMs: 60_000 });
-      return sendJson(res, 200, await computeUserGalleryStats(user.id));
-    }
-
-    if (req.method === 'GET' && pathname === '/api/images/my') {
-      await attachAuth(req);
-      const user = requireAuth(req);
-      await checkRateLimit(`image-my-list:${user.id}`, { max: 90, windowMs: 60_000 });
-      const sort = url.searchParams.get('sort') ?? 'newest';
-      const images = await listImagesByUser(user.id);
-      const sorted = sortGallery(images, sort);
-      return sendJson(res, 200, {
-        images: sorted.map((m) => toClientMeta(m, req)),
-        total: sorted.length,
-      });
-    }
-
-    if (req.method === 'POST' && pathname === '/api/images/upload') {
-      await attachAuth(req);
-      const user = requireAuth(req);
-      await checkRateLimit(`image-upload:${user.id}`, { max: 20, windowMs: 60_000 });
-      const body = await readJsonBody(req);
-      const buffer = decodeImageUploadData(body.data);
-      const userId = user.id;
-      const meta = await saveImage({
-        name: body.name,
-        mime: body.mime,
-        size: body.size ?? buffer.length,
-        width: body.width,
-        height: body.height,
-        buffer,
-        userId,
-      });
-      const isMemeExport = false;
-      if (userId && !isMemeExport) await incrementUserImageUpload(userId);
-      const clientMeta = toClientMeta(meta, req);
-      const skipBot = isMemeExport || body.skipBotNotify === true;
-      if (userId && !skipBot && req.auth?.user?.username) {
-        postBotImageHosted({
-          username: req.auth.user.username,
-          imageName: meta.name,
-          imageHref: imageViewLink(meta.id),
-        }).catch(() => {});
-      }
-      return sendJson(res, 201, clientMeta);
     }
 
     const metaMatch = pathname.match(/^\/api\/images\/([a-f0-9]{16})$/);
@@ -232,6 +159,96 @@ export async function handleImageHostRequest(req, res) {
       return sendJson(res, 200, result);
     }
 
+    const hostingMatch = pathname.match(/^\/hosting\/([a-f0-9]{16})$/);
+    if (hostingMatch && req.method === 'GET') {
+      await checkRateLimit(`hosting-file:${clientIp(req)}`, { max: 120, windowMs: 60_000 });
+      const hit = await getFilePath(hostingMatch[1]);
+      if (!hit) {
+        res.statusCode = 404;
+        res.end('Not found');
+        return;
+      }
+      const buf = await fs.readFile(hit.filePath);
+      res.statusCode = 200;
+      res.setHeader('Content-Type', hit.meta.mime);
+      res.setHeader('X-Content-Type-Options', 'nosniff');
+      res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+      res.end(buf);
+      return;
+    }
+
+    // ── Members-only (upload / gallery / edit) ──────────────────────────────
+    if (req.method === 'POST' && pathname === '/api/images/meme-upload') {
+      await requireMemberTab(req, 'memegen');
+      await attachAuth(req);
+      const user = requireAuth(req);
+      await checkRateLimit(`image-meme-upload:${user.id}`, { max: 20, windowMs: 60_000 });
+      const body = await readJsonBody(req);
+      const buffer = decodeImageUploadData(body.data);
+      const meta = await saveImage({
+        name: body.name,
+        mime: body.mime,
+        size: body.size ?? buffer.length,
+        width: body.width,
+        height: body.height,
+        buffer,
+        userId: user.id,
+        source: 'meme',
+      });
+      return sendJson(res, 201, toClientMeta(meta, req));
+    }
+
+    await requireMemberTab(req, 'imagehost');
+
+    if (req.method === 'GET' && pathname === '/api/images/my/stats') {
+      await attachAuth(req);
+      const user = requireAuth(req);
+      await checkRateLimit(`image-my-stats:${user.id}`, { max: 90, windowMs: 60_000 });
+      return sendJson(res, 200, await computeUserGalleryStats(user.id));
+    }
+
+    if (req.method === 'GET' && pathname === '/api/images/my') {
+      await attachAuth(req);
+      const user = requireAuth(req);
+      await checkRateLimit(`image-my-list:${user.id}`, { max: 90, windowMs: 60_000 });
+      const sort = url.searchParams.get('sort') ?? 'newest';
+      const images = await listImagesByUser(user.id);
+      const sorted = sortGallery(images, sort);
+      return sendJson(res, 200, {
+        images: sorted.map((m) => toClientMeta(m, req)),
+        total: sorted.length,
+      });
+    }
+
+    if (req.method === 'POST' && pathname === '/api/images/upload') {
+      await attachAuth(req);
+      const user = requireAuth(req);
+      await checkRateLimit(`image-upload:${user.id}`, { max: 20, windowMs: 60_000 });
+      const body = await readJsonBody(req);
+      const buffer = decodeImageUploadData(body.data);
+      const userId = user.id;
+      const meta = await saveImage({
+        name: body.name,
+        mime: body.mime,
+        size: body.size ?? buffer.length,
+        width: body.width,
+        height: body.height,
+        buffer,
+        userId,
+      });
+      if (userId) await incrementUserImageUpload(userId);
+      const clientMeta = toClientMeta(meta, req);
+      const skipBot = body.skipBotNotify === true;
+      if (userId && !skipBot && req.auth?.user?.username) {
+        postBotImageHosted({
+          username: req.auth.user.username,
+          imageName: meta.name,
+          imageHref: imageViewLink(meta.id),
+        }).catch(() => {});
+      }
+      return sendJson(res, 201, clientMeta);
+    }
+
     const patchMatch = pathname.match(/^\/api\/images\/([a-f0-9]{16})$/);
     if (patchMatch && req.method === 'PATCH') {
       await attachAuth(req);
@@ -249,24 +266,6 @@ export async function handleImageHostRequest(req, res) {
       await checkRateLimit(`image-delete:${user.id}`, { max: 20, windowMs: 60_000 });
       const result = await deleteImageRecord(deleteMatch[1], user.id);
       return sendJson(res, 200, result);
-    }
-
-    const hostingMatch = pathname.match(/^\/hosting\/([a-f0-9]{16})$/);
-    if (hostingMatch && req.method === 'GET') {
-      await checkRateLimit(`hosting-file:${clientIp(req)}`, { max: 120, windowMs: 60_000 });
-      const hit = await getFilePath(hostingMatch[1]);
-      if (!hit) {
-        res.statusCode = 404;
-        res.end('Not found');
-        return;
-      }
-      const buf = await fs.readFile(hit.filePath);
-      res.statusCode = 200;
-      res.setHeader('Content-Type', hit.meta.mime);
-      res.setHeader('X-Content-Type-Options', 'nosniff');
-      res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
-      res.end(buf);
-      return;
     }
 
     res.statusCode = 404;
