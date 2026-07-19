@@ -174,9 +174,6 @@ export function PasteStarRating({
           {lockHint ? ` · locked ${lockHint}` : ''}
         </p>
       )}
-      {!mine && allowRate && !error && (
-        <p className="text-[7px] font-mono text-slate-600">Guests may rate · 1 vote / 24h per network</p>
-      )}
       {error && (
         <p className="text-[7px] font-mono text-rose-400" role="alert">{error}</p>
       )}
