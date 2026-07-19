@@ -35,6 +35,7 @@ import {
 } from '../../lib/paste';
 import { languageLabel } from '../../data/pasteLanguages';
 import { useAuth } from '../../context/AuthContext';
+import { fetchPublicProfile } from '../../lib/auth';
 import { safeAvatarUrl } from '../../lib/safeAvatarUrl';
 import { safePasteAssetUrl } from '../../lib/safePasteUrl';
 import { AdminUsername } from '../profile/AdminUsername';
@@ -50,11 +51,24 @@ const AUTHOR_RING: Record<string, string> = {
   bot: 'ring-cyan-500/45',
 };
 
+type AuthorDisplay = {
+  username: string;
+  avatarUrl: string | null | undefined;
+  role: UserRole | null;
+  verified: boolean;
+};
+
 type Props = {
   id: string;
   /** When true, fill the App shell content pane (no full-viewport chrome). */
   embedded?: boolean;
 };
+
+function normalizeRole(raw: unknown): UserRole | null {
+  const r = String(raw ?? '').toLowerCase();
+  if (r === 'admin' || r === 'vip' || r === 'bot' || r === 'user') return r;
+  return null;
+}
 
 export function PasteViewer({ id, embedded = false }: Props) {
   const { user, isLoggedIn, openAuth } = useAuth();
@@ -75,6 +89,8 @@ export function PasteViewer({ id, embedded = false }: Props) {
   const [userRating, setUserRating] = useState<number | null>(null);
   const [canRate, setCanRate] = useState(true);
   const [ratingLockedUntil, setRatingLockedUntil] = useState<number | null>(null);
+  /** Live author profile (same source as profile page) when paste meta is incomplete. */
+  const [authorOverlay, setAuthorOverlay] = useState<AuthorDisplay | null>(null);
   const mountedRef = useRef(true);
 
   const shellClass = embedded
@@ -115,10 +131,12 @@ export function PasteViewer({ id, embedded = false }: Props) {
     setDedupeActive(false);
     setDedupeRemoved(0);
     setSearch('');
+    setAuthorOverlay(null);
 
     (async () => {
       try {
-        const data = await fetchPaste(id, { credentialed: isLoggedIn });
+        // Always credentialed when session may exist so private pastes + author resolve correctly
+        const data = await fetchPaste(id, { credentialed: true });
         if (cancelled) return;
         if ((data.requiresPassword || data.requiresLogin) && !data.content) {
           setPaste(data);
@@ -235,11 +253,88 @@ export function PasteViewer({ id, embedded = false }: Props) {
     setDedupeActive(true);
   };
 
-  const authorRole = (paste?.authorRole as UserRole | null | undefined) ?? null;
-  const avatarUrl = paste?.username
-    ? safeAvatarUrl(paste.avatarUrl ?? undefined, paste.username)
+  // Resolve author the same way the profile page does (live avatar, role, verified)
+  useEffect(() => {
+    const uname = paste?.username?.trim();
+    if (!uname) {
+      setAuthorOverlay(null);
+      return;
+    }
+    let cancelled = false;
+    const isOwn = Boolean(user && user.username.toLowerCase() === uname.toLowerCase());
+
+    // Own paste: session user is the source of truth (matches profile picture after upload)
+    if (isOwn && user) {
+      setAuthorOverlay({
+        username: user.username,
+        avatarUrl: user.avatarUrl,
+        role: normalizeRole(user.role),
+        verified: Boolean(user.verified),
+      });
+      return;
+    }
+
+    // Other authors: public profile API (same payload as /profile/:user)
+    (async () => {
+      try {
+        const profile = await fetchPublicProfile(uname);
+        if (cancelled || !mountedRef.current) return;
+        setAuthorOverlay({
+          username: profile.username,
+          avatarUrl: profile.avatarUrl,
+          role: normalizeRole(profile.role),
+          verified: Boolean(profile.verified),
+        });
+      } catch {
+        // Fall back to paste API fields via useMemo
+        if (!cancelled && mountedRef.current && (paste.authorRole || paste.avatarUrl || paste.authorVerified)) {
+          setAuthorOverlay({
+            username: uname,
+            avatarUrl: paste.avatarUrl,
+            role: normalizeRole(paste.authorRole),
+            verified: Boolean(paste.authorVerified),
+          });
+        }
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, [paste?.username, paste?.authorRole, paste?.avatarUrl, paste?.authorVerified, user?.id, user?.username, user?.avatarUrl, user?.role, user?.verified]);
+
+  const author = useMemo((): AuthorDisplay | null => {
+    if (!paste?.username) return null;
+    const fromPasteRole = normalizeRole(paste.authorRole);
+    const fromOverlay = authorOverlay;
+    const fromSession =
+      user && user.username.toLowerCase() === paste.username.toLowerCase()
+        ? {
+            username: user.username,
+            avatarUrl: user.avatarUrl,
+            role: normalizeRole(user.role),
+            verified: Boolean(user.verified),
+          }
+        : null;
+
+    // Prefer live profile overlay → session owner → paste API fields
+    const role = fromOverlay?.role ?? fromSession?.role ?? fromPasteRole;
+    const verified = fromOverlay?.verified
+      ?? fromSession?.verified
+      ?? Boolean(paste.authorVerified);
+    const avatarUrl = fromOverlay?.avatarUrl
+      ?? fromSession?.avatarUrl
+      ?? paste.avatarUrl
+      ?? null;
+    const username = fromOverlay?.username ?? fromSession?.username ?? paste.username;
+    return { username, avatarUrl, role, verified };
+  }, [paste, authorOverlay, user]);
+
+  const authorRole = author?.role ?? null;
+  const avatarUrl = author
+    ? safeAvatarUrl(author.avatarUrl ?? undefined, author.username)
     : null;
   const avatarRing = AUTHOR_RING[authorRole ?? 'user'] ?? AUTHOR_RING.user;
+  const isAdminAuthor = authorRole === 'admin';
+  const isVerifiedAuthor = Boolean(author?.verified);
 
   if (loading) {
     return (
@@ -347,44 +442,48 @@ export function PasteViewer({ id, embedded = false }: Props) {
             <div className="flex items-start gap-3 min-w-0 flex-1">
               {avatarUrl ? (
                 <img
+                  key={avatarUrl}
                   src={avatarUrl}
-                  alt={paste.username ? `@${paste.username}` : 'Author'}
-                  className={`w-11 h-11 sm:w-12 sm:h-12 rounded-full object-cover ring-2 ${avatarRing} border-2 border-[#0c0d12] shrink-0 bg-slate-900`}
+                  alt={author?.username ? `@${author.username}` : 'Author'}
+                  className={`w-12 h-12 sm:w-14 sm:h-14 rounded-full object-cover ring-2 ${avatarRing} border-2 border-[#0c0d12] shrink-0 bg-slate-900 shadow-lg`}
                   loading="lazy"
                 />
               ) : (
-                <div className={`w-11 h-11 rounded-full bg-slate-800 flex items-center justify-center shrink-0 ring-2 ${avatarRing}`}>
+                <div className={`w-12 h-12 rounded-full bg-slate-800 flex items-center justify-center shrink-0 ring-2 ${avatarRing}`}>
                   <User size={18} className="text-slate-500" />
                 </div>
               )}
               <div className="min-w-0">
                 <p className="text-[8px] font-mono uppercase tracking-widest text-slate-500 mb-0.5">Paste</p>
                 <h1 className="text-base sm:text-lg font-semibold text-white truncate">{paste.title}</h1>
-                {paste.username ? (
+                {author ? (
                   <div className="mt-1.5 flex flex-wrap items-center gap-2 min-w-0">
-                    {authorRole === 'admin' ? (
-                      <AdminUsername username={paste.username} size="sm" />
+                    {/* Gradient admin username style (same CSS as profile / shoutbox) */}
+                    {isAdminAuthor ? (
+                      <AdminUsername username={author.username} size="md" className="shrink-0" />
                     ) : authorRole === 'bot' ? (
-                      <span className="bot-username-style text-[12px]">@{paste.username}</span>
+                      <span className="bot-username-style text-[13px] shrink-0">@{author.username}</span>
                     ) : (
                       <span
-                        className={`profile-display-name text-[12px] sm:text-[13px] font-semibold truncate ${
+                        className={`profile-display-name text-[13px] sm:text-sm font-semibold truncate shrink-0 ${
                           authorRole === 'vip' ? 'text-amber-200' : ''
-                        }`}
+                        } ${isAdminAuthor ? 'profile-display-name--admin' : ''}`}
                       >
-                        @{paste.username}
+                        @{author.username}
                       </span>
                     )}
-                    {/* Profile-style badges (same as profile hero) */}
-                    <VerifiedBadge
-                      verified={Boolean(paste.authorVerified)}
-                      size={14}
-                      showLabel
-                      animated={Boolean(paste.authorVerified)}
-                    />
-                    {authorRole === 'admin' && (
+                    {/* Same badges as profile hero */}
+                    {isVerifiedAuthor && (
+                      <VerifiedBadge
+                        verified
+                        size={16}
+                        showLabel
+                        animated
+                      />
+                    )}
+                    {isAdminAuthor && (
                       <span className="profile-admin-badge" title="Administrator">
-                        <Shield size={11} aria-hidden />
+                        <Shield size={12} aria-hidden />
                         <span>Admin</span>
                       </span>
                     )}

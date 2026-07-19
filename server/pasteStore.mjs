@@ -221,6 +221,10 @@ export async function savePaste({
   burnAfterRead,
   userId,
   username,
+  /** Snapshot of author profile at create time (live lookup still preferred on read). */
+  avatarUrl = null,
+  authorRole = null,
+  authorVerified = false,
 }) {
   return withPasteWrite(async () => {
     const text = String(content ?? '');
@@ -246,6 +250,9 @@ export async function savePaste({
       views: 0,
       userId: userId ? String(userId).slice(0, 32) : null,
       username: username ? String(username).slice(0, 48) : null,
+      avatarUrl: avatarUrl ? String(avatarUrl).slice(0, 512) : null,
+      authorRole: authorRole ? String(authorRole).slice(0, 16) : null,
+      authorVerified: Boolean(authorVerified),
       size: bytes,
       lineCount: text.split('\n').length,
       pinned: false,

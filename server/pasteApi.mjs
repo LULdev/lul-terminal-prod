@@ -91,22 +91,40 @@ async function getAuthorLookup() {
 }
 
 function resolveAuthorFields(meta, authorLookup) {
-  const fallbackName = meta?.username ?? null;
-  if (!authorLookup) {
-    return { username: fallbackName, avatarUrl: null, authorRole: null, authorVerified: false };
-  }
+  const fallbackName = meta?.username ? String(meta.username) : null;
+  const snapshotAvatar = sanitizeAvatarUrl(meta?.avatarUrl) || null;
+  const snapshotRole = meta?.authorRole ? String(meta.authorRole) : null;
+  const snapshotVerified = Boolean(meta?.authorVerified);
+
   let user = null;
-  if (meta?.userId) user = authorLookup.byId.get(String(meta.userId)) ?? null;
-  if (!user && fallbackName) user = authorLookup.byName.get(String(fallbackName).toLowerCase()) ?? null;
-  if (!user) {
-    return { username: fallbackName, avatarUrl: null, authorRole: null, authorVerified: false };
+  if (authorLookup) {
+    if (meta?.userId) {
+      user = authorLookup.byId.get(String(meta.userId))
+        ?? authorLookup.byId.get(String(meta.userId).toLowerCase())
+        ?? null;
+    }
+    if (!user && fallbackName) {
+      user = authorLookup.byName.get(String(fallbackName).toLowerCase()) ?? null;
+    }
   }
-  const avatar = sanitizeAvatarUrl(user.avatarUrl);
+
+  if (!user) {
+    // Fallback to snapshot written at create time (or bare username)
+    return {
+      username: fallbackName,
+      avatarUrl: snapshotAvatar,
+      authorRole: snapshotRole,
+      authorVerified: snapshotVerified,
+    };
+  }
+
+  // Prefer live profile avatar so paste matches profile picture after re-upload
+  const liveAvatar = sanitizeAvatarUrl(user.avatarUrl) || null;
   return {
     username: user.username ?? fallbackName,
-    avatarUrl: avatar || null,
-    authorRole: user.role ?? 'user',
-    authorVerified: Boolean(user.verified),
+    avatarUrl: liveAvatar || snapshotAvatar || null,
+    authorRole: user.role ?? snapshotRole ?? 'user',
+    authorVerified: user.verified != null ? Boolean(user.verified) : snapshotVerified,
   };
 }
 
@@ -435,6 +453,9 @@ export async function handlePasteRequest(req, res) {
         burnAfterRead: body.burnAfterRead,
         userId: user.id,
         username: user.username,
+        avatarUrl: sanitizeAvatarUrl(user.avatarUrl) || null,
+        authorRole: user.role ?? 'user',
+        authorVerified: Boolean(user.verified),
       });
       const content = await getContent(meta.id);
       const unlocks = await incrementUserPasteCount(user.id);

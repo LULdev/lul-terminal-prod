@@ -23,6 +23,17 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '3.48.5',
+    title: 'Paste author matches profile: avatar, gradient name, Admin/Verified badges',
+    date: 'Jul 19, 2026 - 18:30',
+    highlight: true,
+    items: [
+      { priority: 'P0', text: 'P0 — Paste viewer loads author from public profile / session (same avatar as profile page).' },
+      { priority: 'P0', text: 'P0 — Admin gradient username CSS + Admin badge + Verified badge reliably shown.' },
+      { priority: 'P1', text: 'P1 — Paste create stores author role/verified/avatar snapshot; live lookup still preferred.' },
+    ],
+  },
+  {
     version: '3.48.4',
     title: 'Paste author avatar + username CSS, compact views',
     date: 'Jul 19, 2026 - 17:15',
