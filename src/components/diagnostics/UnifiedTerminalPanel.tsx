@@ -34,36 +34,43 @@ function formatTime(ts: number) {
 function ChatLine({ msg, onOpenProfile }: { msg: ChatMessage; onOpenProfile?: (username: string) => void }) {
   const botLine = isBotSpeaker(msg);
   const textClass = botLine
-    ? 'text-sky-100/90'
+    ? 'shoutbox-msg-text shoutbox-msg-text--bot'
     : msg.kind === 'action' || msg.kind === 'ping'
-      ? 'text-fuchsia-300/90 italic'
-      : 'text-indigo-200/90';
+      ? 'shoutbox-msg-text shoutbox-msg-text--action'
+      : 'shoutbox-msg-text';
 
   return (
-    <div className={`flex gap-1.5 items-start leading-tight group ${botLine ? 'bot-message-row' : ''}`}>
-      <span className="text-slate-600 font-semibold shrink-0 select-none pt-px">[{formatTime(msg.createdAt)}]</span>
+    <div className={`shoutbox-msg group ${botLine ? 'bot-message-row' : ''}`}>
+      <span className="shoutbox-msg__time">[{formatTime(msg.createdAt)}]</span>
+
       {botLine ? (
-        <ChatRoleBadges role="bot" compact />
+        <span className="shoutbox-msg__identity">
+          <span className="shoutbox-msg__name bot-username-style">@{msg.username}</span>
+        </span>
       ) : onOpenProfile ? (
-        <>
-          <ChatUserChip
-            user={{
-              userId: msg.userId,
-              username: msg.username,
-              displayName: msg.displayName,
-              role: msg.role,
-              avatarUrl: msg.avatarUrl ?? undefined,
-              verified: msg.verified,
-            }}
-            onOpenProfile={onOpenProfile}
-          />
-          <span className="text-slate-600 shrink-0 select-none">:</span>
-        </>
+        <ChatUserChip
+          user={{
+            userId: msg.userId,
+            username: msg.username,
+            displayName: msg.displayName,
+            role: msg.role,
+            avatarUrl: msg.avatarUrl ?? undefined,
+            verified: msg.verified,
+          }}
+          onOpenProfile={onOpenProfile}
+        />
       ) : (
-        <span className="text-slate-400 shrink-0">{msg.username}:</span>
+        <span className="shoutbox-msg__identity">
+          <span className="shoutbox-msg__name">@{msg.username}</span>
+        </span>
       )}
-      <span className={`whitespace-pre-wrap leading-tight break-all ${textClass}`}>
-        <ChatMessageBody msg={msg} onOpenProfile={onOpenProfile} botMessage={botLine} />
+
+      {/* Role badge + message on one line; message uses a different (non-mono) font */}
+      <span className="shoutbox-msg__body">
+        <ChatRoleBadges role={botLine ? 'bot' : msg.role} verified={msg.verified} compact />
+        <span className={textClass}>
+          <ChatMessageBody msg={msg} onOpenProfile={onOpenProfile} botMessage={botLine} />
+        </span>
       </span>
     </div>
   );

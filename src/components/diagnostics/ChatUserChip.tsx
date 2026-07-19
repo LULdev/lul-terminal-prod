@@ -300,8 +300,13 @@ export function ChatUserChip({ user, onOpenProfile, compact = false, modViaApi =
     );
   }
 
-  const size = compact ? 'w-5 h-5' : 'w-6 h-6';
-  const textSize = compact ? 'text-[7px]' : 'text-[8px]';
+  const size = compact ? 'w-5 h-5' : 'w-[22px] h-[22px]';
+  const textSize = compact ? 'text-[8px]' : 'text-[9px]';
+  const roleMark =
+    user.role === 'admin' ? 'A'
+      : user.role === 'vip' ? 'V'
+        : user.role === 'bot' ? 'B'
+          : null;
 
   return (
     <>
@@ -312,22 +317,30 @@ export function ChatUserChip({ user, onOpenProfile, compact = false, modViaApi =
         onAuxClick={handleAuxClick}
         onContextMenu={handleContextMenu}
         disabled={acting}
-        className={`chat-user-chip shrink-0 inline-flex items-center gap-1 rounded-md border border-transparent hover:border-slate-700/80 hover:bg-white/[0.04] px-0.5 py-px transition group ${acting ? 'opacity-60' : ''}`}
+        className={`chat-user-chip shoutbox-msg__chip shrink-0 inline-flex items-center gap-1.5 rounded-md border border-transparent hover:border-slate-700/70 hover:bg-white/[0.03] px-0.5 py-px transition ${acting ? 'opacity-60' : ''}`}
         title={`${user.username} · ${user.displayName}\nLeft-click: profile · Middle-click: ping & send · Right-click: menu`}
         aria-label={`${user.username}, open profile`}
       >
-        <img
-          src={avatarSrc}
-          alt=""
-          className={`${size} rounded-md object-cover ring-1 ${ringStyle} bg-black/40 shrink-0 group-hover:ring-fuchsia-500/40 transition`}
-          loading="lazy"
-        />
-        <ChatRoleBadges role={user.role} verified={isVerified} compact={compact} />
-        <span className={`inline-flex items-center gap-0.5 font-semibold ${roleStyle} ${textSize} max-w-[88px] truncate`}>
+        <span className="shoutbox-msg__avatar-wrap shrink-0">
+          <img
+            src={avatarSrc}
+            alt=""
+            className={`shoutbox-msg__avatar ${size} rounded-md object-cover ring-1 ${ringStyle} bg-black/40 group-hover:ring-fuchsia-500/40 transition`}
+            loading="lazy"
+          />
+          {roleMark && (
+            <span className={`shoutbox-msg__avatar-mark shoutbox-msg__avatar-mark--${user.role}`} aria-hidden>
+              {roleMark}
+            </span>
+          )}
+        </span>
+        <span className={`shoutbox-msg__name inline-flex items-center font-semibold ${roleStyle} ${textSize} max-w-[110px] truncate`}>
           {isAdminUser ? (
-            <span className="admin-username-style">{user.username}</span>
+            <span className="admin-username-style">@{user.username}</span>
+          ) : isBot ? (
+            <span className="bot-username-style">@{user.username}</span>
           ) : (
-            <span>{user.username}</span>
+            <span>@{user.username}</span>
           )}
         </span>
       </button>
