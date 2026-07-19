@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-export type GameArenaType = 'rps' | 'ttt' | 'instant' | 'nim' | 'connect4' | 'mines' | 'dice100';
+export type GameArenaType = 'rps' | 'ttt' | 'instant' | 'nim' | 'connect4' | 'mines' | 'dice100' | 'roulette';
 export type GameCategory = 'classic' | 'instant' | 'strategy';
 
 export const GAME_CATEGORIES: { id: GameCategory | 'all'; label: string; hint: string }[] = [
@@ -287,6 +287,26 @@ export const GAME_CATALOG: GameCatalogEntry[] = [
       'Payout = bet × multiplier (1% edge)',
       '2% of every bet seeds the jackpot pot',
       'Losses feed the full stake into the jackpot',
+    ],
+  },
+  {
+    id: 'roulette',
+    label: 'Roulette',
+    shortLabel: 'Roul',
+    icon: '🎡',
+    accent: 'text-rose-200',
+    borderClass: 'border-rose-500/40 bg-rose-500/15',
+    bgClass: 'border-rose-500/20 from-rose-950/40 to-red-950/30',
+    arenaType: 'roulette',
+    category: 'instant',
+    tagline: 'European · 0–36',
+    description:
+      'Classic European roulette. Place chips on numbers, colors, dozens, and even-money spots, then spin. Instant result vs the terminal — 2% of every bet seeds the jackpot; losses feed the pot.',
+    rules: [
+      'Solo spin · European wheel (single 0)',
+      'Straight 35:1 · Dozen/Column 2:1 · Even money 1:1',
+      'Outside bets lose on 0',
+      '2% of every bet seeds jackpot · losses feed pot',
     ],
   },
 ];

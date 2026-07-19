@@ -55,6 +55,7 @@ import { RpsArena } from '../games/RpsArena';
 import { RpsGlobalMeta, RpsMoveTendency } from '../games/RpsMoveTendency';
 import { TttArena } from '../games/TttArena';
 import { Dice100Arena } from '../games/Dice100Arena';
+import { RouletteArena } from '../games/RouletteArena';
 import { CoinEarningsFeed } from '../games/CoinEarningsFeed';
 import { GameAchievementBadges } from '../games/GameAchievementBadges';
 import { safeAvatarUrl } from '../../lib/safeAvatarUrl';
@@ -435,7 +436,7 @@ export function GamesPage() {
 
   useEffect(() => {
     setMsg('');
-    if (selectedGame === 'dice100') setMode('bot');
+    if (selectedGame === 'dice100' || selectedGame === 'roulette') setMode('bot');
   }, [selectedGame]);
 
   const selectGame = useCallback(async (id: GameId) => {
@@ -585,10 +586,11 @@ export function GamesPage() {
     if (match?.status === 'done' && match.id) {
       dismissedMatches.current.add(match.id);
     }
-    // Dice 100 is solo house game — always bot/instant
-    const forcedMode = selectedGame === 'dice100' ? 'bot' as const : mode;
+    // Solo house games — always bot/instant
+    const soloHouse = selectedGame === 'dice100' || selectedGame === 'roulette';
+    const forcedMode = soloHouse ? 'bot' as const : mode;
     const settings = { bet, mode: forcedMode, seriesType, difficulty, roomCode, ...overrides };
-    if (selectedGame === 'dice100') setMode('bot');
+    if (soloHouse) setMode('bot');
     lastSettings.current = settings;
     beginAction();
     setError('');
@@ -711,14 +713,22 @@ export function GamesPage() {
       setRoomCode(v);
       lastSettings.current = { ...lastSettings.current, roomCode: v };
     },
-    onStart: () => void queueGame(),
+    onStart: (overrides?: { bet?: number }) => {
+      void queueGame(overrides);
+    },
     onCancel: () => void cancelQueue(),
-    onRematch: () => {
+    onRematch: (overrides?: { bet?: number }) => {
       if (match?.status === 'done' && match.id) {
         dismissedMatches.current.add(match.id);
       }
       setMatch(null);
-      void queueGame({ bet, mode, seriesType, difficulty, roomCode });
+      void queueGame({
+        bet: overrides?.bet ?? bet,
+        mode,
+        seriesType,
+        difficulty,
+        roomCode,
+      });
     },
     onPlayAgain: () => {
       if (match?.id) dismissedMatches.current.add(match.id);
@@ -808,6 +818,28 @@ export function GamesPage() {
       case 'dice100':
         return (
           <Dice100Arena
+            catalog={catalog}
+            isLoggedIn={sharedArena.isLoggedIn}
+            userId={user?.id}
+            acting={sharedArena.acting}
+            waiting={sharedArena.waiting}
+            match={match as import('../../lib/games').InstantMatch | null}
+            bet={sharedArena.bet}
+            maxBet={sharedArena.maxBet}
+            minBet={sharedArena.minBet}
+            streak={sharedArena.streak}
+            streakBonusHint={sharedArena.streakBonusHint}
+            onBetChange={sharedArena.onBetChange}
+            onStart={sharedArena.onStart}
+            onCancel={sharedArena.onCancel}
+            onMove={(m) => void playMove(m)}
+            onRematch={sharedArena.onRematch}
+            onPlayAgain={sharedArena.onPlayAgain}
+          />
+        );
+      case 'roulette':
+        return (
+          <RouletteArena
             catalog={catalog}
             isLoggedIn={sharedArena.isLoggedIn}
             userId={user?.id}

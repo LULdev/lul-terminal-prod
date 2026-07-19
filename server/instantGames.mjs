@@ -314,6 +314,115 @@ export const dice100 = {
     dice100Base.joinQueue(userId, { ...opts, mode: 'bot' }),
 };
 
+/** European roulette 0–36. Move encodes chip map, e.g. "n15:100,red:50,d2:20,even:10" */
+const ROULETTE_RED = new Set([1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36]);
+/** Visual wheel order (European). */
+export const ROULETTE_WHEEL_ORDER = [
+  0, 32, 15, 19, 4, 21, 2, 25, 17, 34, 6, 27, 13, 36, 11, 30, 8, 23, 10, 5, 24, 16, 33, 1, 20, 14, 31, 9, 22, 18, 29, 7, 28, 12, 35, 3, 26,
+];
+
+export function rouletteColor(n) {
+  const num = Number(n);
+  if (num === 0) return 'green';
+  return ROULETTE_RED.has(num) ? 'red' : 'black';
+}
+
+/**
+ * Parse move into list of { key, amount }.
+ * Keys: n0–n36, red, black, odd, even, low, high, d1, d2, d3, c1, c2, c3
+ */
+export function parseRouletteMove(raw) {
+  const s = String(raw ?? '').trim().toLowerCase();
+  if (!s) return null;
+  const parts = s.split(',').map((p) => p.trim()).filter(Boolean);
+  if (!parts.length || parts.length > 40) return null;
+  const bets = [];
+  let total = 0;
+  for (const part of parts) {
+    const m = part.match(/^(n(?:[0-9]|[12][0-9]|3[0-6])|red|black|odd|even|low|high|d[123]|c[123]):(\d+)$/);
+    if (!m) return null;
+    const amount = Number(m[2]);
+    if (!Number.isInteger(amount) || amount < 1 || amount > 500) return null;
+    bets.push({ key: m[1], amount });
+    total += amount;
+  }
+  if (total < 1 || total > 500) return null;
+  return { bets, total };
+}
+
+/** Payout multiple of stake returned on win (includes stake). */
+function roulettePayoutMult(key) {
+  if (key.startsWith('n')) return 36; // 35:1
+  if (key === 'd1' || key === 'd2' || key === 'd3' || key === 'c1' || key === 'c2' || key === 'c3') return 3; // 2:1
+  return 2; // even money 1:1
+}
+
+function rouletteBetHits(key, spin) {
+  if (key.startsWith('n')) return Number(key.slice(1)) === spin;
+  if (spin === 0) return false; // outside bets lose on 0
+  if (key === 'red') return ROULETTE_RED.has(spin);
+  if (key === 'black') return !ROULETTE_RED.has(spin);
+  if (key === 'odd') return spin % 2 === 1;
+  if (key === 'even') return spin % 2 === 0;
+  if (key === 'low') return spin >= 1 && spin <= 18;
+  if (key === 'high') return spin >= 19 && spin <= 36;
+  if (key === 'd1') return spin >= 1 && spin <= 12;
+  if (key === 'd2') return spin >= 13 && spin <= 24;
+  if (key === 'd3') return spin >= 25 && spin <= 36;
+  // columns: 1=1,4,7… 2=2,5,8… 3=3,6,9…
+  if (key === 'c1') return spin % 3 === 1;
+  if (key === 'c2') return spin % 3 === 2;
+  if (key === 'c3') return spin % 3 === 0;
+  return false;
+}
+
+const rouletteBase = createInstantDuelGame({
+  gameId: 'roulette',
+  statKey: 'Roulette',
+  achievementFlag: 'roulette_played',
+  chatLabel: 'Roulette',
+  validateMove: (m) => Boolean(parseRouletteMove(m)),
+  resolveWinner: (m) => {
+    const parsed = parseRouletteMove(m.player1.move);
+    if (!parsed) return 'p2';
+    // Ensure match bet matches total chips (join should set bet = total)
+    if (Number(m.bet) !== parsed.total) {
+      // Still resolve, but trust move total for payout math if mismatched
+    }
+    const spin = Math.floor(Math.random() * 37); // 0–36
+    let payout = 0;
+    const hits = [];
+    for (const b of parsed.bets) {
+      if (rouletteBetHits(b.key, spin)) {
+        const win = b.amount * roulettePayoutMult(b.key);
+        payout += win;
+        hits.push({ key: b.key, amount: b.amount, win });
+      }
+    }
+    const won = payout > 0;
+    m.payoutExact = won ? payout : 0;
+    m.payoutMultiplier = won && parsed.total > 0 ? payout / parsed.total : 0;
+    m.player2.move = String(spin);
+    m.reveal = {
+      spin,
+      color: rouletteColor(spin),
+      bets: parsed.bets,
+      hits,
+      payout,
+      totalBet: parsed.total,
+      won,
+    };
+    return won ? 'p1' : 'p2';
+  },
+  botMove: () => 'house',
+});
+
+export const roulette = {
+  ...rouletteBase,
+  joinQueue: (userId, opts = {}) =>
+    rouletteBase.joinQueue(userId, { ...opts, mode: 'bot' }),
+};
+
 export const blackjack = createInstantDuelGame({
   gameId: 'blackjack',
   statKey: 'Blackjack',
@@ -355,4 +464,5 @@ export const INSTANT_GAMES = {
   mines,
   blackjack,
   dice100,
+  roulette,
 };

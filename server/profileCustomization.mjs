@@ -8,7 +8,7 @@ const THEMES = new Set(['indigo', 'rose', 'emerald', 'amber', 'violet', 'cyan', 
 const FRAMES = new Set(['none', 'gold', 'neon', 'holo', 'fire']);
 const GAME_IDS = new Set([
   'rps', 'ttt', 'connect4', 'nim', 'coinflip', 'dice', 'oddeven', 'war',
-  'rpsls', 'numberduel', 'colorpick', 'highlow', 'mines', 'blackjack', 'dice100',
+  'rpsls', 'numberduel', 'colorpick', 'highlow', 'mines', 'blackjack', 'dice100', 'roulette',
 ]);
 
 export const DEFAULT_PROFILE_CUSTOMIZATION = {

@@ -387,11 +387,11 @@ export async function settleMatch({
   }
 
   if (m.mode === 'bot') {
-    // Dice family (Dice Duel + Dice 100):
+    // Solo house games (Dice Duel, Dice 100, Roulette):
     //  1) every bet seeds a small % into the jackpot pot
     //  2) losses feed the full remaining stake into the pot (net 100% of lost wager)
-    const isDiceFamily = gameId === 'dice100' || gameId === 'dice';
-    const dicePotSeed = isDiceFamily
+    const isHouseSolo = gameId === 'dice100' || gameId === 'dice' || gameId === 'roulette';
+    const dicePotSeed = isHouseSolo
       ? Math.max(1, Math.floor(bet * DICE_POT_SEED_RATE))
       : 0;
     if (dicePotSeed > 0) {
@@ -404,9 +404,12 @@ export async function settleMatch({
       bumpGameStats(p1, statKey, 'draw');
     } else if (r === 'p1') {
       outcome = 'win';
-      // Optional variable payout (e.g. Dice 100 over/under multiplier); default 2× pot
+      // Optional variable payout (Dice 100 / Roulette); default 2× pot
+      const exact = Number(m.payoutExact);
       const mult = Number(m.payoutMultiplier);
-      if (Number.isFinite(mult) && mult > 1) {
+      if (Number.isFinite(exact) && exact >= 0) {
+        p1Delta = Math.max(0, Math.round(exact));
+      } else if (Number.isFinite(mult) && mult > 1) {
         p1Delta = Math.max(0, Math.round(bet * mult));
       } else {
         p1Delta = bet * 2;

@@ -2892,3 +2892,472 @@ a.bot-mention-username:focus-visible {
   text-align: center;
   background: rgba(0, 0, 0, 0.25);
 }
+
+/* —— Roulette (European solo — Stake-style board) —— */
+.roulette-arena {
+  background:
+    radial-gradient(ellipse 80% 50% at 50% 0%, rgba(30, 58, 138, 0.18), transparent 55%),
+    linear-gradient(180deg, #0b1220 0%, #070a10 100%);
+}
+.roulette-arena__layout {
+  display: grid;
+  grid-template-columns: 1fr;
+}
+@media (min-width: 800px) {
+  .roulette-arena__layout { grid-template-columns: minmax(190px, 230px) 1fr; }
+}
+.roulette-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  padding: 1rem 1.05rem;
+  border-bottom: 1px solid rgba(51, 65, 85, 0.55);
+  background: linear-gradient(180deg, rgba(10, 16, 28, 0.98), rgba(8, 12, 20, 0.95));
+}
+@media (min-width: 800px) {
+  .roulette-panel { border-bottom: 0; border-right: 1px solid rgba(51, 65, 85, 0.55); }
+}
+.roulette-panel__mode {
+  display: flex;
+  gap: 0.3rem;
+  padding: 0.2rem;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(51, 65, 85, 0.6);
+}
+.roulette-pill {
+  flex: 1;
+  text-align: center;
+  padding: 0.45rem 0.35rem;
+  border-radius: 999px;
+  font-size: 8px;
+  font-family: ui-monospace, monospace;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #64748b;
+  border: 0;
+  background: transparent;
+}
+.roulette-pill--on {
+  color: #f1f5f9;
+  background: rgba(51, 65, 85, 0.85);
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.35);
+}
+.roulette-field { display: flex; flex-direction: column; gap: 0.4rem; }
+.roulette-field__label {
+  font-size: 8px;
+  font-family: ui-monospace, monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #64748b;
+}
+.roulette-chips {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  padding: 0.45rem 0.5rem;
+  border-radius: 0.75rem;
+  background: rgba(15, 23, 42, 0.7);
+  border: 1px solid rgba(51, 65, 85, 0.7);
+}
+.roulette-chip-pick {
+  width: 2.35rem;
+  height: 2.35rem;
+  border-radius: 50%;
+  border: 2px solid rgba(251, 191, 36, 0.55);
+  background:
+    radial-gradient(circle at 32% 28%, #fef9c3, transparent 40%),
+    radial-gradient(circle at 50% 50%, #fbbf24 0%, #d97706 55%, #92400e 100%);
+  color: #78350f;
+  font-family: ui-monospace, monospace;
+  font-size: 9px;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4), inset 0 0 0 1px rgba(255, 255, 255, 0.25);
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+.roulette-chip-pick--on {
+  box-shadow: 0 0 0 2px #93c5fd, 0 0 16px rgba(59, 130, 246, 0.5);
+  transform: scale(1.1);
+}
+.roulette-chip-pick:hover:not(:disabled) { filter: brightness(1.08); }
+.roulette-chip-pick:disabled { opacity: 0.4; cursor: not-allowed; }
+.roulette-total {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.55rem 0.7rem;
+  border-radius: 0.7rem;
+  border: 1px solid rgba(51, 65, 85, 0.8);
+  background: rgba(0, 0, 0, 0.4);
+}
+.roulette-spin-btn {
+  width: 100%;
+  margin-top: 0.15rem;
+  padding: 0.85rem;
+  border: 0;
+  border-radius: 0.8rem;
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+  color: #fff;
+  font-family: ui-monospace, monospace;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  cursor: pointer;
+  box-shadow: 0 8px 24px rgba(37, 99, 235, 0.4);
+  transition: filter 0.12s ease, transform 0.12s ease;
+}
+.roulette-spin-btn:hover:not(:disabled) { filter: brightness(1.1); transform: translateY(-1px); }
+.roulette-spin-btn:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
+.roulette-panel__hint {
+  margin: 0;
+  font-size: 9px;
+  font-family: ui-monospace, monospace;
+  color: #64748b;
+  text-align: center;
+  line-height: 1.35;
+}
+.roulette-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  border: 0;
+  background: transparent;
+  color: #94a3b8;
+  font-size: 9px;
+  font-family: ui-monospace, monospace;
+  cursor: pointer;
+  padding: 0.25rem 0.15rem;
+}
+.roulette-link:hover:not(:disabled) { color: #e2e8f0; }
+.roulette-link:disabled { opacity: 0.35; cursor: not-allowed; }
+
+.roulette-stage { padding: 0.9rem 0.95rem 1rem; min-height: 320px; }
+.roulette-stage__top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 1.15rem 1.5rem;
+  margin-bottom: 1rem;
+}
+.roulette-last__num {
+  width: 3.25rem;
+  height: 3.25rem;
+  border-radius: 0.85rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: ui-monospace, monospace;
+  font-size: 1.35rem;
+  font-weight: 800;
+  border: 1px solid rgba(71, 85, 105, 0.75);
+  background: #1e293b;
+  color: #f8fafc;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+}
+.roulette-last__num--red { background: #b91c1c; border-color: #f87171; }
+.roulette-last__num--black { background: #0f172a; border-color: #475569; }
+.roulette-last__num--green { background: #15803d; border-color: #4ade80; }
+.roulette-last__num--wait { color: #64748b; }
+
+.roulette-wheel-wrap {
+  position: relative;
+  width: 11rem;
+  height: 11rem;
+  flex-shrink: 0;
+}
+.roulette-wheel {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 3px solid #a16207;
+  box-shadow:
+    0 0 0 5px #713f12,
+    0 0 0 7px #422006,
+    0 0 32px rgba(251, 191, 36, 0.18),
+    inset 0 0 24px rgba(0, 0, 0, 0.55);
+  transition: transform 2.4s cubic-bezier(0.12, 0.75, 0.08, 1);
+}
+.roulette-wheel--spin { transition: transform 2.4s cubic-bezier(0.12, 0.75, 0.08, 1); }
+.roulette-wheel__rim {
+  position: absolute;
+  inset: 18%;
+  border-radius: 50%;
+  border: 2px solid rgba(15, 23, 42, 0.85);
+  background: radial-gradient(circle at 50% 50%, #0f172a 0%, #020617 100%);
+  z-index: 1;
+  pointer-events: none;
+}
+.roulette-wedge {
+  position: absolute;
+  left: 50%;
+  top: 5px;
+  width: 0;
+  height: calc(50% - 5px);
+  transform-origin: bottom center;
+  margin-left: -0.5px;
+  z-index: 2;
+  pointer-events: none;
+}
+.roulette-wedge__n {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 7px;
+  font-family: ui-monospace, monospace;
+  font-weight: 800;
+  color: #f8fafc;
+  text-shadow: 0 0 3px #000, 0 1px 1px #000;
+}
+.roulette-wedge--red .roulette-wedge__n { color: #fecaca; }
+.roulette-wedge--black .roulette-wedge__n { color: #e2e8f0; }
+.roulette-wedge--green .roulette-wedge__n { color: #bbf7d0; }
+.roulette-wheel__hub {
+  position: absolute;
+  inset: 34%;
+  border-radius: 50%;
+  background:
+    conic-gradient(from 0deg, #fbbf24, #f59e0b, #fde68a, #d97706, #fbbf24);
+  border: 2px solid #fde68a;
+  box-shadow: 0 0 14px rgba(251, 191, 36, 0.5);
+  z-index: 3;
+}
+.roulette-wheel__hub::after {
+  content: '';
+  position: absolute;
+  inset: 28%;
+  border-radius: 50%;
+  background: radial-gradient(circle at 40% 35%, #fef3c7, #b45309);
+}
+.roulette-wheel__ball {
+  position: absolute;
+  top: 10%;
+  left: 50%;
+  width: 9px;
+  height: 9px;
+  margin-left: -4.5px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #fff, #cbd5e1 60%, #64748b);
+  box-shadow: 0 0 6px rgba(255, 255, 255, 0.7);
+  z-index: 4;
+  animation: roulette-ball-orbit 0.55s linear infinite;
+}
+@keyframes roulette-ball-orbit {
+  from { transform: rotate(0deg) translateY(-42px) rotate(0deg); }
+  to { transform: rotate(360deg) translateY(-42px) rotate(-360deg); }
+}
+.roulette-wheel__pointer {
+  position: absolute;
+  top: -2px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 7px solid transparent;
+  border-right: 7px solid transparent;
+  border-top: 12px solid #f8fafc;
+  z-index: 5;
+  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.55));
+}
+.roulette-history {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  max-height: 11rem;
+  overflow: hidden;
+  min-width: 1.9rem;
+}
+.roulette-hist {
+  width: 1.85rem;
+  height: 1.85rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  font-family: ui-monospace, monospace;
+  font-weight: 700;
+  color: #fff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+.roulette-hist--red { background: #b91c1c; }
+.roulette-hist--black { background: #1e293b; border: 1px solid #475569; }
+.roulette-hist--green { background: #15803d; }
+.roulette-hist--empty {
+  background: transparent;
+  border: 1px dashed rgba(71, 85, 105, 0.5);
+  color: #475569;
+  box-shadow: none;
+}
+
+.roulette-table {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 0.28rem;
+  align-items: stretch;
+}
+.roulette-zero {
+  grid-row: 1 / span 1;
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  min-width: 2.1rem;
+  min-height: 100%;
+  align-self: stretch;
+  /* Align with the three number rows only */
+  height: 100%;
+}
+.roulette-numbers {
+  display: flex;
+  flex-direction: column;
+  gap: 0.22rem;
+}
+.roulette-numbers__row {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 0.22rem;
+}
+.roulette-cell {
+  position: relative;
+  min-height: 2rem;
+  border-radius: 0.28rem;
+  border: 1px solid rgba(0, 0, 0, 0.4);
+  font-family: ui-monospace, monospace;
+  font-size: 10px;
+  font-weight: 700;
+  color: #fff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.1s ease, box-shadow 0.1s ease, outline 0.1s ease;
+  overflow: visible;
+}
+.roulette-cell:hover:not(:disabled) {
+  transform: scale(1.05);
+  box-shadow: 0 0 0 1.5px rgba(253, 224, 71, 0.65);
+  z-index: 2;
+}
+.roulette-cell:disabled { cursor: not-allowed; opacity: 0.8; }
+.roulette-cell--red { background: #e11d48; }
+.roulette-cell--black { background: #334155; }
+.roulette-cell--green { background: #16a34a; }
+.roulette-cols {
+  display: flex;
+  flex-direction: column;
+  gap: 0.22rem;
+}
+.roulette-dozens {
+  grid-column: 2;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.22rem;
+  margin-top: 0.2rem;
+}
+.roulette-even {
+  grid-column: 2;
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 0.22rem;
+  margin-top: 0.1rem;
+}
+.roulette-outside {
+  position: relative;
+  min-height: 2.1rem;
+  border-radius: 0.35rem;
+  border: 1px solid rgba(71, 85, 105, 0.75);
+  background: rgba(15, 23, 42, 0.92);
+  color: #cbd5e1;
+  font-family: ui-monospace, monospace;
+  font-size: 8px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color 0.12s ease, background 0.12s ease;
+}
+.roulette-outside--red {
+  background: linear-gradient(180deg, #e11d48, #be123c);
+  color: #fff;
+  border-color: #fb7185;
+}
+.roulette-outside--black {
+  background: rgba(15, 23, 42, 0.98);
+  color: #e2e8f0;
+  border-color: #64748b;
+}
+.roulette-outside:hover:not(:disabled) { border-color: #fbbf24; }
+.roulette-outside:disabled { cursor: not-allowed; opacity: 0.8; }
+.roulette-cols .roulette-outside {
+  flex: 1;
+  writing-mode: vertical-rl;
+  min-width: 1.85rem;
+  letter-spacing: 0.08em;
+}
+/* Zero tall enough to match 3 number rows — placed in grid row 1 with numbers+cols */
+.roulette-table > .roulette-zero {
+  grid-row: 1;
+  align-self: stretch;
+}
+.roulette-table > .roulette-numbers { grid-row: 1; grid-column: 2; }
+.roulette-table > .roulette-cols { grid-row: 1; grid-column: 3; }
+
+.roulette-table-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 0.65rem;
+  padding: 0 0.15rem;
+}
+
+.roulette-chip-stack {
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 1px 4px 1px 2px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.72);
+  border: 1px solid rgba(251, 191, 36, 0.35);
+  font-size: 7px;
+  font-family: ui-monospace, monospace;
+  font-weight: 700;
+  color: #fde68a;
+  line-height: 1.2;
+  pointer-events: none;
+  z-index: 3;
+}
+.roulette-chip-stack__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #fef9c3, #f59e0b 60%, #92400e);
+  border: 1px solid rgba(251, 191, 36, 0.7);
+  flex-shrink: 0;
+}
+.roulette-footnote {
+  margin: 0;
+  padding: 0.45rem 0.85rem;
+  border-top: 1px solid rgba(51, 65, 85, 0.5);
+  font-family: ui-monospace, monospace;
+  font-size: 8px;
+  color: #64748b;
+  text-align: center;
+  background: rgba(0, 0, 0, 0.35);
+  line-height: 1.4;
+}
+
+@media (max-width: 640px) {
+  .roulette-numbers__row { gap: 0.12rem; }
+  .roulette-cell { min-height: 1.65rem; font-size: 8px; }
+  .roulette-even { grid-template-columns: repeat(3, 1fr); }
+  .roulette-wheel-wrap { width: 9rem; height: 9rem; }
+}
