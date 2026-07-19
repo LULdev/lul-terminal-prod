@@ -439,112 +439,106 @@ export function PasteViewer({ id, embedded = false }: Props) {
             {error}
           </p>
         )}
-        {/* Header card */}
+        {/* Header card — avatar, title, author, meta only */}
         <div className="rounded-2xl border border-slate-800/80 bg-gradient-to-br from-[#12151c]/95 via-[#0c0d12] to-black/50 p-4 sm:p-5 shadow-xl">
-          <div className="flex flex-wrap items-start justify-between gap-4">
-            <div className="flex items-start gap-3 min-w-0 flex-1">
-              {avatarUrl ? (
-                <img
-                  key={avatarUrl}
-                  src={avatarUrl}
-                  alt={author?.username ? `@${author.username}` : 'Author'}
-                  className={`w-12 h-12 sm:w-14 sm:h-14 rounded-full object-cover ring-2 ${avatarRing} border-2 border-[#0c0d12] shrink-0 bg-slate-900 shadow-lg`}
-                  loading="lazy"
-                />
-              ) : (
-                <div className={`w-12 h-12 rounded-full bg-slate-800 flex items-center justify-center shrink-0 ring-2 ${avatarRing}`}>
-                  <User size={18} className="text-slate-500" />
-                </div>
-              )}
-              <div className="min-w-0">
-                <p className="text-[8px] font-mono uppercase tracking-widest text-slate-500 mb-0.5">Paste</p>
-                <h1 className="text-base sm:text-lg font-semibold text-white truncate">{paste.title}</h1>
-                {author ? (
-                  <div className="mt-1.5 flex flex-wrap items-center gap-2 min-w-0">
-                    {/* Gradient admin username style (same CSS as profile / shoutbox) */}
-                    {isAdminAuthor ? (
-                      <AdminUsername username={author.username} size="md" className="shrink-0" />
-                    ) : authorRole === 'bot' ? (
-                      <span className="bot-username-style text-[13px] shrink-0">@{author.username}</span>
-                    ) : (
-                      <span
-                        className={`profile-display-name text-[13px] sm:text-sm font-semibold truncate shrink-0 ${
-                          authorRole === 'vip' ? 'text-amber-200' : ''
-                        } ${isAdminAuthor ? 'profile-display-name--admin' : ''}`}
-                      >
-                        @{author.username}
-                      </span>
-                    )}
-                    {/* Same badges as profile hero */}
-                    {isVerifiedAuthor && (
-                      <VerifiedBadge
-                        verified
-                        size={16}
-                        showLabel
-                        animated
-                      />
-                    )}
-                    {isAdminAuthor && (
-                      <span className="profile-admin-badge" title="Administrator">
-                        <Shield size={12} aria-hidden />
-                        <span>Admin</span>
-                      </span>
-                    )}
-                    {authorRole === 'vip' && (
-                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md border border-amber-500/35 bg-amber-500/10 text-[8px] font-mono text-amber-300 uppercase tracking-wide">
-                        <Crown size={10} aria-hidden />
-                        VIP
-                      </span>
-                    )}
-                  </div>
-                ) : (
-                  <p className="text-[10px] font-mono text-slate-500 mt-1">Anonymous</p>
-                )}
-                <div className="flex flex-wrap gap-2 mt-2 text-[8px] font-mono text-slate-500">
-                  <span className="px-2 py-0.5 rounded-full border border-indigo-500/25 bg-indigo-500/10 text-indigo-300">
-                    {languageLabel(paste.language)}
-                  </span>
-                  <span>{formatPasteBytes(paste.size)}</span>
-                  <span>{formatPasteDate(paste.createdAt)}</span>
-                  <span>{expiryLabel(paste.expiresAt)}</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-              <div
-                className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-md border border-emerald-500/20 bg-emerald-500/8 transition-opacity duration-500 ${
-                  viewsReady ? 'opacity-100' : 'opacity-60'
-                }`}
-                title={`${formatPasteViews(views)} views`}
-              >
-                <Eye size={11} className="text-emerald-400/90 shrink-0" />
-                <span className="text-[10px] font-mono font-semibold text-emerald-200/95 tabular-nums leading-none">
-                  {formatPasteViews(views)}
-                </span>
-                <span className="text-[7px] font-mono text-emerald-500/70 uppercase tracking-wide leading-none">
-                  {views === 1 ? 'view' : 'views'}
-                </span>
-              </div>
-
-              <PasteStarRating
-                pasteId={id}
-                ratingAvg={ratingAvg}
-                ratingCount={ratingCount}
-                userRating={userRating}
-                canRate={canRate}
-                ratingLockedUntil={ratingLockedUntil}
-                size="sm"
-                onRated={(avg, count, ur, lockedUntil) => {
-                  setRatingAvg(avg);
-                  setRatingCount(count);
-                  setUserRating(ur);
-                  setCanRate(false);
-                  setRatingLockedUntil(lockedUntil ?? Date.now() + 24 * 60 * 60 * 1000);
-                }}
+          <div className="flex items-start gap-3 min-w-0">
+            {avatarUrl ? (
+              <img
+                key={avatarUrl}
+                src={avatarUrl}
+                alt={author?.username ? `@${author.username}` : 'Author'}
+                className={`w-12 h-12 sm:w-14 sm:h-14 rounded-full object-cover ring-2 ${avatarRing} border-2 border-[#0c0d12] shrink-0 bg-slate-900 shadow-lg`}
+                loading="lazy"
               />
+            ) : (
+              <div className={`w-12 h-12 rounded-full bg-slate-800 flex items-center justify-center shrink-0 ring-2 ${avatarRing}`}>
+                <User size={18} className="text-slate-500" />
+              </div>
+            )}
+            <div className="min-w-0 flex-1">
+              <p className="text-[8px] font-mono uppercase tracking-widest text-slate-500 mb-0.5">Paste</p>
+              <h1 className="text-base sm:text-lg font-semibold text-white truncate">{paste.title}</h1>
+              {author ? (
+                <div className="mt-1.5 flex flex-wrap items-center gap-2 min-w-0">
+                  {isAdminAuthor ? (
+                    <AdminUsername username={author.username} size="md" className="shrink-0" />
+                  ) : authorRole === 'bot' ? (
+                    <span className="bot-username-style text-[13px] shrink-0">@{author.username}</span>
+                  ) : (
+                    <span
+                      className={`profile-display-name text-[13px] sm:text-sm font-semibold truncate shrink-0 ${
+                        authorRole === 'vip' ? 'text-amber-200' : ''
+                      } ${isAdminAuthor ? 'profile-display-name--admin' : ''}`}
+                    >
+                      @{author.username}
+                    </span>
+                  )}
+                  {isVerifiedAuthor && (
+                    <VerifiedBadge verified size={16} showLabel animated />
+                  )}
+                  {isAdminAuthor && (
+                    <span className="profile-admin-badge" title="Administrator">
+                      <Shield size={12} aria-hidden />
+                      <span>Admin</span>
+                    </span>
+                  )}
+                  {authorRole === 'vip' && (
+                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md border border-amber-500/35 bg-amber-500/10 text-[8px] font-mono text-amber-300 uppercase tracking-wide">
+                      <Crown size={10} aria-hidden />
+                      VIP
+                    </span>
+                  )}
+                </div>
+              ) : (
+                <p className="text-[10px] font-mono text-slate-500 mt-1">Anonymous</p>
+              )}
+              <div className="flex flex-wrap gap-2 mt-2 text-[8px] font-mono text-slate-500">
+                <span className="px-2 py-0.5 rounded-full border border-indigo-500/25 bg-indigo-500/10 text-indigo-300">
+                  {languageLabel(paste.language)}
+                </span>
+                <span>{formatPasteBytes(paste.size)}</span>
+                <span>{formatPasteDate(paste.createdAt)}</span>
+                <span>{expiryLabel(paste.expiresAt)}</span>
+              </div>
             </div>
           </div>
+        </div>
+
+        {/* Views + rating — box below author card */}
+        <div className="rounded-xl border border-slate-800/80 bg-black/40 px-3 py-2.5 sm:px-4 sm:py-3 flex flex-wrap items-center gap-3 sm:gap-5">
+          <div
+            className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-emerald-500/20 bg-emerald-500/10 transition-opacity duration-500 ${
+              viewsReady ? 'opacity-100' : 'opacity-60'
+            }`}
+            title={`${formatPasteViews(views)} views`}
+          >
+            <Eye size={12} className="text-emerald-400/90 shrink-0" />
+            <span className="text-[11px] font-mono font-semibold text-emerald-200/95 tabular-nums leading-none">
+              {formatPasteViews(views)}
+            </span>
+            <span className="text-[7px] font-mono text-emerald-500/70 uppercase tracking-wide leading-none">
+              {views === 1 ? 'view' : 'views'}
+            </span>
+          </div>
+
+          <div className="h-6 w-px bg-slate-800/80 hidden sm:block" aria-hidden />
+
+          <PasteStarRating
+            pasteId={id}
+            ratingAvg={ratingAvg}
+            ratingCount={ratingCount}
+            userRating={userRating}
+            canRate={canRate}
+            ratingLockedUntil={ratingLockedUntil}
+            size="sm"
+            onRated={(avg, count, ur, lockedUntil) => {
+              setRatingAvg(avg);
+              setRatingCount(count);
+              setUserRating(ur);
+              setCanRate(false);
+              setRatingLockedUntil(lockedUntil ?? Date.now() + 24 * 60 * 60 * 1000);
+            }}
+          />
         </div>
 
         {/* Toolbar */}
