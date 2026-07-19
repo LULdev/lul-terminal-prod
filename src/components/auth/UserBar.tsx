@@ -4,13 +4,14 @@
  */
 
 import React, { useState } from 'react';
-import { BarChart3, Crown, Home, LogIn, LogOut, Settings, Shield, Sparkles, UserPlus } from 'lucide-react';
+import { BarChart3, Home, LogIn, LogOut, Settings, Shield, Sparkles, UserPlus } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { LOGOUT_ARCADE_BLOCKED } from '../../lib/authMessages';
 import { TabId } from '../../config/menuItems';
 import { VipBadge } from './VipGate';
 import { safeAvatarUrl } from '../../lib/safeAvatarUrl';
 import { VerifiedBadge } from './VerifiedBadge';
+import { LulCoinAmount } from '../games/LulCoinAmount';
 
 type UserBarProps = {
   onNavigate: (tab: TabId, opts?: { profileUsername?: string }) => void;
@@ -138,6 +139,29 @@ export function UserBar({ onNavigate }: UserBarProps) {
           <VipBadge />
         </div>
       </button>
+
+      <div
+        className="userbar-balance"
+        title={`${(user!.lulCoins ?? 0).toLocaleString('en-US')} LUL coins`}
+        role="status"
+        aria-label={`Balance ${(user!.lulCoins ?? 0).toLocaleString('en-US')} LUL`}
+      >
+        <span className="userbar-balance__shine" aria-hidden />
+        <span className="userbar-balance__coin" aria-hidden>
+          <span className="userbar-balance__coin-face">
+            <span className="userbar-balance__coin-glyph">L</span>
+          </span>
+          <span className="userbar-balance__coin-edge" />
+        </span>
+        <span className="userbar-balance__label">Balance</span>
+        <LulCoinAmount
+          amount={user!.lulCoins ?? 0}
+          variant="balance"
+          size="sm"
+          suffix="LUL"
+          className="userbar-balance__amount"
+        />
+      </div>
 
       <div className="userbar-nav" role="navigation" aria-label="Account shortcuts">
         <NavChip

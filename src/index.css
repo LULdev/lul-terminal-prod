@@ -903,6 +903,133 @@ a.bot-mention-username:focus-visible {
   background: rgba(30, 41, 59, 0.7);
 }
 
+/* LUL coin balance chip */
+.userbar-balance {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  width: 100%;
+  padding: 0.45rem 0.65rem;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid rgba(251, 191, 36, 0.38);
+  background: linear-gradient(
+    125deg,
+    rgba(120, 53, 15, 0.45) 0%,
+    rgba(30, 20, 8, 0.92) 40%,
+    rgba(15, 23, 42, 0.95) 100%
+  );
+  box-shadow:
+    0 0 0 1px rgba(251, 191, 36, 0.08) inset,
+    0 0 18px rgba(245, 158, 11, 0.18),
+    0 4px 14px rgba(0, 0, 0, 0.35);
+}
+.userbar-balance__shine {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    105deg,
+    transparent 0%,
+    transparent 40%,
+    rgba(254, 243, 199, 0.14) 48%,
+    rgba(253, 230, 138, 0.22) 50%,
+    rgba(254, 243, 199, 0.12) 52%,
+    transparent 60%,
+    transparent 100%
+  );
+  background-size: 220% 100%;
+  animation: userbar-balance-shine 3.2s ease-in-out infinite;
+  pointer-events: none;
+}
+@keyframes userbar-balance-shine {
+  0% {
+    background-position: 120% 0;
+  }
+  100% {
+    background-position: -120% 0;
+  }
+}
+.userbar-balance__label {
+  position: relative;
+  z-index: 1;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 8px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(253, 230, 138, 0.72);
+}
+.userbar-balance__amount {
+  position: relative;
+  z-index: 1;
+  margin-left: auto;
+  font-size: 11px !important;
+  filter: drop-shadow(0 0 8px rgba(251, 191, 36, 0.35));
+}
+
+/* Animated placeholder gold coin */
+.userbar-balance__coin {
+  position: relative;
+  z-index: 1;
+  width: 1.35rem;
+  height: 1.35rem;
+  flex-shrink: 0;
+  perspective: 40px;
+  animation: userbar-coin-bob 2.4s ease-in-out infinite;
+}
+.userbar-balance__coin-face {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background:
+    radial-gradient(circle at 32% 28%, #fef9c3 0%, #fde68a 22%, #fbbf24 55%, #d97706 88%, #92400e 100%);
+  border: 1.5px solid rgba(253, 224, 71, 0.85);
+  box-shadow:
+    0 0 0 1px rgba(120, 53, 15, 0.5) inset,
+    0 0 10px rgba(251, 191, 36, 0.55),
+    0 2px 4px rgba(0, 0, 0, 0.4);
+  animation: userbar-coin-spin 4.5s linear infinite;
+  transform-style: preserve-3d;
+}
+.userbar-balance__coin-glyph {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 8px;
+  font-weight: 800;
+  color: #78350f;
+  text-shadow: 0 1px 0 rgba(254, 243, 199, 0.55);
+  line-height: 1;
+}
+.userbar-balance__coin-edge {
+  position: absolute;
+  inset: 15% -1px;
+  border-radius: 50%;
+  background: linear-gradient(180deg, #fbbf24, #b45309);
+  opacity: 0.35;
+  z-index: -1;
+  filter: blur(0.5px);
+}
+@keyframes userbar-coin-spin {
+  0% {
+    transform: rotateY(0deg);
+  }
+  100% {
+    transform: rotateY(360deg);
+  }
+}
+@keyframes userbar-coin-bob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-1.5px);
+  }
+}
+
 /* Profile strip */
 .userbar-profile {
   position: relative;
@@ -1130,7 +1257,10 @@ a.bot-mention-username:focus-visible {
   .userbar-guest-card__icon,
   .userbar-nav-chip,
   .userbar-profile,
-  .userbar-cta {
+  .userbar-cta,
+  .userbar-balance__shine,
+  .userbar-balance__coin,
+  .userbar-balance__coin-face {
     animation: none !important;
     transition: none !important;
   }
