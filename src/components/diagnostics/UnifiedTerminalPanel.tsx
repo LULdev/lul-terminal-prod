@@ -4,8 +4,6 @@
  */
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
-import { Trash2 } from 'lucide-react';
 import { MatrixOverlay } from '../MatrixOverlay';
 import { ChatUserChip } from './ChatUserChip';
 import { ChatRoleBadges } from './ChatRoleBadges';
@@ -17,18 +15,12 @@ import {
   ChatRateLimitError,
   fetchLobbyMessages,
   isBotCongratsMessage,
-  isPingForUser,
-  isPingMessage,
   playBotCongratsSound,
   playChatNotification,
-  playPingSound,
   sendLobbyMessage,
   type ChatMessage,
   type SendChatResult,
 } from '../../lib/chat';
-import { adminDeleteShoutboxMessage } from '../../lib/adminModules';
-import { SessionExpiredError } from '../../lib/sessionFetch';
-import { terminalAppend } from '../../lib/terminalLogBridge';
 import { useAuth } from '../../context/AuthContext';
 import type { LogLine } from '../../types';
 
@@ -39,155 +31,39 @@ function formatTime(ts: number) {
   return new Date(ts).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
 }
 
-/** Classic BOT identity pill — right-click Delete for admins. */
-function BotBadgeChip({
-  messageId,
-  onMessageDeleted,
-}: {
-  messageId: string;
-  onMessageDeleted?: (messageId: string) => void;
-}) {
-  const { isAdmin, openAuth, refresh } = useAuth();
-  const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
-  const [acting, setActing] = useState(false);
-
-  useEffect(() => {
-    if (!menu) return;
-    const close = () => setMenu(null);
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') close(); };
-    window.addEventListener('keydown', onKey);
-    window.addEventListener('scroll', close, true);
-    return () => {
-      window.removeEventListener('keydown', onKey);
-      window.removeEventListener('scroll', close, true);
-    };
-  }, [menu]);
-
-  const onContextMenu = (e: React.MouseEvent) => {
-    if (!isAdmin || !onMessageDeleted) return;
-    e.preventDefault();
-    e.stopPropagation();
-    const pad = 8;
-    setMenu({
-      x: Math.min(e.clientX, window.innerWidth - 180 - pad),
-      y: Math.min(e.clientY, window.innerHeight - 80 - pad),
-    });
-  };
-
-  const deleteMsg = async () => {
-    setMenu(null);
-    if (!confirm('Delete this bot message?')) return;
-    setActing(true);
-    try {
-      await adminDeleteShoutboxMessage(messageId);
-      onMessageDeleted?.(messageId);
-      terminalAppend(`✓ Bot message deleted`, 'info');
-    } catch (err) {
-      if (err instanceof SessionExpiredError) {
-        void refresh().finally(() => openAuth('login'));
-      } else {
-        terminalAppend(`❌ Delete failed: ${err instanceof Error ? err.message : 'error'}`, 'warn');
-      }
-    } finally {
-      setActing(false);
-    }
-  };
-
-  return (
-    <>
-      <button
-        type="button"
-        className="shoutbox-msg__bot-badge-btn"
-        onContextMenu={onContextMenu}
-        disabled={acting}
-        title={isAdmin ? 'Right-click to delete message' : 'System bot'}
-      >
-        <ChatRoleBadges role="bot" />
-      </button>
-      {menu && createPortal(
-        <>
-          <div className="fixed inset-0 z-[200]" onClick={() => setMenu(null)} aria-hidden />
-          <div
-            className="chat-user-context-menu fixed z-[201] min-w-[160px] rounded-xl border border-rose-500/25 bg-[#0a0b10]/98 backdrop-blur-md shadow-2xl overflow-hidden py-1"
-            style={{ left: menu.x, top: menu.y }}
-            role="menu"
-          >
-            <button
-              type="button"
-              role="menuitem"
-              onClick={() => void deleteMsg()}
-              className="w-full flex items-center gap-2 px-3 py-2 text-left text-[9px] font-mono text-rose-300 hover:bg-rose-500/10"
-            >
-              <Trash2 size={12} /> Delete message
-            </button>
-          </div>
-        </>,
-        document.body,
-      )}
-    </>
-  );
-}
-
-function ChatLine({
-  msg,
-  onOpenProfile,
-  onMessageDeleted,
-}: {
-  msg: ChatMessage;
-  onOpenProfile?: (username: string) => void;
-  onMessageDeleted?: (messageId: string) => void;
-}) {
+function ChatLine({ msg, onOpenProfile }: { msg: ChatMessage; onOpenProfile?: (username: string) => void }) {
   const botLine = isBotSpeaker(msg);
   const textClass = botLine
-    ? 'shoutbox-msg-text shoutbox-msg-text--bot'
+    ? 'text-sky-100/90'
     : msg.kind === 'action' || msg.kind === 'ping'
-      ? 'shoutbox-msg-text shoutbox-msg-text--action'
-      : 'shoutbox-msg-text';
-
-  // Classic bot: [time] [BOT] message…  (no avatar / @name)
-  if (botLine) {
-    return (
-      <div className="shoutbox-msg shoutbox-msg--bot bot-message-row group">
-        <span className="shoutbox-msg__time">[{formatTime(msg.createdAt)}]</span>
-        <BotBadgeChip messageId={msg.id} onMessageDeleted={onMessageDeleted} />
-        <span className="shoutbox-msg__body shoutbox-msg__body--bot">
-          <span className={textClass}>
-            <ChatMessageBody msg={msg} onOpenProfile={onOpenProfile} botMessage />
-          </span>
-        </span>
-      </div>
-    );
-  }
+      ? 'text-fuchsia-300/90 italic'
+      : 'text-indigo-200/90';
 
   return (
-    <div className="shoutbox-msg group">
-      <span className="shoutbox-msg__time">[{formatTime(msg.createdAt)}]</span>
-
-      {onOpenProfile ? (
-        <ChatUserChip
-          user={{
-            userId: msg.userId,
-            username: msg.username,
-            displayName: msg.displayName,
-            role: msg.role,
-            avatarUrl: msg.avatarUrl ?? undefined,
-            verified: msg.verified,
-          }}
-          onOpenProfile={onOpenProfile}
-          messageId={msg.id}
-          onMessageDeleted={onMessageDeleted}
-        />
+    <div className={`flex gap-1.5 items-start leading-tight group ${botLine ? 'bot-message-row' : ''}`}>
+      <span className="text-slate-600 font-semibold shrink-0 select-none pt-px">[{formatTime(msg.createdAt)}]</span>
+      {botLine ? (
+        <ChatRoleBadges role="bot" compact />
+      ) : onOpenProfile ? (
+        <>
+          <ChatUserChip
+            user={{
+              userId: msg.userId,
+              username: msg.username,
+              displayName: msg.displayName,
+              role: msg.role,
+              avatarUrl: msg.avatarUrl ?? undefined,
+              verified: msg.verified,
+            }}
+            onOpenProfile={onOpenProfile}
+          />
+          <span className="text-slate-600 shrink-0 select-none">:</span>
+        </>
       ) : (
-        <span className="shoutbox-msg__identity">
-          <span className="shoutbox-msg__name">@{msg.username}</span>
-        </span>
+        <span className="text-slate-400 shrink-0">{msg.username}:</span>
       )}
-
-      <span className="shoutbox-msg__body">
-        <ChatRoleBadges role={msg.role} verified={msg.verified} compact />
-        <span className={textClass}>
-          <ChatMessageBody msg={msg} onOpenProfile={onOpenProfile} botMessage={false} />
-        </span>
+      <span className={`whitespace-pre-wrap leading-tight break-all ${textClass}`}>
+        <ChatMessageBody msg={msg} onOpenProfile={onOpenProfile} botMessage={botLine} />
       </span>
     </div>
   );
@@ -260,7 +136,7 @@ export function UnifiedTerminalPanel({
   onOpenProfile,
   onChatUnlocks,
 }: UnifiedTerminalPanelProps) {
-  const { isLoggedIn, refresh, user } = useAuth();
+  const { isLoggedIn, refresh } = useAuth();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [chatStatus, setChatStatus] = useState<'ok' | 'offline' | 'rate_limited' | 'gated'>('ok');
@@ -274,16 +150,6 @@ export function UnifiedTerminalPanel({
   const mountedRef = useRef(true);
   const isMutedRef = useRef(isMuted);
   const hadMessagesRef = useRef(false);
-  const myUsernameRef = useRef(user?.username ?? '');
-
-  useEffect(() => {
-    myUsernameRef.current = user?.username ?? '';
-  }, [user?.username]);
-
-  const handleMessageDeleted = useCallback((messageId: string) => {
-    setMessages((prev) => prev.filter((m) => m.id !== messageId));
-    knownIdsRef.current.delete(messageId);
-  }, []);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -314,7 +180,6 @@ export function UnifiedTerminalPanel({
     if (!incoming.length) return;
     let played = false;
     let congrats = false;
-    let pingHit = false;
     setMessages((prev) => {
       const byId = new Map<string, ChatMessage>();
       for (const m of prev) byId.set(m.id, m);
@@ -322,7 +187,6 @@ export function UnifiedTerminalPanel({
         if (!knownIdsRef.current.has(m.id)) {
           played = true;
           if (isBotCongratsMessage(m)) congrats = true;
-          if (isPingForUser(m, myUsernameRef.current)) pingHit = true;
         }
         byId.set(m.id, m);
         knownIdsRef.current.add(m.id);
@@ -335,8 +199,6 @@ export function UnifiedTerminalPanel({
     if (!playNotify || !played) return;
     if (congrats) {
       playBotCongratsSound(isMutedRef.current);
-    } else if (pingHit) {
-      playPingSound(isMutedRef.current);
     } else {
       playChatNotification(isMutedRef.current);
     }
@@ -344,14 +206,12 @@ export function UnifiedTerminalPanel({
 
   const replaceDisplayWindow = useCallback((incoming: ChatMessage[], playNotify = false) => {
     let congrats = false;
-    let pingHit = false;
     let anyNew = false;
     if (playNotify) {
       for (const m of incoming) {
         if (!knownIdsRef.current.has(m.id)) {
           anyNew = true;
           if (isBotCongratsMessage(m)) congrats = true;
-          if (isPingForUser(m, myUsernameRef.current)) pingHit = true;
         }
       }
     }
@@ -361,7 +221,6 @@ export function UnifiedTerminalPanel({
     if (mountedRef.current) setMessages(slice);
     if (playNotify && anyNew) {
       if (congrats) playBotCongratsSound(isMutedRef.current);
-      else if (pingHit) playPingSound(isMutedRef.current);
       else playChatNotification(isMutedRef.current);
     }
   }, []);
@@ -487,10 +346,6 @@ export function UnifiedTerminalPanel({
       hadMessagesRef.current = true;
       lastTsRef.current = Math.max(lastTsRef.current, message.createdAt);
       setChatStatus('ok');
-      // Distinct sound when you successfully /ping someone
-      if (isPingMessage(message)) {
-        playPingSound(isMutedRef.current);
-      }
       const hasUnlocks = Boolean(newUnlocks?.length);
       const hasRewards = Boolean(unlockRewards && Object.keys(unlockRewards).length);
       const hasCoins = Boolean(unlockCoinsTotal && unlockCoinsTotal > 0);
@@ -582,11 +437,7 @@ export function UnifiedTerminalPanel({
           if (entry.kind === 'chat') {
             return (
               <React.Fragment key={`chat-${entry.msg.id}`}>
-                <ChatLine
-                  msg={entry.msg}
-                  onOpenProfile={onOpenProfile}
-                  onMessageDeleted={handleMessageDeleted}
-                />
+                <ChatLine msg={entry.msg} onOpenProfile={onOpenProfile} />
               </React.Fragment>
             );
           }

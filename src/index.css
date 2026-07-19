@@ -536,207 +536,72 @@ html, body, #root {
   border-radius: 4px;
 }
 
-/* —— Shoutbox message row (reference layout) —— */
-.shoutbox-msg {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.35rem 0.45rem;
-  line-height: 1.35;
-  min-width: 0;
-}
-.shoutbox-msg__time {
-  flex-shrink: 0;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  font-size: 8px;
-  font-weight: 600;
-  color: #64748b;
-  user-select: none;
-}
-.shoutbox-msg__identity {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  flex-shrink: 0;
-  min-width: 0;
-}
-.shoutbox-msg__chip {
-  min-width: 0;
-}
-.shoutbox-msg__avatar-wrap {
-  position: relative;
-  display: inline-flex;
-}
-.shoutbox-msg__avatar {
-  display: block;
-}
-.shoutbox-msg__avatar-mark {
-  position: absolute;
-  right: -3px;
-  bottom: -3px;
-  width: 11px;
-  height: 11px;
-  border-radius: 3px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-family: ui-monospace, monospace;
-  font-size: 6px;
-  font-weight: 800;
-  line-height: 1;
-  color: #fff;
-  border: 1px solid rgba(0, 0, 0, 0.55);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.45);
-  pointer-events: none;
-}
-.shoutbox-msg__avatar-mark--admin {
-  background: linear-gradient(145deg, #a78bfa, #6d28d9);
-}
-.shoutbox-msg__avatar-mark--vip {
-  background: linear-gradient(145deg, #fbbf24, #b45309);
-}
-.shoutbox-msg__avatar-mark--bot {
-  background: linear-gradient(145deg, #38bdf8, #0369a1);
-}
-.shoutbox-msg__name {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  letter-spacing: 0.02em;
-}
-/* Badge + message on one line */
-.shoutbox-msg__body {
-  display: inline-flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.35rem 0.4rem;
-  min-width: 0;
-  flex: 1 1 auto;
-}
-/* Message text: different font from mono UI chrome */
-.shoutbox-msg-text {
-  font-family: "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
-  font-size: 11px;
-  font-weight: 500;
-  letter-spacing: 0.01em;
-  color: #c7d2fe;
-  line-height: 1.35;
-  word-break: break-word;
-  white-space: pre-wrap;
-  min-width: 0;
-}
-/* User messages: sans body font */
-.shoutbox-msg-text--action {
-  color: #f0abfc;
-  font-style: italic;
-}
-
-/* —— Classic BOT lines (reference: [time] [BOT] mono cyan message) —— */
-.shoutbox-msg--bot {
-  align-items: flex-start;
-  gap: 0.4rem 0.5rem;
-}
-.shoutbox-msg__bot-badge-btn {
-  display: inline-flex;
-  align-items: center;
-  padding: 0;
-  margin: 0;
-  border: 0;
-  background: transparent;
-  cursor: default;
-  flex-shrink: 0;
-  line-height: 1;
-}
-.shoutbox-msg__bot-badge-btn:disabled { opacity: 0.6; }
-.shoutbox-msg__body--bot {
-  flex: 1 1 0;
-  min-width: 0;
-  display: block;
-}
-/* BOT message: terminal mono look (not the user sans font) */
-.shoutbox-msg-text--bot {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace !important;
-  font-size: 9px !important;
-  font-weight: 500;
-  letter-spacing: 0.01em;
-  color: #bae6fd;
-  line-height: 1.4;
-  text-shadow: 0 0 10px rgba(56, 189, 248, 0.12);
-}
-
-/* —— Chat role badges (shoutbox) —— */
+/* —— Chat role badges (shoutbox user chips) —— */
 .chat-role-badge {
   display: inline-flex;
   align-items: center;
-  gap: 3px;
-  padding: 2px 6px;
-  border-radius: 4px;
+  gap: 2px;
+  padding: 1px 4px;
+  border-radius: 3px;
   border: 1px solid transparent;
   font-family: ui-monospace, monospace;
-  font-size: 7px;
-  font-weight: 800;
-  letter-spacing: 0.1em;
+  font-size: 6px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-  line-height: 1.15;
+  line-height: 1.2;
   vertical-align: middle;
   white-space: nowrap;
-  flex-shrink: 0;
 }
 .chat-role-badge--admin {
-  color: #ede9fe;
-  background: linear-gradient(145deg, rgba(109, 40, 217, 0.55), rgba(76, 29, 149, 0.75));
-  border-color: rgba(167, 139, 250, 0.55);
-  box-shadow:
-    0 0 0 1px rgba(0, 0, 0, 0.25) inset,
-    0 0 10px rgba(139, 92, 246, 0.25);
+  color: #ddd6fe;
+  background: rgba(139, 92, 246, 0.18);
+  border-color: rgba(167, 139, 250, 0.45);
+  box-shadow: 0 0 8px rgba(139, 92, 246, 0.2);
 }
 .chat-role-badge--vip {
-  color: #fef3c7;
-  background: linear-gradient(145deg, rgba(217, 119, 6, 0.45), rgba(146, 64, 14, 0.7));
-  border-color: rgba(251, 191, 36, 0.5);
-  box-shadow:
-    0 0 0 1px rgba(0, 0, 0, 0.2) inset,
-    0 0 10px rgba(245, 158, 11, 0.2);
+  color: #fcd34d;
+  background: rgba(245, 158, 11, 0.14);
+  border-color: rgba(251, 191, 36, 0.4);
+  box-shadow: 0 0 8px rgba(245, 158, 11, 0.15);
 }
-/* BOT pill — classic cyan terminal badge */
 .chat-role-badge--bot {
   color: #e0f2fe;
   background: linear-gradient(
     120deg,
-    rgba(14, 165, 233, 0.38),
-    rgba(56, 189, 248, 0.14),
-    rgba(14, 165, 233, 0.32)
+    rgba(14, 165, 233, 0.35),
+    rgba(56, 189, 248, 0.12),
+    rgba(14, 165, 233, 0.28)
   );
   background-size: 200% 100%;
-  border-color: rgba(56, 189, 248, 0.6);
+  border-color: rgba(56, 189, 248, 0.55);
   box-shadow:
-    0 0 0 1px rgba(56, 189, 248, 0.12) inset,
-    0 0 12px rgba(56, 189, 248, 0.28);
-  animation: chat-bot-badge-flow 2.8s ease-in-out infinite;
-  padding: 2px 7px;
-  gap: 4px;
-  font-size: 7.5px;
+    0 0 8px rgba(56, 189, 248, 0.25),
+    0 0 0 1px rgba(56, 189, 248, 0.1) inset;
+  animation: chat-bot-badge-flow 2.4s ease-in-out infinite;
 }
 .chat-role-badge--bot svg {
-  color: #7dd3fc;
-  filter: drop-shadow(0 0 4px rgba(56, 189, 248, 0.55));
+  animation: profile-bot-icon-spin 5s linear infinite;
 }
 @keyframes chat-bot-badge-flow {
-  0%, 100% {
+  0%,
+  100% {
     background-position: 0% 50%;
     box-shadow:
-      0 0 0 1px rgba(56, 189, 248, 0.1) inset,
-      0 0 8px rgba(56, 189, 248, 0.22);
+      0 0 6px rgba(56, 189, 248, 0.2),
+      0 0 0 1px rgba(56, 189, 248, 0.08) inset;
   }
   50% {
     background-position: 100% 50%;
     box-shadow:
-      0 0 0 1px rgba(125, 211, 252, 0.2) inset,
-      0 0 16px rgba(56, 189, 248, 0.4);
+      0 0 14px rgba(56, 189, 248, 0.45),
+      0 0 0 1px rgba(125, 211, 252, 0.2) inset;
   }
 }
 .chat-role-badge--verified {
   color: #7dd3fc;
-  background: rgba(14, 165, 233, 0.12);
-  border-color: rgba(56, 189, 248, 0.4);
+  background: rgba(14, 165, 233, 0.1);
+  border-color: rgba(56, 189, 248, 0.35);
 }
 
 /* —— Bot username & messages —— */
@@ -747,11 +612,11 @@ html, body, #root {
   text-shadow: 0 0 12px rgba(56, 189, 248, 0.45);
 }
 .bot-message-row {
-  background: linear-gradient(90deg, rgba(14, 165, 233, 0.1), transparent 70%);
-  border-left: 2px solid rgba(56, 189, 248, 0.5);
-  padding: 3px 6px 3px 8px;
-  margin-left: -2px;
-  border-radius: 0 6px 6px 0;
+  background: linear-gradient(90deg, rgba(14, 165, 233, 0.08), transparent);
+  border-left: 2px solid rgba(56, 189, 248, 0.45);
+  padding: 2px 4px 2px 6px;
+  margin-left: -4px;
+  border-radius: 0 4px 4px 0;
 }
 
 /* @username mentions inside BOT shoutbox lines */

@@ -11,7 +11,6 @@ import {
   Clock,
   ExternalLink,
   Send,
-  Trash2,
   User,
   VolumeX,
 } from 'lucide-react';
@@ -20,11 +19,10 @@ import { useAuth } from '../../context/AuthContext';
 
 import { insertShoutboxDraft, focusShoutboxInput } from '../../lib/shoutboxDraft';
 import { sendShoutboxCommand } from '../../lib/shoutboxSend';
-import { adminDeleteShoutboxMessage, adminModerateShoutboxUser } from '../../lib/adminModules';
+import { adminModerateShoutboxUser } from '../../lib/adminModules';
 import { SessionExpiredError } from '../../lib/sessionFetch';
 import { terminalAppend } from '../../lib/terminalLogBridge';
 import { safeAvatarUrl } from '../../lib/safeAvatarUrl';
-import { unlockChatAudio } from '../../lib/chat';
 import type { UserRole } from '../../types/auth';
 
 export type ChatUserChipTarget = {
@@ -51,10 +49,6 @@ type ChatUserChipProps = {
   compact?: boolean;
   /** Use admin REST mod API instead of slash commands (admin monitor). */
   modViaApi?: boolean;
-  /** Shoutbox message id — enables “Delete message” for admins. */
-  messageId?: string;
-  /** Called after the message is deleted server-side (remove from local UI). */
-  onMessageDeleted?: (messageId: string) => void;
 };
 
 const ROLE_STYLES: Record<UserRole, string> = {
@@ -76,14 +70,7 @@ type ContextMenuState = {
   y: number;
 };
 
-export function ChatUserChip({
-  user,
-  onOpenProfile,
-  compact = false,
-  modViaApi = false,
-  messageId,
-  onMessageDeleted,
-}: ChatUserChipProps) {
+export function ChatUserChip({ user, onOpenProfile, compact = false, modViaApi = false }: ChatUserChipProps) {
   const { isLoggedIn, isAdmin, openAuth, refresh } = useAuth();
   const [menu, setMenu] = useState<ContextMenuState | null>(null);
   const [acting, setActing] = useState(false);
@@ -122,8 +109,6 @@ export function ChatUserChip({
 
   const pingAndSend = useCallback(async () => {
     if (!requireLogin()) return;
-    // Unlock Web Audio from this click so the ping tone can play after the request
-    unlockChatAudio();
     setActing(true);
     try {
       const result = await sendShoutboxCommand(`/ping ${user.username}`);
@@ -133,9 +118,7 @@ export function ChatUserChip({
       }
       if (result.ok === false) {
         terminalAppend(`❌ Ping failed: ${result.error}`, 'warn');
-        return;
       }
-      // Sound is also triggered in UnifiedTerminalPanel sendChat on kind=ping
     } finally {
       if (mountedRef.current) setActing(false);
     }
@@ -177,33 +160,14 @@ export function ChatUserChip({
 
   const closeMenu = useCallback(() => setMenu(null), []);
 
-  const deleteMessage = useCallback(async () => {
-    if (!isAdmin || !messageId) return;
-    setActing(true);
-    try {
-      await adminDeleteShoutboxMessage(messageId);
-      onMessageDeleted?.(messageId);
-      terminalAppend(`✓ Message deleted (${messageId.slice(0, 6)}…)`, 'info');
-    } catch (e) {
-      if (e instanceof SessionExpiredError) {
-        void refresh().finally(() => openAuth('login'));
-        return;
-      }
-      terminalAppend(`❌ Delete failed: ${e instanceof Error ? e.message : 'error'}`, 'warn');
-    } finally {
-      if (mountedRef.current) setActing(false);
-    }
-  }, [isAdmin, messageId, onMessageDeleted, refresh, openAuth]);
-
   const handleContextMenu = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    // Bots: only allow menu when admin can delete this message
-    if (isBot && !(isAdmin && messageId)) return;
+    if (isBot) return;
 
     const pad = 8;
     const menuW = 200;
-    const menuH = isAdmin ? 360 : 160;
+    const menuH = isAdmin ? 320 : 160;
     const x = Math.min(e.clientX, window.innerWidth - menuW - pad);
     const y = Math.min(e.clientY, window.innerHeight - menuH - pad);
     setMenu({ x, y });
@@ -241,54 +205,35 @@ export function ChatUserChip({
     };
   }, [menu, closeMenu]);
 
-  const menuItems: MenuItem[] = [];
-
-  if (!isBot) {
-    menuItems.push(
-      {
-        id: 'profile',
-        label: 'View profile',
-        icon: <ExternalLink size={12} />,
-        onClick: () => {
-          closeMenu();
-          openProfile();
-        },
+  const menuItems: MenuItem[] = [
+    {
+      id: 'profile',
+      label: 'View profile',
+      icon: <ExternalLink size={12} />,
+      onClick: () => {
+        closeMenu();
+        openProfile();
       },
-      {
-        id: 'ping',
-        label: `Ping @${user.username}`,
-        icon: <AtSign size={12} />,
-        onClick: () => {
-          closeMenu();
-          pingUser();
-        },
+    },
+    {
+      id: 'ping',
+      label: `Ping @${user.username}`,
+      icon: <AtSign size={12} />,
+      onClick: () => {
+        closeMenu();
+        pingUser();
       },
-      {
-        id: 'ping-send',
-        label: 'Ping & send',
-        icon: <Send size={12} />,
-        onClick: async () => {
-          closeMenu();
-          await pingAndSend();
-        },
-      },
-    );
-  }
-
-  if (isAdmin && messageId) {
-    menuItems.push({
-      id: 'delete-msg',
-      label: 'Delete message',
-      icon: <Trash2 size={12} />,
-      tone: 'danger',
-      dividerBefore: menuItems.length > 0,
+    },
+    {
+      id: 'ping-send',
+      label: 'Ping & send',
+      icon: <Send size={12} />,
       onClick: async () => {
         closeMenu();
-        if (!confirm('Delete this shoutbox message?')) return;
-        await deleteMessage();
+        await pingAndSend();
       },
-    });
-  }
+    },
+  ];
 
   if (isAdmin && !isBot && user.role !== 'admin' && user.role !== 'vip') {
     menuItems.push(
@@ -355,13 +300,8 @@ export function ChatUserChip({
     );
   }
 
-  const size = compact ? 'w-5 h-5' : 'w-[22px] h-[22px]';
-  const textSize = compact ? 'text-[8px]' : 'text-[9px]';
-  const roleMark =
-    user.role === 'admin' ? 'A'
-      : user.role === 'vip' ? 'V'
-        : user.role === 'bot' ? 'B'
-          : null;
+  const size = compact ? 'w-5 h-5' : 'w-6 h-6';
+  const textSize = compact ? 'text-[7px]' : 'text-[8px]';
 
   return (
     <>
@@ -372,30 +312,22 @@ export function ChatUserChip({
         onAuxClick={handleAuxClick}
         onContextMenu={handleContextMenu}
         disabled={acting}
-        className={`chat-user-chip shoutbox-msg__chip shrink-0 inline-flex items-center gap-1.5 rounded-md border border-transparent hover:border-slate-700/70 hover:bg-white/[0.03] px-0.5 py-px transition ${acting ? 'opacity-60' : ''}`}
+        className={`chat-user-chip shrink-0 inline-flex items-center gap-1 rounded-md border border-transparent hover:border-slate-700/80 hover:bg-white/[0.04] px-0.5 py-px transition group ${acting ? 'opacity-60' : ''}`}
         title={`${user.username} · ${user.displayName}\nLeft-click: profile · Middle-click: ping & send · Right-click: menu`}
         aria-label={`${user.username}, open profile`}
       >
-        <span className="shoutbox-msg__avatar-wrap shrink-0">
-          <img
-            src={avatarSrc}
-            alt=""
-            className={`shoutbox-msg__avatar ${size} rounded-md object-cover ring-1 ${ringStyle} bg-black/40 group-hover:ring-fuchsia-500/40 transition`}
-            loading="lazy"
-          />
-          {roleMark && (
-            <span className={`shoutbox-msg__avatar-mark shoutbox-msg__avatar-mark--${user.role}`} aria-hidden>
-              {roleMark}
-            </span>
-          )}
-        </span>
-        <span className={`shoutbox-msg__name inline-flex items-center font-semibold ${roleStyle} ${textSize} max-w-[110px] truncate`}>
+        <img
+          src={avatarSrc}
+          alt=""
+          className={`${size} rounded-md object-cover ring-1 ${ringStyle} bg-black/40 shrink-0 group-hover:ring-fuchsia-500/40 transition`}
+          loading="lazy"
+        />
+        <ChatRoleBadges role={user.role} verified={isVerified} compact={compact} />
+        <span className={`inline-flex items-center gap-0.5 font-semibold ${roleStyle} ${textSize} max-w-[88px] truncate`}>
           {isAdminUser ? (
-            <span className="admin-username-style">@{user.username}</span>
-          ) : isBot ? (
-            <span className="bot-username-style">@{user.username}</span>
+            <span className="admin-username-style">{user.username}</span>
           ) : (
-            <span>@{user.username}</span>
+            <span>{user.username}</span>
           )}
         </span>
       </button>
