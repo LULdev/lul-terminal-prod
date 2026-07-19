@@ -352,34 +352,6 @@ export function ProfileHero({ user, isOwn = false, showCoins = true, onNavigateG
           </div>
         </div>
 
-        {showActivity && feat && (showCoins || !isCoinSensitiveAchievement(feat.id)) && (
-          <div className="mt-4 profile-glass rounded-xl px-3 py-2.5 flex items-center gap-3">
-            <span className="text-2xl">{feat.icon}</span>
-            <div className="min-w-0">
-              <div className="text-[7px] font-mono uppercase text-amber-400/80 tracking-wider">Featured trophy</div>
-              <div className="text-[11px] font-semibold text-amber-100 truncate">{feat.name}</div>
-              <div className="text-[8px] font-mono text-slate-500 truncate">{feat.description}</div>
-            </div>
-          </div>
-        )}
-
-        {isOwn && completion && (
-          <div className="mt-4 profile-glass rounded-xl px-3 py-2.5">
-            <div className="flex justify-between text-[8px] font-mono mb-1.5">
-              <span className="text-slate-500 flex items-center gap-1"><Sparkles size={10} /> Profile completion</span>
-              <span className="text-indigo-300 font-bold">{completion.percent}%</span>
-            </div>
-            <div className="h-1.5 rounded-full bg-slate-800/80 overflow-hidden">
-              <div className="profile-level-bar h-full rounded-full transition-all duration-500" style={{ width: `${completion.percent}%` }} />
-            </div>
-            {completion.missing.length > 0 && completion.percent < 100 && (
-              <p className="mt-1.5 text-[7px] font-mono text-slate-600">
-                Next: {completion.missing.slice(0, 3).join(', ')}
-              </p>
-            )}
-          </div>
-        )}
-
         {showActivity && (
           <>
             <div className="mt-3 h-1 rounded-full bg-slate-800/60 overflow-hidden max-w-xs">
@@ -424,6 +396,34 @@ export function ProfileHero({ user, isOwn = false, showCoins = true, onNavigateG
             </button>
           )}
         </div>
+
+        {showActivity && feat && (showCoins || !isCoinSensitiveAchievement(feat.id)) && (
+          <div className="mt-4 profile-glass rounded-xl px-3 py-2.5 flex items-center gap-3">
+            <span className="text-2xl">{feat.icon}</span>
+            <div className="min-w-0">
+              <div className="text-[7px] font-mono uppercase text-amber-400/80 tracking-wider">Featured trophy</div>
+              <div className="text-[11px] font-semibold text-amber-100 truncate">{feat.name}</div>
+              <div className="text-[8px] font-mono text-slate-500 truncate">{feat.description}</div>
+            </div>
+          </div>
+        )}
+
+        {isOwn && completion && (
+          <div className="mt-4 profile-glass rounded-xl px-3 py-2.5">
+            <div className="flex justify-between text-[8px] font-mono mb-1.5">
+              <span className="text-slate-500 flex items-center gap-1"><Sparkles size={10} /> Profile completion</span>
+              <span className="text-indigo-300 font-bold">{completion.percent}%</span>
+            </div>
+            <div className="h-1.5 rounded-full bg-slate-800/80 overflow-hidden">
+              <div className="profile-level-bar h-full rounded-full transition-all duration-500" style={{ width: `${completion.percent}%` }} />
+            </div>
+            {completion.missing.length > 0 && completion.percent < 100 && (
+              <p className="mt-1.5 text-[7px] font-mono text-slate-600">
+                Next: {completion.missing.slice(0, 3).join(', ')}
+              </p>
+            )}
+          </div>
+        )}
       </div>
     </section>
   );
