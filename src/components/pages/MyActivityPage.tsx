@@ -19,6 +19,7 @@ import {
   formatRelativeTime,
   type UserActivitySummary,
 } from '../../lib/analytics';
+import { CoinEarningsFeed } from '../games/CoinEarningsFeed';
 import { ActionButton, PageShell, ToolCard } from './PageShell';
 
 function StatTile({ icon: Icon, label, value, accent }: {
@@ -96,56 +97,61 @@ export function MyActivityPage() {
       {loading && <p className="text-[10px] font-mono text-slate-600">Loading activity…</p>}
 
       {!loading && !act && (
-        <p className="text-[10px] font-mono text-slate-600 text-center py-8">No activity recorded yet.</p>
+        <p className="text-[10px] font-mono text-slate-600 text-center py-4">No activity recorded yet.</p>
       )}
 
-      {u && act && (
-        <div className="space-y-4">
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-            <StatTile icon={Activity} label="Page visits" value={act.pageVisits} accent="text-indigo-300" />
-            <StatTile icon={Terminal} label="Commands" value={act.commandsRun} accent="text-amber-300" />
-            <StatTile icon={Clock} label="Online (min)" value={u.onlineMinutes} accent="text-emerald-300" />
-            <StatTile icon={MessageSquare} label="Shoutbox" value={act.shoutboxSent} accent="text-cyan-300" />
-            <StatTile icon={Eye} label="Profile visits" value={act.profileVisits} accent="text-violet-300" />
-            <StatTile icon={Zap} label="Logins" value={act.loginCount} accent="text-rose-300" />
-            <StatTile icon={BarChart3} label="Changelog" value={act.changelogReads} accent="text-slate-300" />
-            <StatTile icon={BarChart3} label="News" value={act.newsReads} accent="text-slate-300" />
-          </div>
-
-          <ToolCard title="Visited areas" icon="🗺️" accent="violet">
-            <div className="flex flex-wrap gap-1.5">
-              {act.tabsVisited.length ? act.tabsVisited.map((t) => (
-                <span key={t} className="px-2 py-1 rounded-lg border border-violet-500/25 bg-violet-500/10 text-[9px] font-mono text-violet-200 uppercase">{t}</span>
-              )) : (
-                <span className="text-[9px] font-mono text-slate-600">No tabs recorded yet</span>
-              )}
+      <div className="space-y-4">
+        {u && act && (
+          <>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              <StatTile icon={Activity} label="Page visits" value={act.pageVisits} accent="text-indigo-300" />
+              <StatTile icon={Terminal} label="Commands" value={act.commandsRun} accent="text-amber-300" />
+              <StatTile icon={Clock} label="Online (min)" value={u.onlineMinutes} accent="text-emerald-300" />
+              <StatTile icon={MessageSquare} label="Shoutbox" value={act.shoutboxSent} accent="text-cyan-300" />
+              <StatTile icon={Eye} label="Profile visits" value={act.profileVisits} accent="text-violet-300" />
+              <StatTile icon={Zap} label="Logins" value={act.loginCount} accent="text-rose-300" />
+              <StatTile icon={BarChart3} label="Changelog" value={act.changelogReads} accent="text-slate-300" />
+              <StatTile icon={BarChart3} label="News" value={act.newsReads} accent="text-slate-300" />
             </div>
-          </ToolCard>
 
-          <ToolCard title="Profile metrics" icon="⭐" accent="cyan">
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-[9px] font-mono">
-              <div><span className="text-slate-600">Profile views</span><div className="text-slate-300 text-lg">{u.profileViews}</div></div>
-              <div><span className="text-slate-600">Uploads</span><div className="text-slate-300 text-lg">{u.imagesUploaded}</div></div>
-              <div><span className="text-slate-600">Memes</span><div className="text-slate-300 text-lg">{u.memesCreated}</div></div>
-              <div><span className="text-slate-600">Achievements</span><div className="text-slate-300 text-lg">{u.achievements}</div></div>
-            </div>
-          </ToolCard>
-
-          {data.recentEvents.length > 0 && (
-            <ToolCard title="Recent activity" icon="📡" accent="teal">
-              <div className="space-y-1 max-h-48 overflow-y-auto">
-                {data.recentEvents.map((e) => (
-                  <div key={e.id} className="flex gap-2 text-[8px] font-mono text-slate-500 py-1 border-b border-slate-800/50">
-                    <span className="text-teal-400/70 w-20 shrink-0">{formatRelativeTime(e.ts)}</span>
-                    <span className="text-slate-400">{e.type}</span>
-                    {e.tab && <span className="text-slate-600">· {e.tab}</span>}
-                  </div>
-                ))}
+            <ToolCard title="Visited areas" icon="🗺️" accent="violet">
+              <div className="flex flex-wrap gap-1.5">
+                {act.tabsVisited.length ? act.tabsVisited.map((t) => (
+                  <span key={t} className="px-2 py-1 rounded-lg border border-violet-500/25 bg-violet-500/10 text-[9px] font-mono text-violet-200 uppercase">{t}</span>
+                )) : (
+                  <span className="text-[9px] font-mono text-slate-600">No tabs recorded yet</span>
+                )}
               </div>
             </ToolCard>
-          )}
-        </div>
-      )}
+
+            <ToolCard title="Profile metrics" icon="⭐" accent="cyan">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-[9px] font-mono">
+                <div><span className="text-slate-600">Profile views</span><div className="text-slate-300 text-lg">{u.profileViews}</div></div>
+                <div><span className="text-slate-600">Uploads</span><div className="text-slate-300 text-lg">{u.imagesUploaded}</div></div>
+                <div><span className="text-slate-600">Memes</span><div className="text-slate-300 text-lg">{u.memesCreated}</div></div>
+                <div><span className="text-slate-600">Achievements</span><div className="text-slate-300 text-lg">{u.achievements}</div></div>
+              </div>
+            </ToolCard>
+
+            {data && data.recentEvents.length > 0 && (
+              <ToolCard title="Recent activity" icon="📡" accent="teal">
+                <div className="space-y-1 max-h-48 overflow-y-auto">
+                  {data.recentEvents.map((e) => (
+                    <div key={e.id} className="flex gap-2 text-[8px] font-mono text-slate-500 py-1 border-b border-slate-800/50">
+                      <span className="text-teal-400/70 w-20 shrink-0">{formatRelativeTime(e.ts)}</span>
+                      <span className="text-slate-400">{e.type}</span>
+                      {e.tab && <span className="text-slate-600">· {e.tab}</span>}
+                    </div>
+                  ))}
+                </div>
+              </ToolCard>
+            )}
+          </>
+        )}
+
+        {/* Coin earnings — additional to existing activity stats */}
+        <CoinEarningsFeed />
+      </div>
     </PageShell>
   );
 }
