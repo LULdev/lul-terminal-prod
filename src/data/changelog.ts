@@ -23,6 +23,26 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '3.48.1',
+    title: 'Paste module deep audit — views, burn, ratings, access',
+    date: 'Jul 19, 2026 - 12:00',
+    highlight: true,
+    items: [
+      { priority: 'P0', text: 'P0 — Paste share GET no longer blocked by members-only Paste tab (Permission denied on /p/:id fixed).' },
+      { priority: 'P0', text: 'P0 — View counter: owner’s first view now increments; later visits dedupe per user / guest IP.' },
+      { priority: 'P0', text: 'P0 — False “burn-after-read consumed” after refresh removed (client invented burned on meta fetch miss).' },
+      { priority: 'P1', text: 'P1 — Star ratings work without Paste-tab gate; owner may rate own paste; rating errors surface in UI.' },
+      { priority: 'P1', text: 'P1 — Burn-after-read consumes on first content GET (share open); plain reloads of non-burn pastes stay healthy.' },
+      { priority: 'P1', text: 'P1 — GET content survives view-count lock failures (still returns body + best-effort views).' },
+      { priority: 'P2', text: 'P2 — pollPasteMeta credentialed by default (private paste live views after create).' },
+      { priority: 'P2', text: 'P2 — My paste gallery soft-poll keeps last data on 429/session blips; ID pattern 6–32 aligned server-wide.' },
+      { priority: 'P2', text: 'P2 — listByUser / public / trending / admin lists normalize legacy visibility (unlisted → private).' },
+      { priority: 'P3', text: 'P3 — createPaste wires achievementUnlocks into AuthContext confetti path.' },
+      { priority: 'P3', text: 'P3 — Protected unlock password errors clarified; admin paste IDs accept full ID range.' },
+      { priority: 'P9', text: 'P9 — Full paste client+server audit pass; lint clean.' },
+    ],
+  },
+  {
     version: '3.47.1',
     title: 'Fix login session lost after SQLite user save',
     date: 'Jul 15, 2026 - 16:45',

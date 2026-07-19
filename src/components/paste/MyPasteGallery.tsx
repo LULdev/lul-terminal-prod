@@ -77,9 +77,9 @@ export function MyPasteGallery({ refreshKey = 0, onDeleted, onFork }: Props) {
     return () => { mountedRef.current = false; };
   }, []);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (opts?: { soft?: boolean }) => {
     const gen = ++loadGenRef.current;
-    setError('');
+    if (!opts?.soft) setError('');
     try {
       const [items, galleryStats] = await Promise.all([
         fetchMyPastes(sort),
@@ -88,9 +88,13 @@ export function MyPasteGallery({ refreshKey = 0, onDeleted, onFork }: Props) {
       if (gen !== loadGenRef.current || !mountedRef.current) return;
       setPastes(items);
       setStats(galleryStats);
+      setError('');
     } catch (e) {
       if (gen !== loadGenRef.current || !mountedRef.current) return;
-      setError(e instanceof Error ? e.message : 'Could not load pastes');
+      const msg = e instanceof Error ? e.message : 'Could not load pastes';
+      // Soft polls keep last good data on transient errors
+      if (opts?.soft && /too many|429|rate|permission|sign in|session/i.test(msg)) return;
+      setError(msg);
     } finally {
       if (gen === loadGenRef.current && mountedRef.current) setLoading(false);
     }
@@ -98,10 +102,10 @@ export function MyPasteGallery({ refreshKey = 0, onDeleted, onFork }: Props) {
 
   useEffect(() => {
     setLoading(true);
-    load();
+    void load();
   }, [load, refreshKey]);
 
-  useVisibilityAwarePoll(() => { void load(); }, 30_000);
+  useVisibilityAwarePoll(() => { void load({ soft: true }); }, 30_000);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();

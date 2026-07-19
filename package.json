@@ -1,7 +1,7 @@
 {
   "name": "lul-terminal",
   "private": true,
-  "version": "3.48.0",
+  "version": "3.48.1",
   "description": "Self-hosted community platform: auth, arcade, paste, image host, tools & admin",
   "repository": {
     "type": "git",

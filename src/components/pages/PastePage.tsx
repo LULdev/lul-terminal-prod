@@ -94,7 +94,7 @@ function TabBtn({
 }
 
 export function PastePage() {
-  const { syncAchievements } = useAuth();
+  const { syncAchievements, handleUnlocks } = useAuth();
   const [tab, setTab] = useState<PasteTab>('create');
   const [archive, setArchive] = useState<PasteMeta[]>([]);
   const [trending, setTrending] = useState<PasteMeta[]>([]);
@@ -126,7 +126,9 @@ export function PastePage() {
   useEffect(() => {
     if (!result?.id) return;
     setLiveViews(result.views ?? 0);
-    return pollPasteMeta(result.id, (meta) => setLiveViews(meta.views ?? 0), 3000);
+    return pollPasteMeta(result.id, (meta) => setLiveViews(meta.views ?? 0), 3000, {
+      credentialed: true,
+    });
   }, [result?.id]);
 
   const applyFork = useCallback((payload: { title: string; content: string; language: string; visibility: string }) => {
@@ -187,6 +189,8 @@ export function PastePage() {
       });
       setResult(paste);
       setGalleryKey((k) => k + 1);
+      const unlocks = (paste as PasteRecord & { achievementUnlocks?: string[] }).achievementUnlocks;
+      if (unlocks?.length) handleUnlocks(unlocks);
       syncAchievements().catch(() => {});
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not save paste');

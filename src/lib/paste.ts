@@ -8,7 +8,6 @@ import { PASTE_ID_RE } from './safePasteUrl';
 import { sessionFetch } from './sessionFetch';
 
 const API = '/api/paste';
-const VIEW_SESSION_PREFIX = 'lul_paste_view_';
 const viewInflight = new Map<string, Promise<{ views: number; burned: boolean }>>();
 
 export type PasteMeta = {
@@ -41,6 +40,7 @@ export type PasteRecord = PasteMeta & {
   requiresPassword?: boolean;
   requiresLogin?: boolean;
   burned?: boolean;
+  achievementUnlocks?: string[];
 };
 
 export type PasteStats = {
@@ -258,12 +258,15 @@ export function pollPasteMeta(
   id: string,
   onUpdate: (meta: PasteMeta) => void,
   intervalMs = 4000,
+  opts: { credentialed?: boolean } = {},
 ): () => void {
   let active = true;
+  const credentialed = opts.credentialed !== false;
   const tick = async () => {
     if (!active || document.hidden) return;
     try {
-      const meta = await fetchPasteMeta(id);
+      // credentialed by default so private pastes keep live view counts after create
+      const meta = await fetchPasteMeta(id, { credentialed });
       if (meta && active) onUpdate(meta);
     } catch { /* ignore */ }
   };

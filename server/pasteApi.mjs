@@ -289,7 +289,7 @@ export async function handlePasteRequest(req, res) {
       });
     }
 
-    const adminIdMatch = pathname.match(/^\/api\/paste\/admin\/([A-Za-z0-9_-]{10,14})$/);
+    const adminIdMatch = pathname.match(/^\/api\/paste\/admin\/([A-Za-z0-9_-]{6,32})$/);
     if (adminIdMatch) {
       const id = adminIdMatch[1];
       await requireAdmin(req);
@@ -594,14 +594,18 @@ export async function handlePasteRequest(req, res) {
         }
 
         // Public / authorized: return content. Count view here (including owner's first view).
-        // Never consume burn-after-read on plain GET — only POST /view does that intentionally.
+        // Burn-after-read: first successful content delivery consumes (GET is the read).
         let content = null;
         let outMeta = meta;
+        let burned = false;
         try {
-          const viewResult = await countPasteViewDeduped(req, id, { consumeBurn: false });
+          const viewResult = await countPasteViewDeduped(req, id, {
+            consumeBurn: Boolean(meta.burnAfterRead),
+          });
           if (viewResult) {
             content = viewResult.content ?? await getContent(id);
             outMeta = viewResult.meta ?? meta;
+            burned = Boolean(viewResult.burned);
             if (viewResult.meta?.userId && uid && !viewResult.deduped) {
               await incrementUserPasteViews(viewResult.meta.userId, {
                 viewerId: uid,
@@ -618,7 +622,7 @@ export async function handlePasteRequest(req, res) {
         if (!content) return sendJson(res, 404, { error: 'Paste not found or expired' });
         return sendJson(res, 200, {
           ...toClientPaste(outMeta, content, req, { userId: uid }),
-          burned: false,
+          burned,
         });
       }
 

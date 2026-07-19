@@ -179,16 +179,14 @@ export function PasteViewer({ id }: Props) {
       setRatingAvg(data.ratingAvg ?? 0);
       setRatingCount(data.ratingCount ?? 0);
       setUserRating(data.userRating ?? null);
-      const viewResult = await recordPasteView(id);
-      if (!mountedRef.current) return;
-      setViews(viewResult.views);
       setViewsReady(true);
-      if (viewResult.burned || data.burned) {
+      if (data.burned && data.burnAfterRead) {
         setError('This paste was burn-after-read and has been consumed.');
       }
     } catch (err) {
       if (mountedRef.current) {
-        setError(err instanceof Error ? err.message : 'Invalid password');
+        const msg = err instanceof Error ? err.message : 'Invalid password';
+        setError(/not found/i.test(msg) ? 'Wrong password or paste not found' : msg);
       }
     } finally {
       if (mountedRef.current) setUnlocking(false);

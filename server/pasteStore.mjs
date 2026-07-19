@@ -15,7 +15,8 @@ export const CONTENT_DIR = path.join(DATA_ROOT, 'content');
 export const STATS_FILE = path.join(DATA_ROOT, 'stats.json');
 
 export const MAX_BYTES = 512 * 1024;
-export const ID_PATTERN = /^[A-Za-z0-9_-]{10,14}$/;
+/** Canonical ID pattern (generateId emits 12 chars). */
+export const ID_PATTERN = /^[A-Za-z0-9_-]{6,32}$/;
 
 const EXPIRY_MS = {
   '10m': 10 * 60 * 1000,
@@ -27,8 +28,7 @@ const EXPIRY_MS = {
 };
 
 export function isValidId(id) {
-  // Accept 6–32 chars so older/shorter IDs still load; generateId still emits 12.
-  return typeof id === 'string' && /^[A-Za-z0-9_-]{6,32}$/.test(id);
+  return typeof id === 'string' && ID_PATTERN.test(id);
 }
 
 export function generateId() {
@@ -329,7 +329,8 @@ export async function listByUser(userId, sort = 'newest') {
   for (const file of files) {
     if (!file.endsWith('.json')) continue;
     try {
-      const meta = JSON.parse(await fs.readFile(path.join(META_DIR, file), 'utf8'));
+      const raw = JSON.parse(await fs.readFile(path.join(META_DIR, file), 'utf8'));
+      const meta = normalizeStoredVisibility(raw);
       const alive = filterAliveMeta(meta);
       if (!alive || String(alive.userId) !== String(userId)) continue;
       out.push(alive);
@@ -381,7 +382,9 @@ export async function listPublicArchive(limit = 40) {
   for (const file of files) {
     if (!file.endsWith('.json')) continue;
     try {
-      const meta = JSON.parse(await fs.readFile(path.join(META_DIR, file), 'utf8'));
+      const meta = normalizeStoredVisibility(
+        JSON.parse(await fs.readFile(path.join(META_DIR, file), 'utf8')),
+      );
       const alive = filterAliveMeta(meta);
       if (!alive || alive.visibility !== 'public') continue;
       out.push(alive);
@@ -399,7 +402,9 @@ export async function listTrendingPublic(limit = 12) {
   for (const file of files) {
     if (!file.endsWith('.json')) continue;
     try {
-      const meta = JSON.parse(await fs.readFile(path.join(META_DIR, file), 'utf8'));
+      const meta = normalizeStoredVisibility(
+        JSON.parse(await fs.readFile(path.join(META_DIR, file), 'utf8')),
+      );
       const alive = filterAliveMeta(meta);
       if (!alive || alive.visibility !== 'public') continue;
       out.push(alive);
@@ -492,7 +497,9 @@ export async function listAllPastes({
   for (const file of files) {
     if (!file.endsWith('.json')) continue;
     try {
-      const meta = JSON.parse(await fs.readFile(path.join(META_DIR, file), 'utf8'));
+      const meta = normalizeStoredVisibility(
+        JSON.parse(await fs.readFile(path.join(META_DIR, file), 'utf8')),
+      );
       const alive = filterAliveMeta(meta);
       if (!alive) continue;
       if (visFilter && alive.visibility !== visFilter) continue;
