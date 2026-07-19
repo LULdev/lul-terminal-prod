@@ -45,41 +45,159 @@
   box-shadow: 0 0 16px rgba(99, 102, 241, 0.15);
 }
 
+/* —— Profile Anzeigebild (avatar): animated BORDER only —— */
+@property --profile-avatar-angle {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 0deg;
+}
+
+.profile-avatar {
+  --avatar-border-a: #6366f1;
+  --avatar-border-b: #a855f7;
+  --avatar-border-c: #22d3ee;
+  position: relative;
+  width: 6rem; /* 24 */
+  height: 6rem;
+  border-radius: 1rem;
+  flex-shrink: 0;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
+}
+@media (min-width: 640px) {
+  .profile-avatar {
+    width: 11.25rem; /* matches previous sm size ~45*0.25rem */
+    height: 13.5rem;
+  }
+}
+
+/* Spinning border ring — never paints over the photo */
+.profile-avatar__border {
+  position: absolute;
+  inset: -3px;
+  border-radius: calc(1rem + 2px);
+  padding: 3px;
+  pointer-events: none;
+  z-index: 0;
+  background: conic-gradient(
+    from var(--profile-avatar-angle, 0deg),
+    var(--avatar-border-a) 0%,
+    var(--avatar-border-b) 28%,
+    var(--avatar-border-c) 55%,
+    var(--avatar-border-b) 78%,
+    var(--avatar-border-a) 100%
+  );
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  animation: profile-avatar-border-spin 5s linear infinite;
+  box-shadow: 0 0 18px color-mix(in srgb, var(--avatar-border-b) 35%, transparent);
+}
+@keyframes profile-avatar-border-spin {
+  to { --profile-avatar-angle: 360deg; }
+}
+
+/* Photo itself: completely static */
+.profile-avatar__img {
+  position: relative;
+  z-index: 1;
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 0.9rem;
+  border: 2px solid #0c0d12;
+  object-fit: cover;
+  object-position: center;
+  background: #0f172a;
+  filter: none !important;
+  animation: none !important;
+  transform: none !important;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.profile-avatar__emoji {
+  position: absolute;
+  top: -0.4rem;
+  right: -0.4rem;
+  z-index: 3;
+  font-size: 1.125rem;
+  line-height: 1;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.55));
+  pointer-events: none;
+}
+.profile-avatar__role {
+  position: absolute;
+  bottom: -0.2rem;
+  right: -0.2rem;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 0.5rem;
+  border: 1px solid #0c0d12;
+  background: #0c0d12;
+}
+
+/* Frame presets — only change border colors / spin speed (not the image) */
 .profile-frame-gold {
-  box-shadow: 0 0 0 3px rgba(251, 191, 36, 0.55), 0 0 24px rgba(251, 191, 36, 0.25);
+  --avatar-border-a: #b45309;
+  --avatar-border-b: #fde68a;
+  --avatar-border-c: #f59e0b;
+}
+.profile-frame-gold .profile-avatar__border {
+  animation-duration: 4s;
+  box-shadow: 0 0 22px rgba(251, 191, 36, 0.35);
 }
 
 .profile-frame-neon {
-  box-shadow: 0 0 0 2px rgba(34, 211, 238, 0.7), 0 0 28px rgba(34, 211, 238, 0.35);
-  animation: profile-neon-pulse 2s ease-in-out infinite;
+  --avatar-border-a: #0891b2;
+  --avatar-border-b: #67e8f9;
+  --avatar-border-c: #22d3ee;
+}
+.profile-frame-neon .profile-avatar__border {
+  animation-duration: 3.2s;
+  box-shadow: 0 0 24px rgba(34, 211, 238, 0.4);
 }
 
 .profile-frame-holo {
-  box-shadow:
-    0 0 0 2px rgba(167, 139, 250, 0.5),
-    0 0 20px rgba(236, 72, 153, 0.2),
-    0 0 32px rgba(34, 211, 238, 0.15);
-  animation: profile-holo-shift 4s linear infinite;
+  --avatar-border-a: #f472b6;
+  --avatar-border-b: #a78bfa;
+  --avatar-border-c: #22d3ee;
+}
+.profile-frame-holo .profile-avatar__border {
+  animation-duration: 3s;
+  background: conic-gradient(
+    from var(--profile-avatar-angle, 0deg),
+    #fbbf24 0%,
+    #f472b6 22%,
+    #a78bfa 48%,
+    #22d3ee 74%,
+    #fbbf24 100%
+  );
+  box-shadow: 0 0 22px rgba(167, 139, 250, 0.35);
 }
 
 .profile-frame-fire {
-  box-shadow: 0 0 0 2px rgba(251, 146, 60, 0.6), 0 0 30px rgba(239, 68, 68, 0.3);
-  animation: profile-fire-flicker 1.5s ease-in-out infinite;
+  --avatar-border-a: #9a3412;
+  --avatar-border-b: #fb923c;
+  --avatar-border-c: #ef4444;
+}
+.profile-frame-fire .profile-avatar__border {
+  animation-duration: 2.8s;
+  box-shadow: 0 0 22px rgba(239, 68, 68, 0.35);
 }
 
-@keyframes profile-neon-pulse {
-  0%, 100% { box-shadow: 0 0 0 2px rgba(34, 211, 238, 0.5), 0 0 20px rgba(34, 211, 238, 0.2); }
-  50% { box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.85), 0 0 36px rgba(34, 211, 238, 0.45); }
-}
-
-@keyframes profile-holo-shift {
-  0% { filter: hue-rotate(0deg); }
-  100% { filter: hue-rotate(30deg); }
-}
-
-@keyframes profile-fire-flicker {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.92; }
+@media (prefers-reduced-motion: reduce) {
+  .profile-avatar__border {
+    animation: none !important;
+  }
 }
 
 .profile-level-bar {

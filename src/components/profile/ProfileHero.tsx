@@ -169,15 +169,18 @@ export function ProfileHero({ user, isOwn = false, showCoins = true, onNavigateG
       <div className="relative px-4 sm:px-6 pb-5 -mt-16 sm:-mt-20">
         {/* Top-align avatar + identity so name row sits on the same line as the avatar top */}
         <div className="flex flex-col sm:flex-row gap-4 sm:items-start">
-          <div className={`relative shrink-0 ring-4 ${theme.ring} rounded-2xl ${frame.className}`}>
+          <div className={`profile-avatar shrink-0 ${frame.className}`}>
+            {/* Animated border only — Anzeigebild stays completely still */}
+            <span className="profile-avatar__border" aria-hidden />
             <img
               src={safeAvatarUrl(user.avatarUrl, user.username)}
               alt={user.displayName}
-              className="h-24 w-24 sm:w-[calc(var(--spacing)*45)] sm:h-[calc(var(--spacing)*54)] rounded-2xl border-2 border-[#0c0d12] object-cover shadow-2xl"
+              className="profile-avatar__img"
+              draggable={false}
             />
-            <span className="absolute -top-2 -right-2 text-lg drop-shadow-lg">{custom.favoriteEmoji}</span>
+            <span className="profile-avatar__emoji" aria-hidden>{custom.favoriteEmoji}</span>
             {user.role !== 'user' && (
-              <span className="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-lg border border-[#0c0d12] bg-[#0c0d12]">
+              <span className="profile-avatar__role">
                 {user.role === 'admin' && <Shield size={12} className="text-violet-400" />}
                 {user.role === 'vip' && <Crown size={12} className="text-amber-400" />}
                 {user.role === 'bot' && <Bot size={12} className="text-sky-400" />}
