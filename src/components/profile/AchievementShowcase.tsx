@@ -55,7 +55,7 @@ function ShowcaseGroup({
   return (
     <div>
       <h4 className="text-[7px] font-mono uppercase tracking-widest text-slate-500 mb-0.5">{title}</h4>
-      <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-7 gap-1">
+      <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-1">
         {items.map((def) => {
           const unlocked = earnedMap.has(def.id);
           const earnedAt = earnedMap.get(def.id);
@@ -65,12 +65,12 @@ function ShowcaseGroup({
               title={unlocked
                 ? `${def.name} — ${def.description}${earnedAt ? `\n${new Date(earnedAt).toLocaleDateString('en-US')}` : ''}`
                 : def.howToUnlock}
-              className={`${achievementBadgeClass(def, { unlocked, compact: true })} flex flex-col items-center gap-0.5 text-center px-1 py-1.5`}
+              className={`${achievementBadgeClass(def, { unlocked, compact: true })} flex flex-col items-center gap-0.5 text-center px-1 py-1 min-h-[3.1rem]`}
             >
-              <span className={`ach-badge__icon text-sm ${unlocked ? 'achievement-icon-float' : ''}`}>
+              <span className="ach-badge__icon text-[11px]">
                 {def.icon}
               </span>
-              <span className="ach-badge__name text-[7px] line-clamp-2 w-full">
+              <span className="ach-badge__name text-[7px] leading-snug line-clamp-2 w-full break-words">
                 {def.name}
               </span>
               <span className="ach-badge__meta text-[6px]">

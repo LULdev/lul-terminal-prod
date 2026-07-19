@@ -73,11 +73,11 @@ function UnlockedGroup({
           <div
             key={def.id}
             title={`${def.name} — ${def.description}\n${new Date(earnedAt).toLocaleDateString('en-US')}`}
-            className={`${achievementBadgeClass(def, { compact: true })} inline-flex items-center gap-1 px-1.5 py-0.5`}
+            className={`${achievementBadgeClass(def, { compact: true })} inline-flex items-center gap-1 px-1.5 py-1 max-w-[9.5rem]`}
           >
-            <span className="ach-badge__icon text-[13px]">{def.icon}</span>
-            <div className="ach-badge__body max-w-[6.5rem]">
-              <p className="ach-badge__name text-[8px] truncate">{def.name}</p>
+            <span className="ach-badge__icon text-[11px]">{def.icon}</span>
+            <div className="ach-badge__body min-w-0">
+              <p className="ach-badge__name text-[8px] leading-snug break-words">{def.name}</p>
               <p className="ach-badge__meta text-[6px]">{def.rarity}</p>
             </div>
           </div>

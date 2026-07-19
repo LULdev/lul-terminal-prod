@@ -63,19 +63,16 @@ export function LeaderboardBadges({
     return (
       <div className="profile-hof-inline" role="list" aria-label="Hall of Fame awards">
         <span className="profile-hof-inline__label">
-          <Trophy size={9} aria-hidden /> Hall of Fame
+          <Trophy size={9} aria-hidden /> HoF
         </span>
         {badges.map(({ id, earnedAt, def }) => (
           <span
             key={id}
             role="listitem"
             title={`${def.name} — ${def.description}\n${new Date(earnedAt).toLocaleDateString('en-US')}`}
-            className={`${achievementBadgeClass(def, { compact: true })} inline-flex items-center gap-0.5 px-1 py-0.5`}
+            className={achievementBadgeClass(def, { compact: true })}
           >
-            <span className="ach-badge__icon text-[11px]">{def.icon}</span>
-            <span className="ach-badge__name text-[7px] max-w-[4.25rem] truncate hidden sm:inline">
-              {def.name}
-            </span>
+            <span className="ach-badge__icon" aria-hidden>{def.icon}</span>
           </span>
         ))}
       </div>
@@ -106,11 +103,11 @@ export function LeaderboardBadges({
               <div
                 key={id}
                 title={`${def.name} — ${def.description}\n${new Date(earnedAt).toLocaleDateString('en-US')}`}
-                className={`${achievementBadgeClass(def, { compact: true })} inline-flex items-center gap-1 px-1.5 py-0.5`}
+                className={`${achievementBadgeClass(def, { compact: true })} inline-flex items-center gap-1 px-1.5 py-1 max-w-[9.5rem]`}
               >
-                <span className="ach-badge__icon text-[13px]">{def.icon}</span>
-                <div className="ach-badge__body max-w-[6.5rem]">
-                  <p className="ach-badge__name text-[8px] truncate">{def.name}</p>
+                <span className="ach-badge__icon text-[11px]">{def.icon}</span>
+                <div className="ach-badge__body min-w-0">
+                  <p className="ach-badge__name text-[8px] leading-snug break-words">{def.name}</p>
                   <p className="ach-badge__meta text-[6px]">{def.rarity}</p>
                 </div>
               </div>
