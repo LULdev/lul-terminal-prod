@@ -1,0 +1,31 @@
+#!/bin/sh
+# Auto-push the current branch after every successful commit.
+# Skip detached HEAD, rebases, and missing remotes.
+
+branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null) || exit 0
+if [ "$branch" = "HEAD" ]; then
+  exit 0
+fi
+
+git_dir=$(git rev-parse --git-path .)
+if [ -d "$git_dir/rebase-merge" ] || [ -d "$git_dir/rebase-apply" ] || [ -f "$git_dir/MERGE_HEAD" ]; then
+  exit 0
+fi
+
+remote=$(git config --get "branch.$branch.remote" 2>/dev/null)
+if [ -z "$remote" ]; then
+  remote=origin
+fi
+
+if ! git remote get-url "$remote" >/dev/null 2>&1; then
+  echo "[post-commit] no remote '$remote' — skip auto-push" >&2
+  exit 0
+fi
+
+# Push quietly; never fail the commit if network/auth fails.
+if git push "$remote" "HEAD:refs/heads/$branch" 2>&1; then
+  echo "[post-commit] auto-pushed $branch → $remote"
+else
+  echo "[post-commit] auto-push failed (commit kept locally)" >&2
+fi
+exit 0
