@@ -315,14 +315,16 @@ async function finalizeMatch(m, boardState) {
   }
   if (!releaseGameEscrow(p1, { ...TTT_ESCROW, amount: bet })) {
     m.expiresAt = 0;
-    await expireMatchWithRefund(m, activeMatches, TTT_ESCROW);
+    m._finalizeAttempted = true;
+    await expireMatchWithRefund(m, activeMatches, { ...TTT_ESCROW, forceAbandon: true });
     return { match: publicMatch(m) };
   }
   if (m.mode === 'pvp' && p2) {
     if (!releaseGameEscrow(p2, { ...TTT_ESCROW, amount: bet })) {
       m._expireCreditUserIds = new Set([m.player1.userId]);
       m.expiresAt = 0;
-      await expireMatchWithRefund(m, activeMatches, TTT_ESCROW);
+      m._finalizeAttempted = true;
+      await expireMatchWithRefund(m, activeMatches, { ...TTT_ESCROW, forceAbandon: true });
       return { match: publicMatch(m) };
     }
   }

@@ -348,14 +348,16 @@ async function finalizeMatch(m) {
   }
   if (!releaseGameEscrow(p1, { ...RPS_ESCROW, amount: bet })) {
     m.expiresAt = 0;
-    await expireMatchWithRefund(m, activeMatches, RPS_EXPIRE_META);
+    m._finalizeAttempted = true;
+    await expireMatchWithRefund(m, activeMatches, { ...RPS_EXPIRE_META, forceAbandon: true });
     return { match: publicMatch(m) };
   }
   if (m.mode === 'pvp' && p2) {
     if (!releaseGameEscrow(p2, { ...RPS_ESCROW, amount: bet })) {
       m._expireCreditUserIds = new Set([m.player1.userId]);
       m.expiresAt = 0;
-      await expireMatchWithRefund(m, activeMatches, RPS_EXPIRE_META);
+      m._finalizeAttempted = true;
+      await expireMatchWithRefund(m, activeMatches, { ...RPS_EXPIRE_META, forceAbandon: true });
       return { match: publicMatch(m) };
     }
   }
