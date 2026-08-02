@@ -94,6 +94,7 @@ html, body, #root {
   left: 0;
   right: 0;
   height: 420px;
+  /* Never steal clicks from Fun content / trap button under the claw layer */
   pointer-events: none;
   z-index: 40;
 }
@@ -102,6 +103,7 @@ html, body, #root {
   position: relative;
   width: 100%;
   height: 100%;
+  pointer-events: none;
 }
 
 .grab-zone__danger {
@@ -111,7 +113,8 @@ html, body, #root {
   transform: translateX(-50%);
   width: min(92%, 780px);
   height: 100%;
-  pointer-events: auto;
+  /* Proximity uses document mousemove — keep this transparent so Button! stays clickable */
+  pointer-events: none;
 }
 
 /* Active monster states positions */
@@ -208,6 +211,20 @@ html, body, #root {
   cursor: pointer;
   z-index: 4;
   transition: transform 0.1s;
+  /* Only the claw sprite receives pointer events (hand-dwell grab) */
+  pointer-events: auto;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .grabber__face {
+    animation: none !important;
+  }
+  .grabber,
+  .grabber__arm,
+  .grabber__arm-wrapper,
+  .grabber__hand {
+    transition: none !important;
+  }
 }
 
 .grabber__hand::after {

@@ -23,7 +23,9 @@ export function useFirebaseCaughtCount() {
   }, []);
 
   const recordCatch = useCallback(() => {
-    runTransaction(caughtCountRef, (current) => (current ?? 0) + 1);
+    runTransaction(caughtCountRef, (current) => (current ?? 0) + 1).catch(() => {
+      /* Firebase optional — offline / blocked must not break Fun page */
+    });
   }, []);
 
   return { caughtCount, recordCatch };

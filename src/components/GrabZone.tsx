@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { GrabState } from '../types';
 
 interface GrabZoneProps {
@@ -17,12 +17,12 @@ interface GrabZoneProps {
 }
 
 const ASSETS = {
-  head: "https://s3-us-west-2.amazonaws.com/s.cdpn.io/184729/head.svg",
-  waiting: "https://s3-us-west-2.amazonaws.com/s.cdpn.io/184729/hand.svg",
-  stalking: "https://s3-us-west-2.amazonaws.com/s.cdpn.io/184729/hand-waiting.svg",
-  grabbing: "https://s3-us-west-2.amazonaws.com/s.cdpn.io/184729/hand.svg",
-  grabbed: "https://s3-us-west-2.amazonaws.com/s.cdpn.io/184729/hand-with-cursor.svg",
-  shaka: "https://s3-us-west-2.amazonaws.com/s.cdpn.io/184729/hand-surfs-up.svg",
+  head: 'https://s3-us-west-2.amazonaws.com/s.cdpn.io/184729/head.svg',
+  waiting: 'https://s3-us-west-2.amazonaws.com/s.cdpn.io/184729/hand.svg',
+  stalking: 'https://s3-us-west-2.amazonaws.com/s.cdpn.io/184729/hand-waiting.svg',
+  grabbing: 'https://s3-us-west-2.amazonaws.com/s.cdpn.io/184729/hand.svg',
+  grabbed: 'https://s3-us-west-2.amazonaws.com/s.cdpn.io/184729/hand-with-cursor.svg',
+  shaka: 'https://s3-us-west-2.amazonaws.com/s.cdpn.io/184729/hand-surfs-up.svg',
 };
 
 const LETHAL_BUTTON_RADIUS = 260;
@@ -53,6 +53,10 @@ export function GrabZone({
   const innerDwellTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lethalDwellTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const handDwellTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const cursorGrabbedRef = useRef(cursorGrabbed);
+  const gameOverRef = useRef(gameOver);
+  cursorGrabbedRef.current = cursorGrabbed;
+  gameOverRef.current = gameOver;
 
   const [outerHovered, setOuterHovered] = useState(false);
   const [innerHovered, setInnerHovered] = useState(false);
@@ -68,11 +72,11 @@ export function GrabZone({
   if (cursorGrabbed) state = 'grabbed';
   if (gameOver) state = 'shaka';
 
-  const syncArmingState = () => {
+  const syncArmingState = useCallback(() => {
     setIsArmingGrab(Boolean(innerDwellTimer.current || lethalDwellTimer.current || handDwellTimer.current));
-  };
+  }, []);
 
-  const clearDwellTimers = () => {
+  const clearDwellTimers = useCallback(() => {
     if (innerDwellTimer.current) {
       clearTimeout(innerDwellTimer.current);
       innerDwellTimer.current = null;
@@ -86,15 +90,19 @@ export function GrabZone({
       handDwellTimer.current = null;
     }
     setIsArmingGrab(false);
-  };
+  }, []);
 
-  const attemptGrab = () => {
-    if (cursorGrabbed || gameOver) return;
+  const attemptGrab = useCallback(() => {
+    if (cursorGrabbedRef.current || gameOverRef.current) return;
     clearDwellTimers();
     onCursorGrabbed();
-  };
+  }, [clearDwellTimers, onCursorGrabbed]);
 
-  const scheduleGrab = (timerRef: React.MutableRefObject<ReturnType<typeof setTimeout> | null>, delayMs: number) => {
+  const scheduleGrab = useCallback((
+    timerRef: React.MutableRefObject<ReturnType<typeof setTimeout> | null>,
+    delayMs: number,
+  ) => {
+    if (cursorGrabbedRef.current || gameOverRef.current) return;
     if (timerRef.current) return;
     setIsArmingGrab(true);
     timerRef.current = setTimeout(() => {
@@ -102,7 +110,7 @@ export function GrabZone({
       setIsArmingGrab(false);
       attemptGrab();
     }, delayMs);
-  };
+  }, [attemptGrab]);
 
   useEffect(() => {
     if (onMetricsUpdate) {
@@ -151,9 +159,20 @@ export function GrabZone({
     setRotation(clampedRotation);
   }, [mousePos, gameOver, cursorGrabbed]);
 
+  // Hard-stop dwell timers when grab/cooldown starts
+  useEffect(() => {
+    if (cursorGrabbed || gameOver) {
+      clearDwellTimers();
+      setOuterHovered(false);
+      setInnerHovered(false);
+      setNearButton(false);
+      setLethalProximity(false);
+    }
+  }, [cursorGrabbed, gameOver, clearDwellTimers]);
+
   useEffect(() => {
     const handleGlobalMouseMove = (e: MouseEvent) => {
-      if (cursorGrabbed || gameOver) return;
+      if (cursorGrabbedRef.current || gameOverRef.current) return;
 
       const buttonEl = trapButtonRef?.current;
       let btnDist = Infinity;
@@ -178,19 +197,19 @@ export function GrabZone({
       if (!outerRef.current) return;
       const outerRect = outerRef.current.getBoundingClientRect();
       const inOuter =
-        e.clientX >= outerRect.left &&
-        e.clientX <= outerRect.right &&
-        e.clientY >= outerRect.top &&
-        e.clientY <= outerRect.bottom;
+        e.clientX >= outerRect.left
+        && e.clientX <= outerRect.right
+        && e.clientY >= outerRect.top
+        && e.clientY <= outerRect.bottom;
       setOuterHovered(inOuter);
 
       if (!innerRef.current) return;
       const innerRect = innerRef.current.getBoundingClientRect();
       const inInner =
-        e.clientX >= innerRect.left &&
-        e.clientX <= innerRect.right &&
-        e.clientY >= innerRect.top &&
-        e.clientY <= innerRect.bottom;
+        e.clientX >= innerRect.left
+        && e.clientX <= innerRect.right
+        && e.clientY >= innerRect.top
+        && e.clientY <= innerRect.bottom;
       setInnerHovered(inInner);
 
       if (innerDwellTimer.current && !inInner) {
@@ -202,12 +221,12 @@ export function GrabZone({
       }
     };
 
-    window.addEventListener('mousemove', handleGlobalMouseMove);
+    window.addEventListener('mousemove', handleGlobalMouseMove, { passive: true });
     return () => {
       window.removeEventListener('mousemove', handleGlobalMouseMove);
       clearDwellTimers();
     };
-  }, [cursorGrabbed, gameOver, trapButtonRef]);
+  }, [trapButtonRef, scheduleGrab, clearDwellTimers, syncArmingState]);
 
   useEffect(() => {
     Object.values(ASSETS).forEach((src) => {
@@ -222,13 +241,19 @@ export function GrabZone({
 
   return (
     <div className="grab-zone" ref={outerRef} id="interactive-grab-zone">
+      {/*
+        Danger zone is hit-test transparent so the trap button under it stays clickable.
+        Proximity uses document mousemove + getBoundingClientRect; only the claw hand
+        receives pointer events for the hand-dwell grab.
+      */}
       <div className="grab-zone__danger" ref={innerRef} id="danger-trigger-box">
         <div className={grabberClass} id="cute-creature-entity">
           <div className="grabber__body" id="creature-hatch" />
           <img
             className="grabber__face"
             src={ASSETS.head}
-            alt="Monster Head"
+            alt=""
+            draggable={false}
             referrerPolicy="no-referrer"
             id="creature-head"
           />
@@ -238,6 +263,7 @@ export function GrabZone({
                 className="grabber__hand"
                 src={handImageSrc}
                 alt="Monster Hand Claw"
+                draggable={false}
                 referrerPolicy="no-referrer"
                 onMouseEnter={() => scheduleGrab(handDwellTimer, HAND_GRAB_MS)}
                 onMouseLeave={() => {

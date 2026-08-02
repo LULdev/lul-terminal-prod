@@ -75,6 +75,8 @@ const VIEWPORT_PADDING = 8;
 const MIN_SCALE = 0.65;
 const MAX_SCALE = 1.85;
 const GRAB_HOLD_MS = 7500;
+/** Max auto re-grabs after a release while still near the claw (anti stuck-loop). */
+const MAX_AUTO_REGRABS = 2;
 
 const ALL_TAB_IDS = new Set<TabId>([
   'dashboard', 'stats', 'status', 'leaderboard', 'games', 'news', 'fun', 'faq', 'invite', 'changelog', 'memegen', 'imagehost', 'paste',
@@ -312,7 +314,14 @@ export default function App() {
   const [clawThreatLevel, setClawThreatLevel] = useState<0 | 1 | 2>(0);
   const trapButtonRef = useRef<HTMLButtonElement>(null);
   const grabReleaseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const gameOverTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const grabBeepTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
   const prevCursorGrabbed = useRef(false);
+  const autoRegrabCount = useRef(0);
+  const clawThreatRef = useRef(0);
+  const gameOverRef = useRef(false);
+  clawThreatRef.current = clawThreatLevel;
+  gameOverRef.current = gameOver;
   const { caughtCount, recordCatch } = useFirebaseCaughtCount();
 
   // Unrecognized command shake animation trigger state
@@ -518,6 +527,28 @@ export default function App() {
     terminalAppend(message, type);
   }, []);
 
+  const clearGrabBeepTimers = useCallback(() => {
+    for (const t of grabBeepTimers.current) clearTimeout(t);
+    grabBeepTimers.current = [];
+  }, []);
+
+  const resetFunTrapState = useCallback(() => {
+    if (grabReleaseTimer.current) {
+      clearTimeout(grabReleaseTimer.current);
+      grabReleaseTimer.current = null;
+    }
+    if (gameOverTimer.current) {
+      clearTimeout(gameOverTimer.current);
+      gameOverTimer.current = null;
+    }
+    clearGrabBeepTimers();
+    setCursorGrabbed(false);
+    setGameOver(false);
+    setClawThreatLevel(0);
+    autoRegrabCount.current = 0;
+    prevCursorGrabbed.current = false;
+  }, [clearGrabBeepTimers]);
+
   const handleCursorGrabbed = useCallback(() => {
     if (cursorGrabbed || gameOver) return;
 
@@ -544,47 +575,76 @@ export default function App() {
     }
     terminalAppend('🎯 CURSOR SNATCHED! Gravity core localized. Escape probability: < 0.1%', 'alert');
     playBeep(440, 0.4, 'triangle');
-    setTimeout(() => playBeep(220, 0.4, 'sawtooth'), 150);
+    clearGrabBeepTimers();
+    grabBeepTimers.current.push(setTimeout(() => playBeep(220, 0.4, 'sawtooth'), 150));
 
     if (grabReleaseTimer.current) clearTimeout(grabReleaseTimer.current);
     grabReleaseTimer.current = setTimeout(() => {
+      grabReleaseTimer.current = null;
       setCursorGrabbed(false);
       terminalAppend('💨 Brief quantum leakage detected — claw re-arming...', 'warn');
       playBeep(600, 0.25, 'sine');
     }, GRAB_HOLD_MS);
-  }, [cursorGrabbed, gameOver, recordCatch, handleUnlocks, patchUser, playBeep]);
+  }, [cursorGrabbed, gameOver, recordCatch, handleUnlocks, patchUser, playBeep, clearGrabBeepTimers]);
 
+  // Leaving Fun fully resets trap state so overlay/timers never leak to other tabs
   useEffect(() => {
     if (renderTab !== 'fun') {
-      setClawThreatLevel(0);
+      resetFunTrapState();
     }
-  }, [renderTab]);
+  }, [renderTab, resetFunTrapState]);
+
+  // When user leaves the threat zone, allow auto re-grabs again later
+  useEffect(() => {
+    if (clawThreatLevel === 0) {
+      autoRegrabCount.current = 0;
+    }
+  }, [clawThreatLevel]);
 
   useEffect(() => {
     const wasGrabbed = prevCursorGrabbed.current;
     prevCursorGrabbed.current = cursorGrabbed;
-    if (wasGrabbed && !cursorGrabbed && clawThreatLevel >= 1 && renderTab === 'fun' && !gameOver) {
-      const regrabTimer = setTimeout(() => handleCursorGrabbed(), 1000);
+    if (
+      wasGrabbed
+      && !cursorGrabbed
+      && clawThreatLevel >= 1
+      && renderTab === 'fun'
+      && !gameOver
+      && autoRegrabCount.current < MAX_AUTO_REGRABS
+    ) {
+      const regrabTimer = setTimeout(() => {
+        if (clawThreatRef.current < 1 || gameOverRef.current) return;
+        autoRegrabCount.current += 1;
+        handleCursorGrabbed();
+      }, 1000);
       return () => clearTimeout(regrabTimer);
     }
+    return undefined;
   }, [cursorGrabbed, clawThreatLevel, renderTab, gameOver, handleCursorGrabbed]);
 
   useEffect(() => {
     return () => {
       if (grabReleaseTimer.current) clearTimeout(grabReleaseTimer.current);
+      if (gameOverTimer.current) clearTimeout(gameOverTimer.current);
+      clearGrabBeepTimers();
     };
-  }, []);
+  }, [clearGrabBeepTimers]);
 
   const handleButtonClicked = () => {
-    if (cursorGrabbed) return;
+    if (cursorGrabbed || gameOver) return;
     setGameOver(true);
+    autoRegrabCount.current = MAX_AUTO_REGRABS; // no re-grab spam during/after win
     terminalAppend('🎉 TRAP BUTTON clicked! System over-excitation triggered!', 'success');
     playBeep(520, 0.15, 'sine');
-    setTimeout(() => playBeep(650, 0.15, 'sine'), 100);
-    setTimeout(() => playBeep(780, 0.3, 'sine'), 200);
+    clearGrabBeepTimers();
+    grabBeepTimers.current.push(setTimeout(() => playBeep(650, 0.15, 'sine'), 100));
+    grabBeepTimers.current.push(setTimeout(() => playBeep(780, 0.3, 'sine'), 200));
 
-    setTimeout(() => {
+    if (gameOverTimer.current) clearTimeout(gameOverTimer.current);
+    gameOverTimer.current = setTimeout(() => {
+      gameOverTimer.current = null;
       setGameOver(false);
+      autoRegrabCount.current = 0;
       terminalAppend('⚙️ System cooled down. Gravity grids restored. (The claw remembers.)', 'info');
     }, 8000);
   };
