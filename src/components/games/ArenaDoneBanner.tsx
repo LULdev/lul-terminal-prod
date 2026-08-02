@@ -33,6 +33,8 @@ export function ArenaDoneBanner({
   acting = false,
 }: Props) {
   const tone = outcomeTone(outcome);
+  // Shared match carries winner-only streak/jackpot — only show for the victor
+  const showRewards = outcome === 'win';
 
   return (
     <div className="p-6 text-center space-y-3 arena-done-pop">
@@ -41,12 +43,12 @@ export function ArenaDoneBanner({
       <div className={`text-sm font-mono font-bold uppercase ${tone}`}>
         {outcomeLabel(outcome)}
       </div>
-      {streakBonus > 0 && (
+      {showRewards && streakBonus > 0 && (
         <p className="text-[10px] font-mono flex items-center justify-center gap-1.5">
           🔥 Streak bonus <LulCoinAmount amount={streakBonus} variant="streak" size="sm" />
         </p>
       )}
-      {jackpotHit && (
+      {showRewards && jackpotHit && jackpotAmount > 0 && (
         <p className="lul-coin-jackpot-pool text-[11px] font-mono flex items-center justify-center">
           🎰 Jackpot <LulCoinAmount amount={jackpotAmount} variant="jackpot" size="md" />
         </p>

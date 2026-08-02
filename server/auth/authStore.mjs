@@ -33,7 +33,11 @@ export async function ensureAuthStore() {
 
 export async function loadUsersDb() {
   try {
-    return readUsersDbShape();
+    const store = usersWriteAls.getStore();
+    if (store?.db) return store.db;
+    const db = readUsersDbShape();
+    if (store) store.db = db;
+    return db;
   } catch (err) {
     console.error('[auth] CRITICAL: SQLite user store unreadable', err);
     throw new Error('User database unavailable');
@@ -42,10 +46,16 @@ export async function loadUsersDb() {
 
 export async function saveUsersDb(db) {
   writeUsersDbShape(db);
+  const store = usersWriteAls.getStore();
+  if (store) store.db = db;
 }
 
 let usersWriteChain = Promise.resolve();
-/** Tracks re-entrant withUsersWrite (settle/expire nested under submitMove). */
+/**
+ * Re-entrant withUsersWrite context.
+ * Holds a single shared users DB snapshot so nested settle/expire/join
+ * cannot load a second copy and clobber earlier credits on save.
+ */
 const usersWriteAls = new AsyncLocalStorage();
 
 /**
@@ -57,7 +67,8 @@ export function withUsersWrite(task) {
   if (usersWriteAls.getStore()) {
     return Promise.resolve().then(() => task());
   }
-  const run = usersWriteChain.then(() => usersWriteAls.run(1, () => task()));
+  const ctx = { db: null };
+  const run = usersWriteChain.then(() => usersWriteAls.run(ctx, () => task()));
   usersWriteChain = run.then(() => undefined, () => undefined);
   return run;
 }

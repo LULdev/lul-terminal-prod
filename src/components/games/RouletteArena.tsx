@@ -299,10 +299,16 @@ export function RouletteArena({
           <button
             type="button"
             className="roulette-spin-btn"
-            disabled={!isLoggedIn || total < minBet || acting || spinning}
+            disabled={!isLoggedIn || total < minBet || acting || spinning || matchActive || waiting}
             onClick={spin}
           >
-            {acting || spinning ? 'Spinning…' : match?.status === 'done' ? 'Spin again' : 'Spin'}
+            {acting || spinning || match?.status === 'playing'
+              ? 'Spinning…'
+              : waiting
+                ? 'Starting…'
+                : match?.status === 'done'
+                  ? 'Spin again'
+                  : 'Spin'}
           </button>
 
           {!isLoggedIn && (
@@ -310,7 +316,19 @@ export function RouletteArena({
           )}
 
           {waiting && (
-            <button type="button" className="roulette-link" onClick={onCancel}>Cancel queue</button>
+            <button type="button" className="roulette-link" onClick={onCancel} disabled={acting}>Cancel</button>
+          )}
+          {match?.status === 'playing' && submitAttemptsRef.current >= 3 && !acting && (
+            <button
+              type="button"
+              className="roulette-link"
+              onClick={() => {
+                submittedForMatchRef.current = null;
+                submitAttemptsRef.current = 0;
+              }}
+            >
+              Retry spin
+            </button>
           )}
         </aside>
 

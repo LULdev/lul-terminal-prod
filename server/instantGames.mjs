@@ -219,6 +219,14 @@ export const highlow = createInstantDuelGame({
   },
 });
 
+/** Solo minefield: 8/9 safe → fair mult with ~2% house edge (not free 2×). */
+const MINES_HOUSE_EDGE = 0.02;
+const MINES_SAFE_CHANCE = 8 / 9;
+const MINES_SOLO_MULT = Math.max(
+  1.01,
+  Math.floor(((1 - MINES_HOUSE_EDGE) / MINES_SAFE_CHANCE) * 10000) / 10000,
+);
+
 export const mines = createInstantDuelGame({
   gameId: 'mines',
   statKey: 'Mines',
@@ -233,9 +241,21 @@ export const mines = createInstantDuelGame({
     const p1Cell = Number(m.player1.move);
     const p2Cell = Number(m.player2.move);
     m.reveal = { mine, p1Cell, p2Cell };
-    // Solo vs terminal: safe cell wins, mine loses (bot cell is decorative only)
+    // Solo vs terminal: safe cell wins at fair mult; mine loses (bot cell decorative)
     if (m.mode === 'bot') {
-      return p1Cell === mine ? 'p2' : 'p1';
+      if (p1Cell === mine) {
+        m.payoutMultiplier = 0;
+        m.reveal.won = false;
+        m.reveal.multiplier = MINES_SOLO_MULT;
+        return 'p2';
+      }
+      const bet = Number(m.bet) || 0;
+      m.payoutMultiplier = MINES_SOLO_MULT;
+      m.payoutExact = Math.max(0, Math.round(bet * MINES_SOLO_MULT));
+      m.reveal.won = true;
+      m.reveal.multiplier = MINES_SOLO_MULT;
+      m.reveal.payout = m.payoutExact;
+      return 'p1';
     }
     // PvP: avoid the mine — hit = loss for that player
     const p1Hit = p1Cell === mine;

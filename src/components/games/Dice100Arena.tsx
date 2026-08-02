@@ -187,10 +187,14 @@ export function Dice100Arena({
             </div>
           </div>
 
-          {!match || match.status === 'done' ? (
+          {waiting && !match ? (
+            <button type="button" disabled className="dice100-bet-btn dice100-bet-btn--busy">
+              <RefreshCw size={14} className="animate-spin inline" /> Starting…
+            </button>
+          ) : !match || match.status === 'done' ? (
             <button
               type="button"
-              disabled={!isLoggedIn || acting}
+              disabled={!isLoggedIn || acting || waiting}
               onClick={() => {
                 pendingMoveRef.current = encodeMove(dir, target);
                 submittedForMatchRef.current = null;
@@ -220,8 +224,20 @@ export function Dice100Arena({
           )}
 
           {waiting && (
-            <button type="button" onClick={onCancel} className="dice100-cancel">
+            <button type="button" onClick={onCancel} className="dice100-cancel" disabled={acting}>
               Cancel
+            </button>
+          )}
+          {match?.status === 'playing' && submitAttemptsRef.current >= 3 && !acting && (
+            <button
+              type="button"
+              className="dice100-cancel"
+              onClick={() => {
+                submittedForMatchRef.current = null;
+                submitAttemptsRef.current = 0;
+              }}
+            >
+              Retry roll
             </button>
           )}
         </aside>

@@ -250,8 +250,8 @@ export const GAME_CATALOG: GameCatalogEntry[] = [
     arenaType: 'mines',
     category: 'instant',
     tagline: 'Avoid the mine',
-    description: 'A 3×3 grid hides one mine. Tap a safe cell to win — step on the bomb and the pot is gone.',
-    rules: ['3×3 grid, one hidden mine', 'Pick a cell', 'Hit mine = loss'],
+    description: 'A 3×3 grid hides one mine. Tap a safe cell to win — step on the bomb and the pot is gone. Solo pays fair odds (~1.10×) with a small house edge.',
+    rules: ['3×3 grid, one hidden mine', 'Pick a cell · hit mine = loss', 'Solo safe win ≈ 1.10× (2% edge)'],
   },
   {
     id: 'blackjack',

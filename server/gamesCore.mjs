@@ -41,6 +41,7 @@ import {
 import { runCoinTransaction } from './gamesCoinLock.mjs';
 import { normalizeProfileCustomization } from './profileCustomization.mjs';
 import { assertNoOtherArcadeSession, assertPvpPairReady } from './gamesSessionGuard.mjs';
+import { ARCADE_GAMES_META } from './arcadeMeta.mjs';
 
 export const ROOM_TOMBSTONE_MS = 90_000;
 const MAX_QUEUE_ENTRIES = 200;
@@ -102,54 +103,38 @@ function refundBetOnExpire(user, { gameId, chatLabel, matchId, bet, amount }, { 
   const released =
     releaseGameEscrow(user, { gameId, amount: amt }) ||
     releaseAnyGameEscrow(user, amt);
-  if (released || forceCredit) {
+  if (released) {
     logMatchExpireRefund(user, base);
     return;
   }
   const gid = gameId ?? 'arcade';
-  const matchingTotal = (user.gameEscrows ?? [])
-    .filter((e) => e.gameId === gid)
-    .reduce((s, e) => s + Math.max(0, Number(e.amount) || 0), 0);
-  if (matchingTotal >= amt) {
-    stripEscrowRows(user, amt, { gameId: gid });
-    logMatchExpireRefund(user, base);
+  // Prefer stripping real escrow rows over minting coins
+  const strippedGame = stripEscrowRows(user, amt, { gameId: gid });
+  if (strippedGame > 0) {
+    logMatchExpireRefund(user, { ...base, amount: strippedGame });
     console.warn('[games] escrow recovery — stripped game escrow + credited', {
       userId: user.id,
       gameId: gid,
-      amount: amt,
+      amount: strippedGame,
     });
     return;
   }
-  const escrowTotal = (user.gameEscrows ?? []).reduce((s, e) => s + Math.max(0, Number(e.amount) || 0), 0);
-  if (escrowTotal >= amt) {
-    stripEscrowRows(user, amt);
-    logMatchExpireRefund(user, base);
+  const strippedAny = stripEscrowRows(user, amt);
+  if (strippedAny > 0) {
+    logMatchExpireRefund(user, { ...base, amount: strippedAny });
     console.warn('[games] escrow recovery — cross-game strip fallback + credited', {
       userId: user.id,
       gameId: gid,
-      amount: amt,
+      amount: strippedAny,
     });
     return;
   }
-  if (escrowTotal > 0) {
-    stripEscrowRows(user, escrowTotal);
-    logMatchExpireRefund(user, { ...base, amount: Math.min(amt, escrowTotal) });
-    console.warn('[games] expire refund partial-credited — matched escrow only', {
-      userId: user.id,
-      gameId: gid,
-      requested: amt,
-      credited: Math.min(amt, escrowTotal),
-    });
-    return;
-  }
-  if (forceCredit) {
-    logMatchExpireRefund(user, base);
-    return;
-  }
+  // Never mint: forceCredit only documents that we tried (logout/abandon)
   console.warn('[games] expire refund skipped — no escrow rows', {
     userId: user.id,
     gameId,
     amount: amt,
+    forceCredit,
   });
 }
 
@@ -393,15 +378,11 @@ export async function settleMatch({
 
   if (m.mode === 'bot') {
     // Solo house games (Dice Duel, Dice 100, Roulette):
-    //  1) every bet seeds a small % into the jackpot pot
-    //  2) losses feed the full remaining stake into the pot (net 100% of lost wager)
+    //  losses → full stake to pot; wins → small seed taken from credit (never zero a win)
     const isHouseSolo = gameId === 'dice100' || gameId === 'dice' || gameId === 'roulette';
     const dicePotSeed = isHouseSolo
       ? Math.max(1, Math.floor(bet * DICE_POT_SEED_RATE))
       : 0;
-    if (dicePotSeed > 0) {
-      await addToJackpot(dicePotSeed);
-    }
 
     if (r === 'draw') {
       outcome = 'draw';
@@ -409,7 +390,7 @@ export async function settleMatch({
       bumpGameStats(p1, statKey, 'draw');
     } else if (r === 'p1') {
       outcome = 'win';
-      // Optional variable payout (Dice 100 / Roulette); default 2× pot
+      // Optional variable payout (Dice 100 / Roulette / Mines); default 2× pot
       // Only honor payoutExact when explicitly set (null/undefined must not coerce to 0).
       const hasExact = m.payoutExact != null && m.payoutExact !== '';
       const exact = hasExact ? Number(m.payoutExact) : NaN;
@@ -424,11 +405,18 @@ export async function settleMatch({
       } else {
         p1Delta = bet * 2;
       }
-      // House solo: jackpot seed is taken from the win credit (not printed from thin air)
+      // House solo: take seed from win credit but never zero a declared win
       if (dicePotSeed > 0 && p1Delta > 0) {
-        p1Delta = Math.max(0, p1Delta - dicePotSeed);
+        const take = Math.min(dicePotSeed, Math.max(0, p1Delta - 1));
+        p1Delta -= take;
+        if (take > 0) await addToJackpot(take);
       }
+      // Keep public payoutExact / reveal in sync with actual credit
       if (p1Delta > 0) {
+        m.payoutExact = p1Delta;
+        if (m.reveal && typeof m.reveal === 'object') {
+          m.reveal = { ...m.reveal, payout: p1Delta };
+        }
         logGameWinCredit(p1, { ...ledgerCtx, mode: 'bot', amount: p1Delta });
       }
       p1.gameTotalWon = (Number(p1.gameTotalWon) || 0) + Math.max(0, p1Delta - bet);
@@ -450,13 +438,8 @@ export async function settleMatch({
       }
     } else {
       outcome = 'loss';
-      // Losses always feed the jackpot: remaining stake after the per-bet seed (or full bet)
-      if (dicePotSeed > 0) {
-        const rest = bet - dicePotSeed;
-        if (rest > 0) await addToJackpot(rest);
-      } else {
-        await addToJackpot(bet);
-      }
+      // Full lost stake feeds the community jackpot pot
+      await addToJackpot(bet);
       p1.gameTotalLost = (Number(p1.gameTotalLost) || 0) + bet;
       bumpGameStats(p1, statKey, 'loss');
     }
@@ -1008,6 +991,12 @@ export async function expireMatchWithRefund(m, activeMatches, expireMeta) {
         });
         winner.gameTotalWon = (Number(winner.gameTotalWon) || 0) + bet;
         loser.gameTotalLost = (Number(loser.gameTotalLost) || 0) + bet;
+        // Keep W/L stats consistent with normal settles
+        const sk = ARCADE_GAMES_META.find((g) => g.id === gameId)?.statKey;
+        if (sk) {
+          bumpGameStats(winner, sk, 'win');
+          bumpGameStats(loser, sk, 'loss');
+        }
         winner.updatedAt = Date.now();
         loser.updatedAt = Date.now();
         m.status = 'done';

@@ -226,9 +226,9 @@ export function GamesPage() {
     };
   }, []);
 
-  useEffect(() => {
-    actingRef.current = acting;
-  }, [acting]);
+  // Do NOT sync actingRef from React state — that can overwrite beginAction()
+  // after an await when a stale setActing(false) commits. Own the ref only in
+  // beginAction / endActionAndSync.
 
   useEffect(() => {
     selectedGameRef.current = selectedGame;
@@ -276,11 +276,13 @@ export function GamesPage() {
     const outcome = matchOutcomeForUser(m, user?.id);
     const parts = [];
     if (m.result?.outcome === 'expired') parts.push('Match expired — refunded');
-    else if (m.jackpotHit) parts.push(`🎰 JACKPOT +${m.jackpotAmount}`);
+    else if (outcome === 'win' && m.jackpotHit) parts.push(`🎰 JACKPOT +${m.jackpotAmount}`);
     else if (outcome === 'win') parts.push('Victory!');
     else if (outcome === 'draw') parts.push('Draw — refunded');
+    else if (outcome === 'expired') parts.push('Match expired — refunded');
     else parts.push('Defeat');
-    if (m.streakBonus > 0) parts.push(`+${m.streakBonus} streak`);
+    // Streak/jackpot are winner-only on the shared match object
+    if (outcome === 'win' && m.streakBonus > 0) parts.push(`+${m.streakBonus} streak`);
     if (mountedRef.current) setMsg(parts.join(' · '));
     if (mountedRef.current) void refresh();
   }, [user?.id, syncAchievements, refresh]);
@@ -470,7 +472,7 @@ export function GamesPage() {
   }, [selectedGame]);
 
   const selectGame = useCallback(async (id: GameId) => {
-    if (acting || id === selectedGame) return;
+    if (actingRef.current || id === selectedGame) return;
     beginAction();
     let switchedTo: GameId | undefined;
     try {
@@ -671,6 +673,7 @@ export function GamesPage() {
   };
 
   const cancelQueue = async () => {
+    if (actingRef.current) return;
     beginAction();
     try {
       await leaveGameQueue(selectedGame);
@@ -707,7 +710,7 @@ export function GamesPage() {
       // Always re-hydrate match from server on failure
       applySlice = true;
       if (errMsg.includes('expired') || errMsg.includes('not found') || errMsg.includes('Escrow')) {
-        setMatch(null);
+        setMatchAuthoritative(null);
         setWaiting(false);
       }
       void refresh();
@@ -741,6 +744,7 @@ export function GamesPage() {
     },
     onModeChange: (m: 'pvp' | 'bot') => {
       void (async () => {
+        if (actingRef.current) return;
         beginAction();
         try {
           await leaveSelectedQueueIfNeeded();
@@ -796,6 +800,7 @@ export function GamesPage() {
             myDisplayName={user?.displayName}
             onSeriesChange={(s) => {
               void (async () => {
+                if (actingRef.current) return;
                 beginAction();
                 try {
                   await leaveSelectedQueueIfNeeded();

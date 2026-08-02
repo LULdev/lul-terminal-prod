@@ -181,13 +181,13 @@ export async function submitConnect4Move(userId, matchId, move) {
 
   if (m.mode === 'bot') {
     if (m.player1.userId !== userId || m.turn !== 'p1') throw new Error('Not your turn');
-    drop(m.board, col, 'X');
-    if (checkWin(m.board, 'X')) return finalizeC4(m, 'p1');
-    if (boardFull(m.board)) return finalizeC4(m, 'draw');
     if (Date.now() > m.expiresAt) {
       await expireMatchWithRefund(m, mm.activeMatches, { gameId: 'connect4', chatLabel: 'Connect Four' });
       throw new Error('Match expired');
     }
+    drop(m.board, col, 'X');
+    if (checkWin(m.board, 'X')) return finalizeC4(m, 'p1');
+    if (boardFull(m.board)) return finalizeC4(m, 'draw');
     m.expiresAt = Date.now() + MATCH_TIMEOUT_MS;
     const botCol = botConnect4(m.board, m.botDifficulty);
     drop(m.board, botCol, 'O');
@@ -202,14 +202,14 @@ export async function submitConnect4Move(userId, matchId, move) {
   const isP2 = m.player2.userId === userId;
   if (!isP1 && !isP2) throw new Error('Not your match');
   if ((isP1 && m.turn !== 'p1') || (isP2 && m.turn !== 'p2')) throw new Error('Not your turn');
-  const mark = isP1 ? 'X' : 'O';
-  drop(m.board, col, mark);
-  if (checkWin(m.board, mark)) return finalizeC4(m, isP1 ? 'p1' : 'p2');
-  if (boardFull(m.board)) return finalizeC4(m, 'draw');
   if (Date.now() > m.expiresAt) {
     await expireMatchWithRefund(m, mm.activeMatches, { gameId: 'connect4', chatLabel: 'Connect Four' });
     throw new Error('Match expired');
   }
+  const mark = isP1 ? 'X' : 'O';
+  drop(m.board, col, mark);
+  if (checkWin(m.board, mark)) return finalizeC4(m, isP1 ? 'p1' : 'p2');
+  if (boardFull(m.board)) return finalizeC4(m, 'draw');
   m.expiresAt = Date.now() + MATCH_TIMEOUT_MS;
   m.turn = m.turn === 'p1' ? 'p2' : 'p1';
   return { match: publicMatch(m) };

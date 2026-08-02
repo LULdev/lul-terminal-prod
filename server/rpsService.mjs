@@ -814,14 +814,20 @@ export async function submitMove(userId, matchId, move) {
 
     const slot = isP1 ? m.player1 : m.player2;
     if (slot.move) throw new Error('Move already submitted');
-    slot.move = move;
-
-    const bothReady = Boolean(m.player1.move && m.player2.move);
-    if (Date.now() > m.expiresAt && !bothReady) {
+    const other = isP1 ? m.player2 : m.player1;
+    // Expiry BEFORE recording move — prevents late submit from stealing forfeit pot
+    if (Date.now() > m.expiresAt) {
+      if (other?.move) {
+        slot.move = move;
+        if (m.seriesType === 'bo3') return processBo3Round(m);
+        return finalizeMatch(m);
+      }
       await expireMatchWithRefund(m, activeMatches, RPS_EXPIRE_META);
       throw new Error('Match expired');
     }
+    slot.move = move;
 
+    const bothReady = Boolean(m.player1.move && m.player2.move);
     if (bothReady) {
       if (m.seriesType === 'bo3') return processBo3Round(m);
       return finalizeMatch(m);

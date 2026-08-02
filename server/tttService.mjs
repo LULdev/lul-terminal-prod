@@ -692,7 +692,9 @@ export async function releaseTttUserSession(userId) {
 
 export async function submitTttMove(userId, matchId, cell) {
   const idx = Math.floor(Number(cell));
-  if (idx < 0 || idx > 8) throw new Error('Invalid cell');
+  if (!Number.isInteger(idx) || idx < 0 || idx > 8 || !Number.isFinite(Number(cell))) {
+    throw new Error('Invalid cell');
+  }
 
   return runCoinTransaction(async () => {
   const m = activeMatches.get(matchId);
@@ -701,15 +703,15 @@ export async function submitTttMove(userId, matchId, cell) {
   if (m.mode === 'bot') {
     if (m.player1.userId !== userId) throw new Error('Not your match');
     if (m.turn !== 'p1') throw new Error('Not your turn');
+    if (Date.now() > m.expiresAt) {
+      await expireMatchWithRefund(m, activeMatches, { gameId: 'ttt', chatLabel: 'Tic-Tac-Toe' });
+      throw new Error('Match expired');
+    }
     if (m.board[idx] !== null) throw new Error('Cell taken');
     m.board[idx] = 'X';
 
     let state = checkBoardState(m.board);
     if (state) return finalizeMatch(m, state);
-    if (Date.now() > m.expiresAt) {
-      await expireMatchWithRefund(m, activeMatches, { gameId: 'ttt', chatLabel: 'Tic-Tac-Toe' });
-      throw new Error('Match expired');
-    }
     m.expiresAt = Date.now() + MATCH_TIMEOUT_MS;
 
     const botCell = botPick(m.board, m.botDifficulty);
@@ -727,6 +729,10 @@ export async function submitTttMove(userId, matchId, cell) {
   const isP2 = m.player2.userId === userId;
   if (!isP1 && !isP2) throw new Error('Not your match');
   if ((isP1 && m.turn !== 'p1') || (isP2 && m.turn !== 'p2')) throw new Error('Not your turn');
+  if (Date.now() > m.expiresAt) {
+    await expireMatchWithRefund(m, activeMatches, { gameId: 'ttt', chatLabel: 'Tic-Tac-Toe' });
+    throw new Error('Match expired');
+  }
   if (m.board[idx] !== null) throw new Error('Cell taken');
 
   m.board[idx] = isP1 ? 'X' : 'O';
@@ -734,10 +740,6 @@ export async function submitTttMove(userId, matchId, cell) {
   const state = checkBoardState(m.board);
   if (state) return finalizeMatch(m, state);
 
-  if (Date.now() > m.expiresAt) {
-    await expireMatchWithRefund(m, activeMatches, { gameId: 'ttt', chatLabel: 'Tic-Tac-Toe' });
-    throw new Error('Match expired');
-  }
   m.expiresAt = Date.now() + MATCH_TIMEOUT_MS;
   m.turn = m.turn === 'p1' ? 'p2' : 'p1';
   return { match: publicMatch(m) };

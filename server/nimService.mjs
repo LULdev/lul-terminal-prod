@@ -156,12 +156,12 @@ export async function submitNimMove(userId, matchId, move) {
 
   if (m.mode === 'bot') {
     if (m.player1.userId !== userId || m.turn !== 'p1') throw new Error('Not your turn');
-    m.piles[pile] -= take;
-    if (m.piles.every((p) => p === 0)) return finalizeNim(m, 'p1');
     if (Date.now() > m.expiresAt) {
       await expireMatchWithRefund(m, mm.activeMatches, { gameId: 'nim', chatLabel: 'Nim' });
       throw new Error('Match expired');
     }
+    m.piles[pile] -= take;
+    if (m.piles.every((p) => p === 0)) return finalizeNim(m, 'p1');
     m.expiresAt = Date.now() + MATCH_TIMEOUT_MS;
     const botRaw = botNimMove(m.piles, m.botDifficulty);
     const botParsed = parseMove(botRaw);
@@ -177,13 +177,13 @@ export async function submitNimMove(userId, matchId, move) {
   const isP2 = m.player2.userId === userId;
   if (!isP1 && !isP2) throw new Error('Not your match');
   if ((isP1 && m.turn !== 'p1') || (isP2 && m.turn !== 'p2')) throw new Error('Not your turn');
-  m.piles[pile] -= take;
-  if (m.piles.every((p) => p === 0)) {
-    return finalizeNim(m, isP1 ? 'p1' : 'p2');
-  }
   if (Date.now() > m.expiresAt) {
     await expireMatchWithRefund(m, mm.activeMatches, { gameId: 'nim', chatLabel: 'Nim' });
     throw new Error('Match expired');
+  }
+  m.piles[pile] -= take;
+  if (m.piles.every((p) => p === 0)) {
+    return finalizeNim(m, isP1 ? 'p1' : 'p2');
   }
   m.expiresAt = Date.now() + MATCH_TIMEOUT_MS;
   m.turn = m.turn === 'p1' ? 'p2' : 'p1';
