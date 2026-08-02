@@ -22,6 +22,7 @@ export function VaultPasswordReveal({ accountId, hasPassword = true, initialPass
   const [copied, setCopied] = useState(false);
 
   const reveal = useCallback(async () => {
+    if (loading) return;
     if (revealed && password) return;
     if (!hasPassword) {
       setError('No password stored');

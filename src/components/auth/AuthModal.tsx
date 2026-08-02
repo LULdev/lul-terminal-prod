@@ -35,6 +35,7 @@ export function AuthModal() {
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (loading) return;
     const trimmedEmail = email.trim();
     if (!trimmedEmail) {
       setError('Email or username is required');

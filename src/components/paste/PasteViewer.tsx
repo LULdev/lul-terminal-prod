@@ -219,6 +219,7 @@ export function PasteViewer({ id, embedded = false }: Props) {
 
   const onUnlock = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (unlocking) return;
     setUnlocking(true);
     setError('');
     try {

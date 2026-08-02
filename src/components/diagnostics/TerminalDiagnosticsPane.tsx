@@ -540,6 +540,8 @@ export const TerminalDiagnosticsPane = memo(function TerminalDiagnosticsPane({
     ],
   );
 
+  const chatSendInFlightRef = useRef(false);
+
   const executeCommand = async (e: React.FormEvent) => {
     e.preventDefault();
     const text = commandInput.trim();
@@ -556,23 +558,29 @@ export const TerminalDiagnosticsPane = memo(function TerminalDiagnosticsPane({
       return;
     }
 
-    const result = await sendChatRef.current(text);
-    if (result.ok) {
-      setCommandInput('');
-      setCommandHistory((prev) => (prev.length > 0 && prev[prev.length - 1] === text ? prev : [...prev, text]));
-      setHistoryIndex(-1);
-      setTempInput('');
-      return;
+    if (chatSendInFlightRef.current) return;
+    chatSendInFlightRef.current = true;
+    try {
+      const result = await sendChatRef.current(text);
+      if (result.ok) {
+        setCommandInput('');
+        setCommandHistory((prev) => (prev.length > 0 && prev[prev.length - 1] === text ? prev : [...prev, text]));
+        setHistoryIndex(-1);
+        setTempInput('');
+        return;
+      }
+      if (result.error === 'CHAT_AUTH_REQUIRED') {
+        void refresh().finally(() => openAuth('login'));
+        return;
+      }
+      if (result.retryAfterMs) {
+        appendLog(`💬 Rate limited — wait a moment before sending again.`, 'warn');
+        return;
+      }
+      appendLog(`💬 ${result.error}`, 'warn');
+    } finally {
+      chatSendInFlightRef.current = false;
     }
-    if (result.error === 'CHAT_AUTH_REQUIRED') {
-      void refresh().finally(() => openAuth('login'));
-      return;
-    }
-    if (result.retryAfterMs) {
-      appendLog(`💬 Rate limited — wait a moment before sending again.`, 'warn');
-      return;
-    }
-    appendLog(`💬 ${result.error}`, 'warn');
   };
 
   return (

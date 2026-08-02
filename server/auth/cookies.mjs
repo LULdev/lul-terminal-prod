@@ -26,10 +26,12 @@ export function parseCookies(req) {
 }
 
 function useSecureCookies() {
+  // Explicit off for local HTTP; production defaults to Secure
   if (process.env.COOKIE_SECURE === '0' || process.env.COOKIE_SECURE === 'false') return false;
   if (process.env.COOKIE_SECURE === '1' || process.env.COOKIE_SECURE === 'true') return true;
   const base = String(process.env.PUBLIC_BASE_URL ?? '').trim().toLowerCase();
   if (base.startsWith('https://')) return true;
+  if (process.env.NODE_ENV === 'production') return true;
   return false;
 }
 

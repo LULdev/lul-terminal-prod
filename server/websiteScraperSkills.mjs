@@ -323,16 +323,14 @@ export async function fetchPageWithRetry(url, { timeoutMs = 12000, signal, maxAt
     if (attempt > 0) await new Promise((r) => setTimeout(r, 400 * attempt));
 
     try {
-      await assertSafeFetchUrlAsync(url);
-      const res = await fetch(url, {
+      const { safeFetch } = await import('./assertSafeFetchUrl.mjs');
+      const res = await safeFetch(url, {
         signal: ctrl.signal,
         headers: fetchHeaders(attempt),
-        redirect: 'follow',
       });
       clearTimeout(t);
       signal?.removeEventListener('abort', onAbort);
       const finalUrl = res.url || url;
-      await assertSafeFetchUrlAsync(finalUrl);
       const text = await res.text();
       return {
         ok: res.ok,

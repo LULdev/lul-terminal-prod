@@ -240,6 +240,7 @@ export function ProfilePage({ routeUsername, profileTabReadyTick = 0, onNavigate
   if (!user) return null;
 
   const save = async () => {
+    if (saving || avatarUploading) return;
     setSaving(true);
     setError('');
     setSuccess('');

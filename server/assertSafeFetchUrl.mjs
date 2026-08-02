@@ -115,3 +115,33 @@ export async function assertSafeFetchUrlAsync(urlStr) {
   }
   return href;
 }
+
+/**
+ * Fetch with manual redirect walking — re-validates each hop against SSRF rules.
+ * Never uses redirect:'follow' (that would hit private IPs before validation).
+ */
+export async function safeFetch(urlStr, init = {}, { maxRedirects = 5 } = {}) {
+  let current = await assertSafeFetchUrlAsync(urlStr);
+  const headers = { ...(init.headers ?? {}) };
+  const { signal, method } = init;
+
+  for (let hop = 0; hop <= maxRedirects; hop += 1) {
+    const res = await fetch(current, {
+      method: method ?? 'GET',
+      headers,
+      signal,
+      redirect: 'manual',
+    });
+    if (res.status >= 300 && res.status < 400) {
+      const loc = res.headers.get('location');
+      if (!loc) throw new Error('Redirect without Location');
+      const next = new URL(loc, current).href;
+      // Drain body to free the socket
+      await res.arrayBuffer().catch(() => {});
+      current = await assertSafeFetchUrlAsync(next);
+      continue;
+    }
+    return res;
+  }
+  throw new Error('Too many redirects');
+}

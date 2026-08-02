@@ -558,6 +558,7 @@ function QuickAddForm({ onAdded }: { onAdded: () => void }) {
   };
 
   const confirmSubmit = async () => {
+    if (saving) return;
     if (!validate()) return;
     setSaving(true);
     setFormError('');

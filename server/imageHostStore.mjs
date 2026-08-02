@@ -144,7 +144,14 @@ export async function getMeta(id) {
 export async function getFilePath(id) {
   const meta = await getMeta(id);
   if (!meta) return null;
-  const filePath = path.join(FILES_DIR, meta.filename);
+  // Never trust meta.filename for path — rebuild from id + extension only
+  const safeName = path.basename(String(meta.filename ?? ''));
+  if (!safeName || safeName !== meta.filename || safeName.includes('..')) return null;
+  const filePath = path.resolve(FILES_DIR, safeName);
+  if (!filePath.startsWith(path.resolve(FILES_DIR) + path.sep)
+    && filePath !== path.resolve(FILES_DIR)) {
+    return null;
+  }
   try {
     await fs.access(filePath);
     return { filePath, meta };
@@ -269,11 +276,17 @@ export async function adminDeleteImage(id) {
 }
 
 async function removeImageFiles(id, meta) {
-  const filePath = path.join(FILES_DIR, meta.filename);
-  await Promise.allSettled([
-    fs.unlink(filePath),
-    fs.unlink(path.join(META_DIR, `${id}.json`)),
-  ]);
+  const safeName = path.basename(String(meta.filename ?? ''));
+  const filePath = path.resolve(FILES_DIR, safeName);
+  const root = path.resolve(FILES_DIR) + path.sep;
+  if (!safeName || !filePath.startsWith(root)) {
+    await fs.unlink(path.join(META_DIR, `${id}.json`)).catch(() => {});
+  } else {
+    await Promise.allSettled([
+      fs.unlink(filePath),
+      fs.unlink(path.join(META_DIR, `${id}.json`)),
+    ]);
+  }
 
   const stats = await readStats();
   stats.imagesHosted = Math.max(0, (stats.imagesHosted ?? 0) - 1);

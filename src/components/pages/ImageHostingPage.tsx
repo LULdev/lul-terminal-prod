@@ -86,6 +86,7 @@ export function ImageHostingPage() {
   }, [preview]);
 
   const startUpload = useCallback(async (file: File) => {
+    if (phase === 'uploading') return;
     const validation = await validateImageFileAsync(file);
     if (validation) {
       setError(validation);
@@ -121,7 +122,7 @@ export function ImageHostingPage() {
       setError(friendly);
       setPhase('error');
     }
-  }, [preview, isLoggedIn, syncAchievements, refresh]);
+  }, [phase, preview, isLoggedIn, syncAchievements, refresh]);
 
   const onFiles = useCallback((files: FileList | File[] | null) => {
     const file = files?.[0];

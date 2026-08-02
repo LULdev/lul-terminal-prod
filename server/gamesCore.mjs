@@ -129,12 +129,21 @@ function refundBetOnExpire(user, { gameId, chatLabel, matchId, bet, amount }, { 
     });
     return;
   }
-  // Never mint: forceCredit only documents that we tried (logout/abandon)
+  // forceCredit: escrow was already released (e.g. partial settle) — must credit coins
+  // without escrow rows. Only used from known recovery paths, never for random expire.
+  if (forceCredit) {
+    logMatchExpireRefund(user, base);
+    console.warn('[games] expire refund force-credited (escrow already released)', {
+      userId: user.id,
+      gameId,
+      amount: amt,
+    });
+    return;
+  }
   console.warn('[games] expire refund skipped — no escrow rows', {
     userId: user.id,
     gameId,
     amount: amt,
-    forceCredit,
   });
 }
 
@@ -364,14 +373,17 @@ export async function settleMatch({
   }
   if (!releaseGameEscrow(p1, { gameId, amount: bet })) {
     m.expiresAt = 0;
-    await expireMatchWithRefund(m, activeMatches, { gameId, chatLabel });
+    m._finalizeAttempted = true; // skip dual-finalize loop
+    await expireMatchWithRefund(m, activeMatches, { gameId, chatLabel, forceAbandon: true });
     return { match: publicMatch(m) };
   }
   if (m.mode === 'pvp' && p2) {
     if (!releaseGameEscrow(p2, { gameId, amount: bet })) {
+      // P1 escrow already stripped — force-credit P1 on refund path
       m._expireCreditUserIds = new Set([m.player1.userId]);
       m.expiresAt = 0;
-      await expireMatchWithRefund(m, activeMatches, { gameId, chatLabel });
+      m._finalizeAttempted = true;
+      await expireMatchWithRefund(m, activeMatches, { gameId, chatLabel, forceAbandon: true });
       return { match: publicMatch(m) };
     }
   }
@@ -955,10 +967,17 @@ export async function expireMatchWithRefund(m, activeMatches, expireMeta) {
   if (m.status === 'done') return;
   if (m.status !== 'playing') return;
   if (m.player1?.move != null && m.player2?.move != null && !expireMeta?.forceAbandon) {
-    if (expireMeta?.finalizeDualSubmit) {
+    // One-shot dual finalize — never recurse settle → expire → settle
+    if (!m._finalizeAttempted && expireMeta?.finalizeDualSubmit) {
+      m._finalizeAttempted = true;
       await expireMeta.finalizeDualSubmit(m, activeMatches);
+      if (m.status === 'done') return;
+      // Finalize failed (escrow etc.) — fall through to refund both with force paths
+    } else if (m._finalizeAttempted) {
+      // already tried — fall through to dual refund
+    } else {
+      return;
     }
-    return;
   }
 
   const forceAbandon = Boolean(expireMeta?.forceAbandon);

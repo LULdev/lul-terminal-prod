@@ -127,6 +127,7 @@ export function UserDashboardPage({ onNavigate }: UserDashboardPageProps) {
   }, [earnedSorted]);
 
   const saveSecurity = async () => {
+    if (saving) return;
     if (!email.trim() || !user) return;
     const emailChanged = email.trim().toLowerCase() !== user.email.trim().toLowerCase();
     if (emailChanged && !currentPassword) {

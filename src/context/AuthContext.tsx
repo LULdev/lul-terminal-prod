@@ -144,7 +144,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setPermissions(data.permissions ?? defaultPermissions);
         setAccountsSubmitted(data.stats?.accountsSubmitted ?? 0);
         resetSessionInvalidation();
-      } else if (!userRef.current) {
+      } else {
+        // Soft /me with no user — clear zombie logged-in UI
         setUser(null);
         setPermissions(defaultPermissions);
         setAccountsSubmitted(0);
@@ -152,7 +153,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (e) {
       if (gen !== refreshGenRef.current) return;
       const status = (e as { status?: number })?.status;
-      if (status === 401 && !userRef.current) {
+      // Network blips must not wipe session; hard 401 does
+      if (status === 401) {
         setUser(null);
         setPermissions(defaultPermissions);
         setAccountsSubmitted(0);

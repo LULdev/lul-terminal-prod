@@ -25,6 +25,9 @@ function lockFilePath(key) {
  * @param {{ maxWaitMs?: number }} [opts]
  * @returns {Promise<T>}
  */
+/** Stale lock reclaim threshold (crashed holder). */
+const STALE_LOCK_MS = 20_000;
+
 export async function withCrossProcessLock(key, task, { maxWaitMs = 4000 } = {}) {
   await fs.mkdir(LOCK_DIR, { recursive: true });
   const lockPath = lockFilePath(key);
@@ -36,6 +39,14 @@ export async function withCrossProcessLock(key, task, { maxWaitMs = 4000 } = {})
       handle = await fs.open(lockPath, 'wx');
       break;
     } catch {
+      // Reclaim locks left by crashed processes (mtime older than STALE_LOCK_MS)
+      try {
+        const st = await fs.stat(lockPath);
+        if (Date.now() - st.mtimeMs > STALE_LOCK_MS) {
+          await fs.unlink(lockPath).catch(() => {});
+          continue;
+        }
+      } catch { /* gone */ }
       await new Promise((r) => setTimeout(r, 12 + Math.floor(Math.random() * 28)));
     }
   }
@@ -43,6 +54,8 @@ export async function withCrossProcessLock(key, task, { maxWaitMs = 4000 } = {})
   if (!handle) throw new Error('File lock timeout');
 
   try {
+    // Stamp lock content for operators
+    await handle.writeFile(JSON.stringify({ pid: process.pid, at: Date.now() }), 'utf8').catch(() => {});
     return await task();
   } finally {
     await handle.close().catch(() => {});

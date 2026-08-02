@@ -48,13 +48,12 @@ async function fetchUrlTextOnce(url, timeoutMs, attempt = 0) {
   const ctrl = new AbortController();
   const t = setTimeout(() => ctrl.abort(), timeoutMs);
   try {
-    const res = await fetch(url, {
+    const { safeFetch } = await import('./assertSafeFetchUrl.mjs');
+    const res = await safeFetch(url, {
       signal: ctrl.signal,
       headers: fetchHeaders(attempt),
-      redirect: 'follow',
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    await assertSafeFetchUrlAsync(res.url || url);
     const text = await res.text();
     return { ok: true, text, bytes: text.length, contentType: res.headers.get('content-type') };
   } catch (e) {

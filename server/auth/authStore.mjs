@@ -73,26 +73,38 @@ export function withUsersWrite(task) {
   return run;
 }
 
+let sessionsWriteChain = Promise.resolve();
+const sessionsWriteAls = new AsyncLocalStorage();
+
 export async function loadSessionsDb() {
   try {
-    return readSessionsDbShape();
+    const store = sessionsWriteAls.getStore();
+    if (store?.db) return store.db;
+    const db = readSessionsDbShape();
+    if (store) store.db = db;
+    return db;
   } catch (err) {
     console.error('[auth] CRITICAL: SQLite session store unreadable', err);
     throw new Error('Session database unavailable');
   }
 }
 
-let sessionsWriteChain = Promise.resolve();
 
-/** Serialize session DB read-modify-write to prevent login/logout races. */
+/** Serialize session DB read-modify-write to prevent login/logout races. Re-entrant. */
 export function withSessionsWrite(task) {
-  const run = sessionsWriteChain.then(() => task());
+  if (sessionsWriteAls.getStore()) {
+    return Promise.resolve().then(() => task());
+  }
+  const ctx = { db: null };
+  const run = sessionsWriteChain.then(() => sessionsWriteAls.run(ctx, () => task()));
   sessionsWriteChain = run.then(() => undefined, () => undefined);
   return run;
 }
 
 export async function saveSessionsDb(db) {
   writeSessionsDbShape(db);
+  const store = sessionsWriteAls.getStore();
+  if (store) store.db = db;
 }
 
 async function ensureBotUserInDb(db) {

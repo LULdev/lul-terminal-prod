@@ -166,6 +166,7 @@ export function PastePage() {
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (saving) return;
     if (!content.trim()) {
       setError('Paste content cannot be empty');
       return;

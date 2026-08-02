@@ -309,11 +309,16 @@ export function MemeEditor({ template, onBack, onMemeCreated }: Props) {
 
   const announceMemeExport = useCallback(async () => {
     if (announcedTemplateRef.current === template.id) return;
+    // Lock before async work so double download/copy cannot double-upload
+    announcedTemplateRef.current = template.id;
     onMemeCreated?.();
     if (!isLoggedIn) return;
     try {
       const blob = await getPngBlob();
-      if (!blob) return;
+      if (!blob) {
+        announcedTemplateRef.current = null;
+        return;
+      }
       const safeName = template.name.replace(/[^a-z0-9]+/gi, '-').toLowerCase() || 'meme';
       const file = new File([blob], `${safeName}.png`, { type: 'image/png' });
       const meta = await uploadHostedImage(file, () => {}, { source: 'meme' });
@@ -322,9 +327,9 @@ export function MemeEditor({ template, onBack, onMemeCreated }: Props) {
         memeImageId: meta.id,
         templateId: template.id,
       });
-      announcedTemplateRef.current = template.id;
     } catch {
-      /* shoutbox announce is best-effort */
+      /* shoutbox announce is best-effort — allow retry on failure */
+      announcedTemplateRef.current = null;
     }
   }, [getPngBlob, isLoggedIn, onMemeCreated, template.id, template.name]);
 
@@ -337,9 +342,11 @@ export function MemeEditor({ template, onBack, onMemeCreated }: Props) {
     if (!blob) return;
     const a = document.createElement('a');
     a.download = `${template.name.replace(/[^a-z0-9]+/gi, '-').toLowerCase()}.png`;
-    a.href = URL.createObjectURL(blob);
+    const objectUrl = URL.createObjectURL(blob);
+    a.href = objectUrl;
     a.click();
-    URL.revokeObjectURL(a.href);
+    // Delayed revoke — immediate revoke cancels download in some browsers
+    window.setTimeout(() => URL.revokeObjectURL(objectUrl), 30_000);
     await announceMemeExport();
     flash('PNG saved');
   }, [announceMemeExport, getPngBlob, template.name]);

@@ -223,7 +223,7 @@ export async function fetchHostedImage(
   const credentialed = opts.credentialed ?? false;
   const init = { headers: { 'Content-Type': 'application/json' } };
   const res = credentialed
-    ? await sessionFetch(`${API}/${id}`, init)
+    ? await sessionFetch(`${API}/${id}`, init, { soft401: true })
     : await fetch(`${API}/${id}`, { ...init, credentials: 'omit' });
   if (res.status === 404) return null;
   if (res.status === 401 || res.status === 403) {

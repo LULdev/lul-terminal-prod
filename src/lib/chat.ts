@@ -105,7 +105,9 @@ export async function fetchLobbyMessages(opts: { since?: number; limit?: number 
       if (!me.user) invalidateSession();
       return guestRes.json() as Promise<LobbyMessagesResponse>;
     }
-    invalidateSession();
+    // Only wipe global session when /me also confirms no user
+    const me = await fetchMe().catch(() => ({ user: null }));
+    if (!me.user) invalidateSession();
     throw new ChatAuthRequiredError();
   }
   if (res.status === 403) {
@@ -139,7 +141,8 @@ export async function sendLobbyMessage(text: string): Promise<SendLobbyMessageRe
     body: JSON.stringify({ text: body }),
   });
   if (res.status === 401) {
-    invalidateSession();
+    const me = await fetchMe().catch(() => ({ user: null }));
+    if (!me.user) invalidateSession();
     throw new ChatAuthRequiredError();
   }
   if (res.status === 429) {
