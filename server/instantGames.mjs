@@ -293,6 +293,10 @@ const dice100Base = createInstantDuelGame({
     const won = dir === 'over' ? roll > target : roll < target;
     const { chancePct, multiplier } = dice100Odds(dir, target);
     m.payoutMultiplier = won ? multiplier : 0;
+    // Explicit credit amount (includes stake) so settle never falls back incorrectly
+    if (won) {
+      m.payoutExact = Math.max(0, Math.round(Number(m.bet) * multiplier));
+    }
     m.player2.move = roll.toFixed(2);
     m.reveal = {
       roll,
@@ -301,6 +305,7 @@ const dice100Base = createInstantDuelGame({
       chancePct,
       multiplier,
       won,
+      payout: won ? m.payoutExact : 0,
     };
     return won ? 'p1' : 'p2';
   },
@@ -385,9 +390,20 @@ const rouletteBase = createInstantDuelGame({
   resolveWinner: (m) => {
     const parsed = parseRouletteMove(m.player1.move);
     if (!parsed) return 'p2';
-    // Ensure match bet matches total chips (join should set bet = total)
-    if (Number(m.bet) !== parsed.total) {
-      // Still resolve, but trust move total for payout math if mismatched
+    // Escrow is match.bet — reject stake mismatch so clients cannot over-claim
+    const stake = Number(m.bet);
+    if (!Number.isInteger(stake) || stake !== parsed.total) {
+      m.payoutExact = 0;
+      m.payoutMultiplier = 0;
+      m.player2.move = 'invalid';
+      m.reveal = {
+        error: 'stake_mismatch',
+        totalBet: parsed.total,
+        bet: stake,
+        won: false,
+        payout: 0,
+      };
+      return 'p2';
     }
     const spin = Math.floor(Math.random() * 37); // 0–36
     let payout = 0;
@@ -400,8 +416,13 @@ const rouletteBase = createInstantDuelGame({
       }
     }
     const won = payout > 0;
-    m.payoutExact = won ? payout : 0;
-    m.payoutMultiplier = won && parsed.total > 0 ? payout / parsed.total : 0;
+    // Only set exact credit on wins (avoid settle treating 0 as an explicit payout)
+    if (won) {
+      m.payoutExact = payout;
+      m.payoutMultiplier = stake > 0 ? payout / stake : 0;
+    } else {
+      m.payoutMultiplier = 0;
+    }
     m.player2.move = String(spin);
     m.reveal = {
       spin,

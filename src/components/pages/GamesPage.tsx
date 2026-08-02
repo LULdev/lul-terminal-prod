@@ -309,12 +309,13 @@ export function GamesPage() {
 
   const load = useCallback(async (opts?: { gameId?: GameId; applySlice?: boolean }) => {
     const gameId = opts?.gameId ?? selectedGameRef.current;
-    const gen = ++loadGenRef.current;
+    // Defer while acting — do NOT bump loadGenRef or an in-flight load cannot clear the spinner.
     if (actingRef.current) {
       pendingLoadRef.current = true;
       pendingLoadGameIdRef.current = gameId;
       return;
     }
+    const gen = ++loadGenRef.current;
     pendingLoadRef.current = false;
     pendingLoadGameIdRef.current = null;
     const seqBefore = matchSeqRef.current;
@@ -326,10 +327,11 @@ export function GamesPage() {
         pendingLoadGameIdRef.current = gameId;
         return;
       }
-      if (gameId !== selectedGameRef.current) return;
+      // Apply global state even if selection changed mid-fetch
       setState(s);
+      const activeId = selectedGameRef.current;
       if (opts?.applySlice !== false) {
-        const slice = s.games?.[gameId] ?? s[gameId as 'rps' | 'ttt'];
+        const slice = s.games?.[activeId] ?? s[activeId as 'rps' | 'ttt'];
         applySliceState(slice, matchSeqRef.current);
       }
       setError('');
@@ -338,7 +340,9 @@ export function GamesPage() {
         setError(e instanceof Error ? e.message : 'Load failed');
       }
     } finally {
-      if (gen === loadGenRef.current && mountedRef.current) setLoading(false);
+      if (mountedRef.current && gen === loadGenRef.current) {
+        setLoading(false);
+      }
     }
   }, [applySliceState]);
 
@@ -373,27 +377,56 @@ export function GamesPage() {
   }) => {
     setActing(false);
     actingRef.current = false;
-    await pollState({ force: true, gameId: opts?.gameId, applySlice: opts?.applySlice });
-    if (opts?.applySlice === false) {
-      pendingLoadRef.current = false;
-      pendingLoadGameIdRef.current = null;
-      return;
-    }
-    if (pendingLoadRef.current) {
-      pendingLoadRef.current = false;
-      const gid = pendingLoadGameIdRef.current ?? opts?.gameId ?? selectedGameRef.current;
-      pendingLoadGameIdRef.current = null;
-      await load({ gameId: gid });
+    try {
+      await pollState({ force: true, gameId: opts?.gameId, applySlice: opts?.applySlice });
+      if (opts?.applySlice === false) {
+        pendingLoadRef.current = false;
+        pendingLoadGameIdRef.current = null;
+        return;
+      }
+      if (pendingLoadRef.current) {
+        pendingLoadRef.current = false;
+        const gid = pendingLoadGameIdRef.current ?? opts?.gameId ?? selectedGameRef.current;
+        pendingLoadGameIdRef.current = null;
+        await load({ gameId: gid });
+      }
+    } finally {
+      // Guarantee spinner is never left on after an action finishes
+      if (mountedRef.current && !stateRef.current) {
+        // keep loading only if we still have no state and a load is expected
+      } else if (mountedRef.current) {
+        setLoading(false);
+      }
     }
   }, [pollState, load]);
 
   useEffect(() => {
-    if (authLoading || !isLoggedIn) return;
+    if (authLoading) {
+      return;
+    }
+    if (!isLoggedIn) {
+      setLoading(false);
+      return;
+    }
     if (initialLoadDoneRef.current) return;
     initialLoadDoneRef.current = true;
+    setLoading(true);
     void load();
     void loadMeta();
   }, [load, loadMeta, authLoading, isLoggedIn]);
+
+  // Never leave the UI stuck on "Loading arcade…" (hung request / race)
+  useEffect(() => {
+    if (!loading) return;
+    const t = window.setTimeout(() => {
+      if (!mountedRef.current || !loading) return;
+      setLoading(false);
+      if (!stateRef.current) {
+        setError((prev) => prev || 'Arcade took too long to load — try Retry');
+      }
+    }, 12_000);
+    return () => window.clearTimeout(t);
+  }, [loading]);
 
   const wasLoggedInRef = useRef(false);
   useEffect(() => {
@@ -877,6 +910,38 @@ export function GamesPage() {
         {loading && !state && (
           <div className="text-center py-6 text-[10px] font-mono text-slate-600 rounded-2xl border border-slate-800/60 bg-black/20">
             <RefreshCw size={14} className="inline animate-spin mr-2" /> Loading arcade…
+            <div className="mt-2">
+              <button
+                type="button"
+                className="text-[8px] font-mono text-rose-300/80 hover:text-rose-200 underline"
+                onClick={() => {
+                  setError('');
+                  setLoading(true);
+                  initialLoadDoneRef.current = true;
+                  void load();
+                  void loadMeta();
+                }}
+              >
+                Retry
+              </button>
+            </div>
+          </div>
+        )}
+        {error && !state && !loading && (
+          <div className="text-center py-3 text-[10px] font-mono text-rose-300/90 rounded-2xl border border-rose-500/25 bg-rose-950/20 px-3">
+            {error}
+            <button
+              type="button"
+              className="ml-2 underline text-rose-200"
+              onClick={() => {
+                setError('');
+                setLoading(true);
+                void load();
+                void loadMeta();
+              }}
+            >
+              Retry
+            </button>
           </div>
         )}
 

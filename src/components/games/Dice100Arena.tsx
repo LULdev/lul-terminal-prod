@@ -45,10 +45,10 @@ type Props = {
   streak?: number;
   streakBonusHint?: number;
   onBetChange: (n: number) => void;
-  onStart: () => void;
+  onStart: (overrides?: { bet?: number }) => void;
   onCancel: () => void;
   onMove: (move: string) => void;
-  onRematch: () => void;
+  onRematch: (overrides?: { bet?: number }) => void;
   onPlayAgain: () => void;
 };
 
@@ -181,10 +181,12 @@ export function Dice100Arena({
               onClick={() => {
                 pendingMoveRef.current = encodeMove(dir, target);
                 submittedForMatchRef.current = null;
+                const stake = Math.max(minBet, Math.min(maxBet, bet));
+                onBetChange(stake);
                 if (match?.status === 'done') {
-                  onRematch();
+                  onRematch({ bet: stake });
                 } else {
-                  onStart();
+                  onStart({ bet: stake });
                 }
               }}
               className="dice100-bet-btn"
@@ -323,7 +325,9 @@ export function Dice100Arena({
                 onRematch={() => {
                   pendingMoveRef.current = encodeMove(dir, target);
                   submittedForMatchRef.current = null;
-                  onRematch();
+                  const stake = Math.max(minBet, Math.min(maxBet, bet));
+                  onBetChange(stake);
+                  onRematch({ bet: stake });
                 }}
                 onPlayAgain={onPlayAgain}
                 detail={reveal ? (

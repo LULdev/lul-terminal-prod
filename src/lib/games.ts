@@ -52,6 +52,8 @@ export type InstantMatch = {
   jackpotAmount: number;
   /** Variable house-game payout (e.g. Dice 100) */
   payoutMultiplier?: number | null;
+  /** Exact LULcoins credited on win (includes stake), e.g. Roulette / Dice 100 */
+  payoutExact?: number | null;
   createdAt: number;
   expiresAt: number;
   timeLeftMs: number;

@@ -405,9 +405,11 @@ export async function settleMatch({
     } else if (r === 'p1') {
       outcome = 'win';
       // Optional variable payout (Dice 100 / Roulette); default 2× pot
-      const exact = Number(m.payoutExact);
+      // Only honor payoutExact when explicitly set (null/undefined must not coerce to 0).
+      const hasExact = m.payoutExact != null && m.payoutExact !== '';
+      const exact = hasExact ? Number(m.payoutExact) : NaN;
       const mult = Number(m.payoutMultiplier);
-      if (Number.isFinite(exact) && exact >= 0) {
+      if (hasExact && Number.isFinite(exact) && exact >= 0) {
         p1Delta = Math.max(0, Math.round(exact));
       } else if (Number.isFinite(mult) && mult > 1) {
         p1Delta = Math.max(0, Math.round(bet * mult));
