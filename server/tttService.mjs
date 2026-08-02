@@ -28,7 +28,7 @@ import {
   touchQueueHeartbeat,
 } from './gamesCore.mjs';
 import { runCoinTransaction } from './gamesCoinLock.mjs';
-import { assertPvpPairReady } from './gamesSessionGuard.mjs';
+import { assertNoOtherArcadeSession, assertPvpPairReady } from './gamesSessionGuard.mjs';
 import {
   addGameEscrow,
   releaseAnyGameEscrow,
@@ -373,11 +373,13 @@ async function finalizeMatch(m, boardState) {
       }
 
       if (Math.random() < JACKPOT_CHANCE) {
-        jackpotHit = true;
         jackpotAmount = await payoutJackpot(winner.username);
-        creditCoins(winner, jackpotAmount, logJackpotCredit, ledgerCtx);
-        winner.gameJackpotsWon = (Number(winner.gameJackpotsWon) || 0) + 1;
-        postBotArcadeJackpot({ username: winner.username, amount: jackpotAmount }).catch(() => {});
+        if (jackpotAmount > 0) {
+          jackpotHit = true;
+          creditCoins(winner, jackpotAmount, logJackpotCredit, ledgerCtx);
+          winner.gameJackpotsWon = (Number(winner.gameJackpotsWon) || 0) + 1;
+          postBotArcadeJackpot({ username: winner.username, amount: jackpotAmount }).catch(() => {});
+        }
       }
 
       postBotTttVictory({
@@ -475,6 +477,7 @@ async function joinTttQueueInner(userId, { bet, mode = 'pvp', botDifficulty = 'n
   const db = await loadUsersDb();
   const user = getUser(db, userId);
   if (!user) throw new Error('User not found');
+  await assertNoOtherArcadeSession(userId, 'ttt');
   const amount = normalizeBet(bet);
   ensureCoins(user);
 

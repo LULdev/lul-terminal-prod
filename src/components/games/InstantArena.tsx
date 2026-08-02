@@ -49,6 +49,7 @@ function revealText(match: InstantMatch) {
   if ('p1Card' in r) return `Cards: ${match.player1.move} vs ${match.player2 && 'move' in match.player2 ? match.player2.move : '?'}`;
   if ('winning' in r) return `Winning color: ${r.winning}`;
   if ('target' in r && 'answer' in r) return `Target ${r.target} → ${r.answer}`;
+  if ('target' in r && 'd1' in r) return `Secret target: ${r.target}`;
   if ('mine' in r) return `Mine was cell ${r.mine}`;
   if ('p1Total' in r) return `BJ: ${r.p1Total} vs ${r.p2Total}`;
   return null;

@@ -30,7 +30,7 @@ import {
   touchQueueHeartbeat,
 } from './gamesCore.mjs';
 import { runCoinTransaction } from './gamesCoinLock.mjs';
-import { assertPvpPairReady } from './gamesSessionGuard.mjs';
+import { assertNoOtherArcadeSession, assertPvpPairReady } from './gamesSessionGuard.mjs';
 import { addGameEscrow, releaseAnyGameEscrow, releaseGameEscrow } from './gamesEscrow.mjs';
 import { sweepExpiredInMap } from './gamesExpirySweep.mjs';
 import {
@@ -406,11 +406,13 @@ async function finalizeMatch(m) {
       }
 
       if (Math.random() < JACKPOT_CHANCE) {
-        jackpotHit = true;
         jackpotAmount = await payoutJackpot(winner.username);
-        creditCoins(winner, jackpotAmount, logJackpotCredit, ledgerCtx);
-        winner.gameJackpotsWon = (Number(winner.gameJackpotsWon) || 0) + 1;
-        postBotRpsJackpot({ username: winner.username, amount: jackpotAmount }).catch(() => {});
+        if (jackpotAmount > 0) {
+          jackpotHit = true;
+          creditCoins(winner, jackpotAmount, logJackpotCredit, ledgerCtx);
+          winner.gameJackpotsWon = (Number(winner.gameJackpotsWon) || 0) + 1;
+          postBotRpsJackpot({ username: winner.username, amount: jackpotAmount }).catch(() => {});
+        }
       }
 
       postBotRpsVictory({
@@ -565,6 +567,7 @@ async function joinQueueInner(userId, { bet, mode = 'pvp', botDifficulty = 'norm
   const db = await loadUsersDb();
   const user = getUser(db, userId);
   if (!user) throw new Error('User not found');
+  await assertNoOtherArcadeSession(userId, 'rps');
   const amount = normalizeBet(bet);
   const series = seriesType === 'bo3' ? 'bo3' : 'single';
   ensureCoins(user);

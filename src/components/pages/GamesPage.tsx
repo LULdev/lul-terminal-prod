@@ -379,22 +379,19 @@ export function GamesPage() {
     actingRef.current = false;
     try {
       await pollState({ force: true, gameId: opts?.gameId, applySlice: opts?.applySlice });
-      if (opts?.applySlice === false) {
-        pendingLoadRef.current = false;
-        pendingLoadGameIdRef.current = null;
-        return;
-      }
+      // Always drain deferred loads (even when applySlice was false for authoritative joins)
       if (pendingLoadRef.current) {
         pendingLoadRef.current = false;
         const gid = pendingLoadGameIdRef.current ?? opts?.gameId ?? selectedGameRef.current;
         pendingLoadGameIdRef.current = null;
-        await load({ gameId: gid });
+        await load({
+          gameId: gid,
+          applySlice: opts?.applySlice !== false,
+        });
       }
     } finally {
       // Guarantee spinner is never left on after an action finishes
-      if (mountedRef.current && !stateRef.current) {
-        // keep loading only if we still have no state and a load is expected
-      } else if (mountedRef.current) {
+      if (mountedRef.current) {
         setLoading(false);
       }
     }
@@ -599,45 +596,59 @@ export function GamesPage() {
 
   const queueGame = async (overrides?: Partial<typeof lastSettings.current>) => {
     if (!isLoggedIn) return;
-    const fresh = (await pollState({ force: true, applySlice: false })) ?? state;
-    if (fresh) {
-      const blockedElsewhere = GAME_CATALOG.find((g) => {
-        if (g.id === selectedGame) return false;
-        const slice = getGameSlice(fresh, g.id);
-        return slice?.activeMatch?.status === 'playing' || slice?.inQueue;
-      });
-      if (blockedElsewhere) {
-        const slice = getGameSlice(fresh, blockedElsewhere.id);
-        setError(
-          slice?.activeMatch?.status === 'playing'
-            ? `Finish your ${blockedElsewhere.shortLabel} match first`
-            : `Leave your ${blockedElsewhere.shortLabel} queue first`,
-        );
-        return;
-      }
-    }
-    if (match?.status === 'done' && match.id) {
-      dismissedMatches.current.add(match.id);
-    }
-    // Solo house games — always bot/instant
-    const soloHouse = selectedGame === 'dice100' || selectedGame === 'roulette';
-    const forcedMode = soloHouse ? 'bot' as const : mode;
-    const settings = { bet, mode: forcedMode, seriesType, difficulty, roomCode, ...overrides };
-    if (soloHouse) setMode('bot');
-    lastSettings.current = settings;
+    // Lock immediately so rematch/start cannot double-fire during preflight poll
+    if (actingRef.current) return;
     beginAction();
     setError('');
     setMsg('');
+    const gameAtStart = selectedGameRef.current;
+    const doneMatchId = match?.status === 'done' ? match.id : null;
     let authoritativeMatch = false;
+    let joinedOk = false;
     try {
+      const fresh = (await pollState({ force: true, applySlice: false })) ?? stateRef.current;
+      if (selectedGameRef.current !== gameAtStart) {
+        setError('Game switched — start again');
+        return;
+      }
+      if (fresh) {
+        const blockedElsewhere = GAME_CATALOG.find((g) => {
+          if (g.id === gameAtStart) return false;
+          const slice = getGameSlice(fresh, g.id);
+          return slice?.activeMatch?.status === 'playing' || slice?.inQueue;
+        });
+        if (blockedElsewhere) {
+          const slice = getGameSlice(fresh, blockedElsewhere.id);
+          setError(
+            slice?.activeMatch?.status === 'playing'
+              ? `Finish your ${blockedElsewhere.shortLabel} match first`
+              : `Leave your ${blockedElsewhere.shortLabel} queue first`,
+          );
+          return;
+        }
+      }
+      // Solo house games — always bot/instant; never let overrides.mode win
+      const soloHouse = gameAtStart === 'dice100' || gameAtStart === 'roulette';
+      const settings = {
+        bet: overrides?.bet ?? bet,
+        mode: (soloHouse ? 'bot' : (overrides?.mode ?? mode)) as 'pvp' | 'bot',
+        seriesType: overrides?.seriesType ?? seriesType,
+        difficulty: overrides?.difficulty ?? difficulty,
+        roomCode: overrides?.roomCode ?? roomCode,
+      };
+      if (soloHouse) setMode('bot');
+      lastSettings.current = settings;
       const body: Record<string, unknown> = {
         bet: settings.bet,
         mode: settings.mode,
         botDifficulty: settings.difficulty,
         roomCode: settings.mode === 'pvp' && settings.roomCode.trim() ? settings.roomCode.trim() : undefined,
       };
-      if (selectedGame === 'rps') body.seriesType = settings.seriesType;
-      const res = await joinGameQueue(selectedGame, body);
+      if (gameAtStart === 'rps') body.seriesType = settings.seriesType;
+      const res = await joinGameQueue(gameAtStart, body);
+      joinedOk = true;
+      // Dismiss previous done match only after successful join
+      if (doneMatchId) dismissedMatches.current.add(doneMatchId);
       if (res.match) {
         setMatchAuthoritative(res.match);
         authoritativeMatch = true;
@@ -650,8 +661,12 @@ export function GamesPage() {
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Queue failed');
       setWaiting(false);
+      // Keep previous done match visible when rematch fails
+      if (!joinedOk && doneMatchId && match?.id === doneMatchId) {
+        /* leave match as-is */
+      }
     } finally {
-      await endActionAndSync({ applySlice: !authoritativeMatch });
+      await endActionAndSync({ applySlice: !authoritativeMatch, gameId: gameAtStart });
     }
   };
 
@@ -671,6 +686,7 @@ export function GamesPage() {
 
   const playMove = async (move: string | number) => {
     if (!match) return;
+    if (actingRef.current) return;
     beginAction();
     setError('');
     let applySlice = false;
@@ -688,12 +704,13 @@ export function GamesPage() {
     } catch (e) {
       const errMsg = e instanceof Error ? e.message : 'Move failed';
       setError(errMsg);
+      // Always re-hydrate match from server on failure
+      applySlice = true;
       if (errMsg.includes('expired') || errMsg.includes('not found') || errMsg.includes('Escrow')) {
         setMatch(null);
         setWaiting(false);
-        applySlice = true;
-        void refresh();
       }
+      void refresh();
     } finally {
       await endActionAndSync({ gameId: selectedGame, applySlice });
     }
@@ -751,13 +768,9 @@ export function GamesPage() {
     },
     onCancel: () => void cancelQueue(),
     onRematch: (overrides?: { bet?: number }) => {
-      if (match?.status === 'done' && match.id) {
-        dismissedMatches.current.add(match.id);
-      }
-      setMatch(null);
+      // Do not dismiss/clear done match until queueGame succeeds
       void queueGame({
         bet: overrides?.bet ?? bet,
-        mode,
         seriesType,
         difficulty,
         roomCode,

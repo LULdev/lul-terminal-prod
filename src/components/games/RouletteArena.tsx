@@ -120,6 +120,7 @@ export function RouletteArena({
   const [betTrail, setBetTrail] = useState<Array<{ key: string; amount: number }>>([]);
   const pendingMoveRef = useRef('');
   const submittedForMatchRef = useRef<string | null>(null);
+  const submitAttemptsRef = useRef(0);
   const wheelBg = useMemo(() => wheelConic(), []);
 
   const total = totalBets(bets);
@@ -130,9 +131,11 @@ export function RouletteArena({
         color?: string;
         payout?: number;
         totalBet?: number;
+        error?: string;
         hits?: Array<{ key: string; amount: number; win: number }>;
       } | null)
     : null;
+  const stakeMismatch = reveal?.error === 'stake_mismatch';
 
   const matchActive = Boolean(match && match.status === 'playing') || waiting || acting || spinning;
   const canBet = isLoggedIn && !matchActive;
@@ -166,16 +169,27 @@ export function RouletteArena({
     return () => window.clearTimeout(t);
   }, [match?.id, match?.status, reveal?.spin]);
 
-  // Auto-submit bets once match starts
+  // Auto-submit bets once match starts (retry a few times if previous attempt failed)
   useEffect(() => {
-    if (!match || match.status !== 'playing' || acting) return;
-    if (submittedForMatchRef.current === match.id) return;
+    if (!match || match.status !== 'playing') return;
     if (match.player1?.move || match.player1?.submitted) {
       submittedForMatchRef.current = match.id;
+      submitAttemptsRef.current = 0;
       return;
     }
+    if (acting) return;
     if (!pendingMoveRef.current) return;
+    if (submittedForMatchRef.current === match.id) {
+      if (submitAttemptsRef.current >= 3) return;
+      const t = window.setTimeout(() => {
+        if (submittedForMatchRef.current === match.id && submitAttemptsRef.current < 3) {
+          submittedForMatchRef.current = null;
+        }
+      }, 800);
+      return () => window.clearTimeout(t);
+    }
     submittedForMatchRef.current = match.id;
+    submitAttemptsRef.current += 1;
     onMove(pendingMoveRef.current);
   }, [match?.id, match?.status, match?.player1?.move, match?.player1?.submitted, acting, onMove]);
 
@@ -221,6 +235,7 @@ export function RouletteArena({
     const stake = Math.min(maxBet, total);
     pendingMoveRef.current = encoded;
     submittedForMatchRef.current = null;
+    submitAttemptsRef.current = 0;
     onBetChange(stake);
     if (match?.status === 'done') {
       onRematch({ bet: stake });
@@ -454,6 +469,7 @@ export function RouletteArena({
               <ArenaDoneBanner
                 catalog={catalog}
                 outcome={outcome}
+                acting={acting}
                 streakBonus={match.streakBonus}
                 jackpotHit={match.jackpotHit}
                 jackpotAmount={match.jackpotAmount}
@@ -462,13 +478,19 @@ export function RouletteArena({
                   if (t < minBet || !encodeBets(bets)) return;
                   pendingMoveRef.current = encodeBets(bets);
                   submittedForMatchRef.current = null;
+                  submitAttemptsRef.current = 0;
                   onBetChange(t);
                   onRematch({ bet: t });
                 }}
                 onPlayAgain={() => {
                   onPlayAgain();
                 }}
-                detail={reveal ? (
+                detail={
+                  stakeMismatch ? (
+                    <p className="text-[10px] font-mono text-amber-300/90">
+                      Stake mismatch — chip total did not match escrow. Place chips again and spin.
+                    </p>
+                  ) : reveal ? (
                   <p className="text-[10px] font-mono text-slate-400">
                     Ball on{' '}
                     <span className={`font-bold ${reveal.color === 'red' ? 'text-rose-400' : reveal.color === 'green' ? 'text-emerald-400' : 'text-slate-200'}`}>
@@ -481,7 +503,8 @@ export function RouletteArena({
                       <> · staked <LulCoinAmount amount={reveal.totalBet} variant="bet" size="xs" /></>
                     )}
                   </p>
-                ) : null}
+                  ) : null
+                }
               />
             </div>
           )}

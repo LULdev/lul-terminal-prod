@@ -171,9 +171,8 @@ export function findUserLeaderboardRanks(
   };
 
   if (opts?.showCoins !== false) scan(boards.coins, 'Coins');
-  scan(boards.rps?.wins, 'RPS wins');
-  scan(boards.ttt?.wins, 'TTT wins');
 
+  // Single pass over catalog (boards.rps/ttt are aliases of games.rps/ttt — do not double-scan)
   for (const g of GAME_CATALOG) {
     const slice = boards[g.id];
     if (slice && !Array.isArray(slice) && slice.wins) {

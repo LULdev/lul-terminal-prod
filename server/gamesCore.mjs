@@ -295,20 +295,25 @@ export async function sweepStaleQueueEntries(mm, { gameId, chatLabel }, maxAgeMs
       if (!released) {
         entry._sweepFail = (Number(entry._sweepFail) || 0) + 1;
         if (entry._sweepFail < 5) continue;
-        console.warn('[games] forcing stale queue removal after escrow failures — force-crediting bet', {
-          userId: entry.userId,
-          gameId,
-          bet: entry.bet,
-        });
-        logQueueRefund(user, { gameId, chatLabel, bet: entry.bet, amount: entry.bet });
-        if (Array.isArray(user.gameEscrows)) {
-          user.gameEscrows = user.gameEscrows.filter(
-            (e) => !(String(e.gameId) === String(gameId) && Number(e.amount) === Number(entry.bet)),
-          );
-          if (!user.gameEscrows.length) delete user.gameEscrows;
+        // Never mint coins without stripping escrow. Credit only what we can strip.
+        const stripped = stripEscrowRows(user, entry.bet, { gameId });
+        if (stripped > 0) {
+          logQueueRefund(user, { gameId, chatLabel, bet: entry.bet, amount: stripped });
+          user.updatedAt = Date.now();
+          swept += 1;
+          console.warn('[games] stale queue — stripped escrow and credited', {
+            userId: entry.userId,
+            gameId,
+            bet: entry.bet,
+            credited: stripped,
+          });
+        } else {
+          console.warn('[games] stale queue — drop without credit (no escrow left)', {
+            userId: entry.userId,
+            gameId,
+            bet: entry.bet,
+          });
         }
-        user.updatedAt = Date.now();
-        swept += 1;
         mm.queue.splice(i, 1);
         if (entry.roomCode) {
           for (const [code, room] of mm.rooms.entries()) {
@@ -413,10 +418,19 @@ export async function settleMatch({
         p1Delta = Math.max(0, Math.round(exact));
       } else if (Number.isFinite(mult) && mult > 1) {
         p1Delta = Math.max(0, Math.round(bet * mult));
+      } else if (Number.isFinite(mult) && mult >= 0 && mult <= 1) {
+        // Explicit low mult without exact (defensive) — do not fall back to 2×
+        p1Delta = mult > 0 ? Math.max(0, Math.round(bet * mult)) : 0;
       } else {
         p1Delta = bet * 2;
       }
-      logGameWinCredit(p1, { ...ledgerCtx, mode: 'bot', amount: p1Delta });
+      // House solo: jackpot seed is taken from the win credit (not printed from thin air)
+      if (dicePotSeed > 0 && p1Delta > 0) {
+        p1Delta = Math.max(0, p1Delta - dicePotSeed);
+      }
+      if (p1Delta > 0) {
+        logGameWinCredit(p1, { ...ledgerCtx, mode: 'bot', amount: p1Delta });
+      }
       p1.gameTotalWon = (Number(p1.gameTotalWon) || 0) + Math.max(0, p1Delta - bet);
       bumpGameStats(p1, statKey, 'win');
       streakBonus = calcStreakBonus(bet, p1[f.streak]);
@@ -424,13 +438,15 @@ export async function settleMatch({
         logStreakCredit(p1, { ...ledgerCtx, amount: streakBonus });
         p1.gameTotalWon = (Number(p1.gameTotalWon) || 0) + streakBonus;
       }
-      // Same jackpot spice as PvP wins
+      // Same jackpot spice as PvP wins (only count when pool actually pays)
       if (Math.random() < JACKPOT_CHANCE) {
-        jackpotHit = true;
         jackpotAmount = await payoutJackpot(p1.username);
-        logJackpotCredit(p1, { ...ledgerCtx, amount: jackpotAmount });
-        p1.gameJackpotsWon = (Number(p1.gameJackpotsWon) || 0) + 1;
-        postBotArcadeJackpot({ username: p1.username, amount: jackpotAmount }).catch(() => {});
+        if (jackpotAmount > 0) {
+          jackpotHit = true;
+          logJackpotCredit(p1, { ...ledgerCtx, amount: jackpotAmount });
+          p1.gameJackpotsWon = (Number(p1.gameJackpotsWon) || 0) + 1;
+          postBotArcadeJackpot({ username: p1.username, amount: jackpotAmount }).catch(() => {});
+        }
       }
     } else {
       outcome = 'loss';
@@ -466,11 +482,13 @@ export async function settleMatch({
         winner.gameTotalWon = (Number(winner.gameTotalWon) || 0) + streakBonus;
       }
       if (Math.random() < JACKPOT_CHANCE) {
-        jackpotHit = true;
         jackpotAmount = await payoutJackpot(winner.username);
-        logJackpotCredit(winner, { ...ledgerCtx, amount: jackpotAmount });
-        winner.gameJackpotsWon = (Number(winner.gameJackpotsWon) || 0) + 1;
-        postBotArcadeJackpot({ username: winner.username, amount: jackpotAmount }).catch(() => {});
+        if (jackpotAmount > 0) {
+          jackpotHit = true;
+          logJackpotCredit(winner, { ...ledgerCtx, amount: jackpotAmount });
+          winner.gameJackpotsWon = (Number(winner.gameJackpotsWon) || 0) + 1;
+          postBotArcadeJackpot({ username: winner.username, amount: jackpotAmount }).catch(() => {});
+        }
       }
       postBotArcadeVictory({
         gameLabel: chatLabel,
@@ -929,6 +947,24 @@ export async function leaveMatchQueue(mm, userId, { gameId = 'arcade', chatLabel
   });
 }
 
+/**
+ * Decide PvP forfeit winner on timeout (anti stall-to-draw exploit).
+ * @returns {'p1'|'p2'|null} null = refund both
+ */
+function resolveTimeoutForfeit(m) {
+  if (m.mode !== 'pvp') return null;
+  // Turn-based (TTT, Nim, Connect4): the player whose turn it is forfeits
+  if (m.turn === 'p1' || m.turn === 'p2') {
+    return m.turn === 'p1' ? 'p2' : 'p1';
+  }
+  // Simultaneous (RPS / instant): non-submitter forfeits
+  const p1Moved = m.player1?.move != null && m.player1.move !== '';
+  const p2Moved = m.player2?.move != null && m.player2.move !== '';
+  if (p1Moved && !p2Moved) return 'p1';
+  if (p2Moved && !p1Moved) return 'p2';
+  return null;
+}
+
 export async function expireMatchWithRefund(m, activeMatches, expireMeta) {
   if (!m) return;
   const { gameId, chatLabel } = expireMeta ?? {};
@@ -941,26 +977,90 @@ export async function expireMatchWithRefund(m, activeMatches, expireMeta) {
     }
     return;
   }
-  m.status = 'done';
-  m.doneAt = Date.now();
-  m.result = { outcome: 'expired', winner: 'draw' };
+
+  const forceAbandon = Boolean(expireMeta?.forceAbandon);
+  const forfeitWinner = !forceAbandon ? resolveTimeoutForfeit(m) : null;
   const db = await loadUsersDb();
   const bet = m.bet;
   const base = { gameId, chatLabel, matchId: m.id, bet, amount: bet };
-
   const forceIds = m._expireCreditUserIds;
-  const forceAbandon = Boolean(expireMeta?.forceAbandon);
   const p1 = getUser(db, m.player1.userId);
+  const p2 = m.mode === 'pvp' && m.player2?.userId ? getUser(db, m.player2.userId) : null;
+
+  if (forfeitWinner && p1 && (m.mode !== 'pvp' || p2)) {
+    // Winner takes pot; loser stake is not refunded
+    const winner = forfeitWinner === 'p1' ? p1 : p2;
+    const loser = forfeitWinner === 'p1' ? p2 : p1;
+    if (winner && loser) {
+      const wEscrow = releaseGameEscrow(winner, { gameId, amount: bet })
+        || releaseAnyGameEscrow(winner, bet);
+      const lEscrow = releaseGameEscrow(loser, { gameId, amount: bet })
+        || releaseAnyGameEscrow(loser, bet);
+      // Require both escrows so we never mint pot without both stakes locked
+      if (wEscrow && lEscrow) {
+        logGameWinCredit(winner, {
+          gameId,
+          chatLabel,
+          matchId: m.id,
+          bet,
+          mode: 'pvp',
+          amount: bet * 2,
+        });
+        winner.gameTotalWon = (Number(winner.gameTotalWon) || 0) + bet;
+        loser.gameTotalLost = (Number(loser.gameTotalLost) || 0) + bet;
+        winner.updatedAt = Date.now();
+        loser.updatedAt = Date.now();
+        m.status = 'done';
+        m.doneAt = Date.now();
+        m.result = {
+          outcome: forfeitWinner === 'p1' ? 'win' : 'loss',
+          winner: forfeitWinner,
+          forfeited: true,
+          reason: 'timeout',
+        };
+        m.streakBonus = 0;
+        m.jackpotHit = false;
+        m.jackpotAmount = 0;
+        await saveUsersDb(db);
+        await appendMatchHistory({
+          id: m.id,
+          game: gameId,
+          mode: m.mode,
+          bet,
+          at: Date.now(),
+          player1: m.player1.username,
+          player2: m.player2?.username ?? '—',
+          outcome: forfeitWinner === 'p1' ? 'win' : 'loss',
+          forfeited: true,
+          streakBonus: 0,
+          jackpotHit: false,
+          jackpotAmount: 0,
+        });
+        return;
+      }
+      // Partial release: force-credit anyone whose escrow was already stripped
+      console.warn('[games] forfeit settle aborted — escrow incomplete, refunding', {
+        matchId: m.id,
+        gameId,
+        wEscrow,
+        lEscrow,
+      });
+      if (wEscrow) refundBetOnExpire(winner, base, { forceCredit: true });
+      if (lEscrow) refundBetOnExpire(loser, base, { forceCredit: true });
+    }
+  }
+
+  // Refund path (bot, abandon, simultaneous no-moves, or forfeit escrow failed)
+  m.status = 'done';
+  m.doneAt = Date.now();
+  m.result = { outcome: 'expired', winner: 'draw' };
   if (p1) {
     refundBetOnExpire(p1, base, { forceCredit: forceAbandon || forceIds?.has(m.player1.userId) });
     p1.updatedAt = Date.now();
   }
-  if (m.mode === 'pvp' && m.player2?.userId) {
-    const p2 = getUser(db, m.player2.userId);
-    if (p2) {
-      refundBetOnExpire(p2, base, { forceCredit: forceAbandon || forceIds?.has(m.player2.userId) });
-      p2.updatedAt = Date.now();
-    }
+  if (p2) {
+    refundBetOnExpire(p2, base, { forceCredit: forceAbandon || forceIds?.has(m.player2.userId) });
+    p2.updatedAt = Date.now();
   }
   await saveUsersDb(db);
   await appendMatchHistory({

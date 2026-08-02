@@ -4,6 +4,7 @@
  */
 
 import crypto from 'crypto';
+import { AsyncLocalStorage } from 'node:async_hooks';
 import { hashPassword } from './crypto.mjs';
 import {
   AUTH_DB_DIR,
@@ -44,10 +45,19 @@ export async function saveUsersDb(db) {
 }
 
 let usersWriteChain = Promise.resolve();
+/** Tracks re-entrant withUsersWrite (settle/expire nested under submitMove). */
+const usersWriteAls = new AsyncLocalStorage();
 
-/** Serialize user DB read-modify-write to prevent registration/account races. */
+/**
+ * Serialize user DB read-modify-write to prevent registration/account races.
+ * Re-entrant: nested calls (e.g. settleMatch inside submitMove) run inline
+ * instead of deadlocking the promise chain.
+ */
 export function withUsersWrite(task) {
-  const run = usersWriteChain.then(() => task());
+  if (usersWriteAls.getStore()) {
+    return Promise.resolve().then(() => task());
+  }
+  const run = usersWriteChain.then(() => usersWriteAls.run(1, () => task()));
   usersWriteChain = run.then(() => undefined, () => undefined);
   return run;
 }

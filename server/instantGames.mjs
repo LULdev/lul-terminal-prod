@@ -148,16 +148,21 @@ export const numberduel = createInstantDuelGame({
     const n = Number(m);
     return Number.isInteger(n) && n >= 1 && n <= 10;
   },
+  // Closest to a secret target 1–10 wins (always picking 10 is no longer free coins)
   resolveWinner: (m) => {
+    const target = 1 + Math.floor(Math.random() * 10);
     const p1 = Number(m.player1.move);
     const p2 = Number(m.player2.move);
-    if (p1 === p2) return 'draw';
-    return p1 > p2 ? 'p1' : 'p2';
+    const d1 = Math.abs(p1 - target);
+    const d2 = Math.abs(p2 - target);
+    m.reveal = { target, p1, p2, d1, d2 };
+    if (d1 === d2) return 'draw';
+    return d1 < d2 ? 'p1' : 'p2';
   },
-  botMove: (playerMove, difficulty) => {
-    const p = Number(playerMove);
-    if (difficulty === 'hard' && p >= 1 && p <= 10 && Math.random() < 0.4) {
-      return String(Math.min(10, p + 1 + Math.floor(Math.random() * 2)));
+  botMove: (_playerMove, difficulty) => {
+    // Uniform random; hard slightly biases toward mid-band (optimal without knowing target)
+    if (difficulty === 'hard' && Math.random() < 0.45) {
+      return String(4 + Math.floor(Math.random() * 4)); // 4–7
     }
     return String(1 + Math.floor(Math.random() * 10));
   },
@@ -228,6 +233,11 @@ export const mines = createInstantDuelGame({
     const p1Cell = Number(m.player1.move);
     const p2Cell = Number(m.player2.move);
     m.reveal = { mine, p1Cell, p2Cell };
+    // Solo vs terminal: safe cell wins, mine loses (bot cell is decorative only)
+    if (m.mode === 'bot') {
+      return p1Cell === mine ? 'p2' : 'p1';
+    }
+    // PvP: avoid the mine — hit = loss for that player
     const p1Hit = p1Cell === mine;
     const p2Hit = p2Cell === mine;
     if (p1Hit && p2Hit) return 'draw';

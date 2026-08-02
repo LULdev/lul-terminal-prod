@@ -77,6 +77,7 @@ export function Dice100Arena({
   const [displayRoll, setDisplayRoll] = useState<number | null>(null);
   const pendingMoveRef = useRef(encodeMove('over', 50));
   const submittedForMatchRef = useRef<string | null>(null);
+  const submitAttemptsRef = useRef(0);
 
   const odds = useMemo(() => dice100Odds(dir, target), [dir, target]);
   const profit = Math.max(0, Math.round(bet * odds.multiplier) - bet);
@@ -113,15 +114,27 @@ export function Dice100Arena({
     return () => window.clearInterval(iv);
   }, [match?.id, match?.status, reveal?.roll]);
 
-  // Solo: auto-submit locked-in move once match starts
+  // Solo: auto-submit locked-in move once match starts.
+  // Server submitted flag is source of truth — retry a few times if the first attempt fails.
   useEffect(() => {
-    if (!match || match.status !== 'playing' || acting) return;
-    if (submittedForMatchRef.current === match.id) return;
+    if (!match || match.status !== 'playing') return;
     if (match.player1?.move || match.player1?.submitted) {
       submittedForMatchRef.current = match.id;
+      submitAttemptsRef.current = 0;
       return;
     }
+    if (acting) return;
+    if (submittedForMatchRef.current === match.id) {
+      if (submitAttemptsRef.current >= 3) return;
+      const t = window.setTimeout(() => {
+        if (submittedForMatchRef.current === match.id && submitAttemptsRef.current < 3) {
+          submittedForMatchRef.current = null;
+        }
+      }, 800);
+      return () => window.clearTimeout(t);
+    }
     submittedForMatchRef.current = match.id;
+    submitAttemptsRef.current += 1;
     onMove(pendingMoveRef.current);
   }, [match?.id, match?.status, match?.player1?.move, match?.player1?.submitted, acting, onMove]);
 
@@ -181,6 +194,7 @@ export function Dice100Arena({
               onClick={() => {
                 pendingMoveRef.current = encodeMove(dir, target);
                 submittedForMatchRef.current = null;
+                submitAttemptsRef.current = 0;
                 const stake = Math.max(minBet, Math.min(maxBet, bet));
                 onBetChange(stake);
                 if (match?.status === 'done') {
@@ -319,12 +333,14 @@ export function Dice100Arena({
               <ArenaDoneBanner
                 catalog={catalog}
                 outcome={outcome}
+                acting={acting}
                 streakBonus={match.streakBonus}
                 jackpotHit={match.jackpotHit}
                 jackpotAmount={match.jackpotAmount}
                 onRematch={() => {
                   pendingMoveRef.current = encodeMove(dir, target);
                   submittedForMatchRef.current = null;
+                  submitAttemptsRef.current = 0;
                   const stake = Math.max(minBet, Math.min(maxBet, bet));
                   onBetChange(stake);
                   onRematch({ bet: stake });
@@ -336,6 +352,9 @@ export function Dice100Arena({
                     {' · '}
                     {reveal.dir === 'over' ? 'Over' : 'Under'} {Number(reveal.target).toFixed(2)}
                     {' · ×'}{Number(reveal.multiplier).toFixed(4)}
+                    {typeof match.payoutExact === 'number' && match.payoutExact > 0 && outcome === 'win' ? (
+                      <> · paid {match.payoutExact}</>
+                    ) : null}
                   </p>
                 ) : null}
               />

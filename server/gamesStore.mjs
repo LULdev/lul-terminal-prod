@@ -118,7 +118,11 @@ export async function addToJackpot(amount) {
 export async function payoutJackpot(winner) {
   return withGamesAuxWrite(async () => {
     const db = await readJackpotFromDisk();
-    const amount = Math.max(0, Number(db.pool) || 0);
+    const amount = Math.max(0, Math.floor(Number(db.pool) || 0));
+    // Empty pool is a miss — do not bump hits / lastWinner
+    if (amount <= 0) {
+      return 0;
+    }
     db.pool = 0;
     db.totalPaidOut = (Number(db.totalPaidOut) || 0) + amount;
     db.hits = (Number(db.hits) || 0) + 1;

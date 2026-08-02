@@ -192,9 +192,9 @@ export const GAME_CATALOG: GameCatalogEntry[] = [
     bgClass: 'border-indigo-500/20 from-indigo-950/40 to-violet-950/30',
     arenaType: 'instant',
     category: 'instant',
-    tagline: 'Pick 1–10',
-    description: 'Secretly pick a number from 1 to 10. Highest bid wins — chicken out low or go max and risk the mirror.',
-    rules: ['Both pick 1–10 secretly', 'Higher number wins', 'Same = draw'],
+    tagline: 'Closest to target',
+    description: 'Secretly pick a number from 1 to 10. A hidden target is rolled — closest guess wins the pot. Ties refund.',
+    rules: ['Both pick 1–10 secretly', 'Secret target 1–10', 'Closest wins · same distance = draw'],
     moves: Array.from({ length: 10 }, (_, i) => ({
       id: String(i + 1),
       label: String(i + 1),
