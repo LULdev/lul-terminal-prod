@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
 import { revealVaultPassword } from '../../lib/premiumAccounts';
 
@@ -20,14 +20,16 @@ export function VaultPasswordReveal({ accountId, hasPassword = true, initialPass
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [copied, setCopied] = useState(false);
+  const loadingRef = useRef(false);
 
   const reveal = useCallback(async () => {
-    if (loading) return;
+    if (loadingRef.current) return;
     if (revealed && password) return;
     if (!hasPassword) {
       setError('No password stored');
       return;
     }
+    loadingRef.current = true;
     setLoading(true);
     setError('');
     try {
@@ -37,6 +39,7 @@ export function VaultPasswordReveal({ accountId, hasPassword = true, initialPass
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Reveal failed');
     } finally {
+      loadingRef.current = false;
       setLoading(false);
     }
   }, [accountId, hasPassword, password, revealed]);

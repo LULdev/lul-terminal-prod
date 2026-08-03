@@ -352,6 +352,10 @@ export async function logoutUser(token) {
     const { leaveAllGameQueues } = await import('../gamesService.mjs');
     const cleanup = await leaveAllGameQueues(userId);
     await refundOrphanEscrowsAfterCleanup(userId, cleanup);
+    // Always try residual escrow refund after cleanup (done matches no longer block)
+    await refundUserEscrows(userId).catch((e) => {
+      console.warn('[auth] logout residual escrow refund failed', userId, e);
+    });
     await withUsersWrite(async () => {
       const db = await loadUsersDb();
       const user = db.users.find((u) => u.id === userId);

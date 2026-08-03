@@ -78,6 +78,8 @@ export function Dice100Arena({
   const pendingMoveRef = useRef(encodeMove('over', 50));
   const submittedForMatchRef = useRef<string | null>(null);
   const submitAttemptsRef = useRef(0);
+  const [submitFails, setSubmitFails] = useState(0);
+  const [retryToken, setRetryToken] = useState(0);
 
   const odds = useMemo(() => dice100Odds(dir, target), [dir, target]);
   const profit = Math.max(0, Math.round(bet * odds.multiplier) - bet);
@@ -121,22 +123,28 @@ export function Dice100Arena({
     if (match.player1?.move || match.player1?.submitted) {
       submittedForMatchRef.current = match.id;
       submitAttemptsRef.current = 0;
+      setSubmitFails(0);
       return;
     }
     if (acting) return;
-    if (submittedForMatchRef.current === match.id) {
-      if (submitAttemptsRef.current >= 3) return;
+    if (submittedForMatchRef.current === match.id && retryToken === 0) {
+      if (submitAttemptsRef.current >= 3) {
+        setSubmitFails(submitAttemptsRef.current);
+        return;
+      }
       const t = window.setTimeout(() => {
         if (submittedForMatchRef.current === match.id && submitAttemptsRef.current < 3) {
           submittedForMatchRef.current = null;
+          setRetryToken((n) => n + 1);
         }
       }, 800);
       return () => window.clearTimeout(t);
     }
     submittedForMatchRef.current = match.id;
     submitAttemptsRef.current += 1;
+    setSubmitFails(submitAttemptsRef.current >= 3 ? submitAttemptsRef.current : 0);
     onMove(pendingMoveRef.current);
-  }, [match?.id, match?.status, match?.player1?.move, match?.player1?.submitted, acting, onMove]);
+  }, [match?.id, match?.status, match?.player1?.move, match?.player1?.submitted, acting, onMove, retryToken]);
 
   const matchActive = Boolean(match && match.status === 'playing') || waiting || acting || rolling;
   const markerPct = displayRoll != null
@@ -228,13 +236,16 @@ export function Dice100Arena({
               Cancel
             </button>
           )}
-          {match?.status === 'playing' && submitAttemptsRef.current >= 3 && !acting && (
+          {match?.status === 'playing' && submitFails >= 3 && !acting && (
             <button
               type="button"
               className="dice100-cancel"
               onClick={() => {
                 submittedForMatchRef.current = null;
                 submitAttemptsRef.current = 0;
+                setSubmitFails(0);
+                setRetryToken((n) => n + 1);
+                onMove(pendingMoveRef.current);
               }}
             >
               Retry roll

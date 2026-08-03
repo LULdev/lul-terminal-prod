@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { sessionJson } from './sessionFetch';
+import { sessionFetch } from './sessionFetch';
 
 const API = '/api/games/coin-feed';
 
@@ -42,7 +42,16 @@ export type CoinFeedResponse = {
 };
 
 export async function fetchCoinFeed(limit = 40): Promise<CoinFeedResponse> {
-  return sessionJson<CoinFeedResponse>(`${API}?limit=${limit}`);
+  // Soft 401 — read-only poll must not invalidate the whole session
+  const res = await sessionFetch(`${API}?limit=${limit}`, undefined, { soft401: true });
+  const data = await res.json().catch(() => ({}));
+  if (res.status === 401) {
+    throw new Error('Sign in to view coin feed');
+  }
+  if (!res.ok) {
+    throw new Error((data as { error?: string }).error ?? `HTTP ${res.status}`);
+  }
+  return data as CoinFeedResponse;
 }
 
 export function formatCoinFeedTime(ts: number): string {

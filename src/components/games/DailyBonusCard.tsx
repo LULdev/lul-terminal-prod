@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Clock, Gift, Sparkles } from 'lucide-react';
 import { claimDailyBonus, type DailyBonusInfo } from '../../lib/games';
 import { LulCoinAmount } from './LulCoinAmount';
@@ -29,31 +29,37 @@ export function DailyBonusCard({
 }) {
   const [remainingMs, setRemainingMs] = useState(bonus.remainingMs);
   const [claiming, setClaiming] = useState(false);
+  const [claimedLocal, setClaimedLocal] = useState(false);
   const [pulse, setPulse] = useState(false);
+  const claimingRef = useRef(false);
 
   useEffect(() => {
     setRemainingMs(bonus.remainingMs);
-  }, [bonus.remainingMs, bonus.canClaim]);
+    // Server says claimable again — clear local latch
+    if (bonus.canClaim) setClaimedLocal(false);
+  }, [bonus.remainingMs, bonus.canClaim, bonus.nextClaimAt]);
 
   useEffect(() => {
-    if (bonus.canClaim) return;
+    if (bonus.canClaim && !claimedLocal) return;
     const tick = setInterval(() => {
       setRemainingMs((prev) => Math.max(0, prev - 1000));
     }, 1000);
     return () => clearInterval(tick);
-  }, [bonus.canClaim]);
+  }, [bonus.canClaim, claimedLocal]);
 
-  const canClaim = bonus.canClaim;
+  const canClaim = bonus.canClaim && !claimedLocal;
   const progress = canClaim
     ? 1
     : 1 - remainingMs / Math.max(1, bonus.cooldownMs);
   const circumference = 2 * Math.PI * 28;
 
   const handleClaim = useCallback(async () => {
-    if (!canClaim || claiming) return;
+    if (!canClaim || claimingRef.current) return;
+    claimingRef.current = true;
     setClaiming(true);
     try {
       const res = await claimDailyBonus();
+      setClaimedLocal(true);
       setPulse(true);
       setTimeout(() => setPulse(false), 1200);
       setRemainingMs(res.remainingMs ?? bonus.cooldownMs);
@@ -61,9 +67,10 @@ export function DailyBonusCard({
     } catch (e) {
       onError?.(e instanceof Error ? e.message : 'Bonus unavailable');
     } finally {
+      claimingRef.current = false;
       setClaiming(false);
     }
-  }, [bonus.cooldownMs, canClaim, claiming, onClaimed, onError]);
+  }, [bonus.cooldownMs, canClaim, onClaimed, onError]);
 
   if (compact) {
     return (

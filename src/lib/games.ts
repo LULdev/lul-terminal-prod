@@ -320,8 +320,9 @@ async function apiRead<T>(path: string): Promise<T> {
   return data as T;
 }
 
+/** Poll/load: soft401 so a flaky /state 401 does not wipe the global session. */
 export function fetchGamesState() {
-  return api<GamesState>('/state');
+  return apiRead<GamesState>('/state');
 }
 
 export function fetchGamesStateRead() {

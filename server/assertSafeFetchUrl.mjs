@@ -65,6 +65,10 @@ function decodeIpLiteral(host) {
 function normalizeDottedIpv4(host) {
   if (net.isIP(host)) return host;
   const parts = String(host).split('.');
+  // Ambiguous leading-zero octets (e.g. 0177.0.0.1) — reject rather than mis-parse
+  if (parts.length === 4 && parts.some((p) => /^0\d+$/.test(p))) {
+    throw new Error('Blocked URL host');
+  }
   if (parts.length > 0 && parts.length < 4 && parts.every((p) => /^\d+$/.test(p))) {
     const nums = parts.map(Number);
     if (!nums.some((n) => n < 0 || n > 255)) {
@@ -76,7 +80,12 @@ function normalizeDottedIpv4(host) {
 }
 
 function assertHostAllowed(host) {
-  const decoded = normalizeDottedIpv4(decodeIpLiteral(host));
+  let decoded;
+  try {
+    decoded = normalizeDottedIpv4(decodeIpLiteral(host));
+  } catch {
+    throw new Error('Blocked URL host');
+  }
   if (BLOCKED_HOSTS.has(decoded)) throw new Error('Blocked URL host');
   if (decoded.endsWith('.local') || decoded.endsWith('.internal')) throw new Error('Blocked URL host');
   if (net.isIP(decoded) && isPrivateIp(decoded)) throw new Error('Blocked private IP');

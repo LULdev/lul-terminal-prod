@@ -125,21 +125,36 @@ async function incrementRedis(key, max, windowMs) {
 
 async function incrementFile(key, max, windowMs) {
   const now = Date.now();
-  return withFileWrite(async () => withCrossProcessLock('rate-limits-buckets', async () => {
-    await loadFileBuckets(true);
-    const ok = incrementLocal(fileCache, key, max, windowMs, now);
-    await persistFileBuckets();
-    incrementLocal(memoryBuckets, key, max, windowMs, now);
-    return ok;
-  }));
+  try {
+    return await withFileWrite(async () => withCrossProcessLock('rate-limits-buckets', async () => {
+      await loadFileBuckets(true);
+      const ok = incrementLocal(fileCache, key, max, windowMs, now);
+      await persistFileBuckets();
+      incrementLocal(memoryBuckets, key, max, windowMs, now);
+      return ok;
+    }, { maxWaitMs: 6000 }));
+  } catch (err) {
+    // Lock timeout / I/O — fail closed as rate-limited (429), never 500
+    const msg = err instanceof Error ? err.message : String(err);
+    if (/lock timeout|EACCES|ENOENT|EPERM/i.test(msg)) {
+      console.warn('[rate-limit] file backend unavailable — fail closed', msg);
+      return false;
+    }
+    throw err;
+  }
 }
 
 /** Returns true when request is within limit. */
 export async function incrementRateLimit(key, { max = 30, windowMs = 60_000 } = {}) {
   const backend = resolveBackend();
-  if (backend === 'redis') return incrementRedis(key, max, windowMs);
-  if (backend === 'file') return incrementFile(key, max, windowMs);
-  return incrementLocal(memoryBuckets, key, max, windowMs, Date.now());
+  try {
+    if (backend === 'redis') return await incrementRedis(key, max, windowMs);
+    if (backend === 'file') return await incrementFile(key, max, windowMs);
+    return incrementLocal(memoryBuckets, key, max, windowMs, Date.now());
+  } catch (err) {
+    console.warn('[rate-limit] backend error — fail closed', err);
+    return false;
+  }
 }
 
 export function getRateLimitBackend() {

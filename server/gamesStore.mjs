@@ -6,6 +6,7 @@
 import fs from 'fs/promises';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { withCrossProcessLock } from './fileLock.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(__dirname, '..', 'data', 'games');
@@ -36,9 +37,14 @@ async function fileExists(file) {
   }
 }
 
-/** Serialize jackpot/history RMW (independent of users.json coin lock). */
+/**
+ * Serialize jackpot/history RMW (process-local chain + cross-process lock).
+ * Independent of users.json coin lock.
+ */
 export function withGamesAuxWrite(task) {
-  const run = gamesAuxWriteChain.then(() => task());
+  const run = gamesAuxWriteChain.then(() =>
+    withCrossProcessLock('games-aux', () => task(), { maxWaitMs: 8000 }),
+  );
   gamesAuxWriteChain = run.then(() => undefined, () => undefined);
   return run;
 }

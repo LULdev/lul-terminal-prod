@@ -28,10 +28,13 @@ export function toClientAccounts(accounts) {
   return (accounts ?? []).map(toClientAccount);
 }
 
-export async function revealAccountPassword(id) {
+export async function revealAccountPassword(id, { isAdmin = false } = {}) {
   const db = await loadAccountsDb();
   const row = db.accounts.find((a) => a.id === id);
   if (!row) throw new Error('Account not found');
+  // Same visibility gate as list/export — block unchecked for non-admins
+  const visible = visibleAccountsForViewer([row], isAdmin);
+  if (!visible.length) throw new Error('Account not found');
   return { password: String(row.password ?? '') };
 }
 

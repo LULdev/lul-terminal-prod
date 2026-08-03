@@ -157,7 +157,7 @@ export async function handlePremiumAccountsRequest(req, res) {
       requirePremiumView(req);
       await requireMemberTab(req, 'premiumaccounts');
       await checkRateLimit(`premium-reveal:${req.auth.user.id}`, { max: 40, windowMs: 60_000 });
-      const result = await revealAccountPassword(revealMatch[1]);
+      const result = await revealAccountPassword(revealMatch[1], { isAdmin });
       return sendJson(res, 200, result);
     }
 

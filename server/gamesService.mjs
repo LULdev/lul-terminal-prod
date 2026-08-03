@@ -145,11 +145,18 @@ export async function leaveAllGameQueues(userId) {
   return { ok: errors.length === 0, errors };
 }
 
-/** True when user still has an in-memory queue entry or active match in any arcade game. */
+/**
+ * True when user still has an in-memory queue entry or **playing** match.
+ * Done matches kept for UI polling (MATCH_DONE_TTL) must NOT block escrow refunds.
+ */
 export async function userHasActiveArcadeSession(userId) {
   if (!userId) return false;
   const slices = await Promise.all(GAME_IDS.map((id) => GAME_REGISTRY[id].getUserSlice(userId)));
-  return slices.some((slice) => slice?.inQueue || slice?.activeMatch);
+  return slices.some((slice) => {
+    if (slice?.inQueue) return true;
+    const m = slice?.activeMatch;
+    return Boolean(m && m.status === 'playing');
+  });
 }
 
 export async function getCoinFeed(userId, limit = 40) {

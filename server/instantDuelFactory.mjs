@@ -186,13 +186,8 @@ export function createInstantDuelGame(cfg) {
         const slot = isP1 ? m.player1 : m.player2;
         if (slot.move) throw new Error('Move already submitted');
         const other = isP1 ? m.player2 : m.player1;
-        // Expiry BEFORE recording move — prevents late submit from stealing forfeit pot
+        // Expiry BEFORE recording move — never accept late moves (forfeit resolves pot)
         if (Date.now() > m.expiresAt) {
-          if (other?.move) {
-            // Opponent locked in before timeout; accept dual finalize
-            slot.move = raw;
-            return finalizeIfReady(m);
-          }
           await expireMatchWithRefund(m, mm.activeMatches, expireMeta);
           throw new Error('Match expired');
         }

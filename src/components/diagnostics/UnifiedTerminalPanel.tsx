@@ -441,7 +441,12 @@ export function UnifiedTerminalPanel({
     };
   }, [loadMessages, pollEnabled, isLoggedIn, chatStatus]);
 
+  const sendInFlightRef = useRef(false);
   const sendChat = useCallback(async (text: string): Promise<SendChatResult> => {
+    if (sendInFlightRef.current) {
+      return { ok: false, error: 'Send in progress' };
+    }
+    sendInFlightRef.current = true;
     try {
       const { message, newUnlocks, unlockRewards, unlockCoinsTotal } = await sendLobbyMessage(text);
       if (!mountedRef.current) return { ok: true };
@@ -473,6 +478,8 @@ export function UnifiedTerminalPanel({
         return { ok: false, error: err.message };
       }
       return { ok: false, error: err instanceof Error ? err.message : 'Send failed' };
+    } finally {
+      sendInFlightRef.current = false;
     }
   }, [onChatUnlocks]);
 
