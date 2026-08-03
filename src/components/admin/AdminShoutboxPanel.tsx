@@ -257,13 +257,16 @@ export function AdminShoutboxPanel() {
     return msg?.role;
   }, [data]);
 
+  const actingRef = useRef(false);
   const runMod = async (username: string, action: 'ban' | 'unban' | 'mute' | 'unmute', minutes?: number) => {
+    if (actingRef.current || acting || broadcasting) return;
     if ((action === 'ban' || action === 'mute') && isProtectedModTarget(resolveModRole(username))) {
       setError(`Cannot ${action} protected user @${username}`);
       return;
     }
     const label = action === 'mute' ? `Mute @${username} for ${minutes ?? 30}m?` : `${action} @${username}?`;
     if (!confirm(label)) return;
+    actingRef.current = true;
     setActing(`${action}:${username}`);
     try {
       await adminModerateShoutboxUser({ action, username, minutes });
@@ -272,6 +275,7 @@ export function AdminShoutboxPanel() {
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Moderation failed');
     } finally {
+      actingRef.current = false;
       setActing(null);
     }
   };

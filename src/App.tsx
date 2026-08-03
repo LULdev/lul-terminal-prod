@@ -246,7 +246,20 @@ export default function App() {
                 newsLastReadVersion: incoming.newsLastReadVersion ?? prev.newsLastReadVersion,
               };
             }
-            return { ...prev, ...incoming };
+            // Protect fresher arcade-patched balance: tab_visit often omits coin bumps
+            // and can share the same updatedAt as an older /me snapshot
+            const prevCoins = Number(prev.lulCoins);
+            const incCoins = Number(incoming.lulCoins);
+            const keepLocalCoins =
+              Number.isFinite(prevCoins)
+              && Number.isFinite(incCoins)
+              && prevCoins !== incCoins
+              && incAt <= prevAt;
+            return {
+              ...prev,
+              ...incoming,
+              ...(keepLocalCoins ? { lulCoins: prev.lulCoins } : {}),
+            };
           });
           if (trackedTab === 'changelog' && r.user.changelogLastReadVersion === APP_VERSION) {
             markLocalChangelogRead();
@@ -560,7 +573,21 @@ export default function App() {
         authApi.recordAchievementEvent('claw_victim', proof)
           .then((data) => {
             handleUnlocks(data.newUnlocks ?? [], data.unlockRewards);
-            if (data.user) patchUser(data.user);
+            if (data.user) {
+              // Merge — do not clobber fresher arcade balance with achievement snapshot
+              patchUser((prev) => {
+                if (!prev) return data.user!;
+                const incoming = data.user!;
+                const prevCoins = Number(prev.lulCoins);
+                const incCoins = Number(incoming.lulCoins);
+                const keepLocal =
+                  Number.isFinite(prevCoins)
+                  && Number.isFinite(incCoins)
+                  && prevCoins !== incCoins
+                  && (Number(incoming.updatedAt) || 0) <= (Number(prev.updatedAt) || 0);
+                return { ...prev, ...incoming, ...(keepLocal ? { lulCoins: prev.lulCoins } : {}) };
+              });
+            }
           })
           .catch((e) => {
             requestAchievementProofRemint();

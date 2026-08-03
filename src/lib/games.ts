@@ -383,7 +383,8 @@ export function joinRpsQueue(body: {
 }
 
 export function leaveRpsQueue() {
-  return api<{ ok: boolean }>('/rps/queue', { method: 'DELETE' });
+  // soft401 parity with leaveGameQueue (legacy helper)
+  return leaveGameQueue('rps');
 }
 
 export function submitRpsMove(matchId: string, move: RpsMove) {
@@ -406,7 +407,7 @@ export function joinTttQueue(body: {
 }
 
 export function leaveTttQueue() {
-  return api<{ ok: boolean }>('/ttt/queue', { method: 'DELETE' });
+  return leaveGameQueue('ttt');
 }
 
 export function submitTttMove(matchId: string, cell: number) {

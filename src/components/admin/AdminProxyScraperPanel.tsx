@@ -33,6 +33,7 @@ export function AdminProxyScraperPanel({ onScrapeSuccess, onGoToChecker, scrapeR
   const [scrapedCount, setScrapedCount] = useState(0);
   const [customCount, setCustomCount] = useState(0);
   const [busy, setBusy] = useState(false);
+  const busyRef = useRef(false);
   const [msg, setMsg] = useState('');
   const [logs, setLogs] = useState<string[]>([]);
   const [customUrl, setCustomUrl] = useState('');
@@ -71,6 +72,8 @@ export function AdminProxyScraperPanel({ onScrapeSuccess, onGoToChecker, scrapeR
   }, [load]);
 
   const runScrape = async () => {
+    if (busyRef.current) return;
+    busyRef.current = true;
     setBusy(true);
     setMsg('Scrape starting…');
     setLogs([]);
@@ -102,6 +105,7 @@ export function AdminProxyScraperPanel({ onScrapeSuccess, onGoToChecker, scrapeR
       if (e instanceof DOMException && e.name === 'AbortError') return;
       setMsg(e instanceof Error ? e.message : 'Scrape failed');
     } finally {
+      busyRef.current = false;
       setBusy(false);
     }
   };

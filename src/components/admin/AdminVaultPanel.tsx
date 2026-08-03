@@ -505,10 +505,11 @@ export function AdminVaultPanel() {
   };
 
   const runBulkImport = async () => {
-    if (!bulkValid) {
-      setError('No valid entries to import');
+    if (!bulkValid || savingRef.current) {
+      if (!bulkValid) setError('No valid entries to import');
       return;
     }
+    savingRef.current = true;
     setBulkImporting(true);
     setError('');
     setBulkResult('');
@@ -530,6 +531,7 @@ export function AdminVaultPanel() {
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Bulk import failed');
     } finally {
+      savingRef.current = false;
       setBulkImporting(false);
     }
   };

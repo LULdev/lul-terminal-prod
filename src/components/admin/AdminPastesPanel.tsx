@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useMountedLoad } from '../../hooks/useMountedLoad';
 import {
   ExternalLink,
@@ -89,6 +89,7 @@ export function AdminPastesPanel() {
   const [editor, setEditor] = useState<EditForm | null>(null);
   const [viewer, setViewer] = useState<{ meta: AdminPasteMeta; content: string } | null>(null);
   const [saving, setSaving] = useState(false);
+  const savingRef = useRef(false);
   const { mountedRef, loadGenRef } = useMountedLoad();
 
   const load = useCallback(async () => {
@@ -182,7 +183,8 @@ export function AdminPastesPanel() {
   };
 
   const saveEdit = async () => {
-    if (!editor) return;
+    if (!editor || savingRef.current) return;
+    savingRef.current = true;
     setSaving(true);
     setError('');
     try {
@@ -205,6 +207,7 @@ export function AdminPastesPanel() {
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Save failed');
     } finally {
+      savingRef.current = false;
       setSaving(false);
     }
   };

@@ -74,6 +74,7 @@ export function AdminEmotesPanel() {
   const [createOpen, setCreateOpen] = useState(false);
   const [create, setCreate] = useState<CreateForm>(emptyCreate());
   const [createSaving, setCreateSaving] = useState(false);
+  const actingRef = useRef(false);
   const [editCode, setEditCode] = useState('');
   const [editLabel, setEditLabel] = useState('');
   const [dragOver, setDragOver] = useState(false);
@@ -152,6 +153,7 @@ export function AdminEmotesPanel() {
   };
 
   const handleCreate = async () => {
+    if (actingRef.current) return;
     const code = normalizeCodeInput(create.code);
     const label = create.label.trim();
     if (!code) {
@@ -167,6 +169,7 @@ export function AdminEmotesPanel() {
       return;
     }
 
+    actingRef.current = true;
     setCreateSaving(true);
     setError('');
     try {
@@ -180,11 +183,14 @@ export function AdminEmotesPanel() {
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Create failed');
     } finally {
+      actingRef.current = false;
       setCreateSaving(false);
     }
   };
 
   const handleReplaceImage = async (id: string, file: File) => {
+    if (actingRef.current) return;
+    actingRef.current = true;
     setActing(id);
     setError('');
     try {
@@ -195,17 +201,20 @@ export function AdminEmotesPanel() {
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Upload failed');
     } finally {
+      actingRef.current = false;
       setActing(null);
     }
   };
 
   const handleSaveMeta = async (emote: AdminChatEmote) => {
+    if (actingRef.current) return;
     const code = normalizeCodeInput(editCode);
     const label = editLabel.trim();
     if (!code || !label) {
       setError('Code and label are required');
       return;
     }
+    actingRef.current = true;
     setActing(emote.id);
     setError('');
     try {
@@ -215,11 +224,14 @@ export function AdminEmotesPanel() {
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Update failed');
     } finally {
+      actingRef.current = false;
       setActing(null);
     }
   };
 
   const handleToggle = async (emote: AdminChatEmote) => {
+    if (actingRef.current) return;
+    actingRef.current = true;
     setActing(emote.id);
     setError('');
     try {
@@ -229,12 +241,15 @@ export function AdminEmotesPanel() {
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Update failed');
     } finally {
+      actingRef.current = false;
       setActing(null);
     }
   };
 
   const handleDelete = async (emote: AdminChatEmote) => {
+    if (actingRef.current) return;
     if (!confirm(`Delete emote :${emote.code}:? This cannot be undone.`)) return;
+    actingRef.current = true;
     setActing(emote.id);
     setError('');
     try {
@@ -245,6 +260,7 @@ export function AdminEmotesPanel() {
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Delete failed');
     } finally {
+      actingRef.current = false;
       setActing(null);
     }
   };

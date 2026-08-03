@@ -23,6 +23,19 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '3.56.1',
+    title: 'Client residual: lulCoins merge protect, proxy job busyRef, admin double-submit sweep',
+    date: 'Aug 4, 2026 - 04:40',
+    highlight: true,
+    items: [
+      { priority: 'P1', text: 'P1 — tab_visit / syncAchievements / claw patchUser merge keep fresher lulCoins (no UserBar clobber).' },
+      { priority: 'P1', text: 'P1 — Proxy scraper + checker start busyRef (no double jobs on double-click).' },
+      { priority: 'P2', text: 'P2 — soft401 paste raw download; leaveRps/TttQueue soft401 via leaveGameQueue.' },
+      { priority: 'P2', text: 'P2 — Admin busyRefs: vault bulk import, shoutbox mod, emotes create/toggle/delete, pastes saveEdit.' },
+      { priority: 'P9', text: 'P9 — Version 3.56.1 residual after 3.56.0 full audit.' },
+    ],
+  },
+  {
     version: '3.56.0',
     title: 'Full Server+Client audit (all priorities): queue recover, logout forfeit, coins sync',
     date: 'Aug 4, 2026 - 04:20',

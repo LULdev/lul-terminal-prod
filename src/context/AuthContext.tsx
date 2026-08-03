@@ -352,7 +352,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Never resurrect a logged-out session from a late 200
       if (gen !== refreshGenRef.current) return;
       if (data.user) {
-        setUser((prev) => (prev ? data.user! : null));
+        // Merge: never clobber fresher arcade/claim balance with older achievement snapshot
+        setUser((prev) => {
+          if (!prev) return null;
+          const incoming = data.user!;
+          const prevCoins = Number(prev.lulCoins);
+          const incCoins = Number(incoming.lulCoins);
+          const keepLocalCoins =
+            Number.isFinite(prevCoins)
+            && Number.isFinite(incCoins)
+            && prevCoins !== incCoins
+            && (Number(incoming.updatedAt) || 0) <= (Number(prev.updatedAt) || 0);
+          return {
+            ...prev,
+            ...incoming,
+            ...(keepLocalCoins ? { lulCoins: prev.lulCoins } : {}),
+          };
+        });
       }
       if (userRef.current) {
         handleUnlocks(data.newUnlocks ?? [], data.unlockRewards);

@@ -171,8 +171,9 @@ export function MyPasteGallery({ refreshKey = 0, onDeleted, onFork }: Props) {
 
   const onDownload = async (p: PasteMeta) => {
     try {
-      const res = await sessionFetch(`/api/paste/${p.id}/raw`);
-      if (!res.ok) throw new Error('Download failed');
+      // soft401: gallery download must not wipe global session on flaky 401
+      const res = await sessionFetch(`/api/paste/${p.id}/raw`, undefined, { soft401: true });
+      if (!res.ok) throw new Error(res.status === 401 ? 'Sign in required' : 'Download failed');
       const text = await res.text();
       downloadPasteText(p.title || p.id, text);
     } catch (e) {

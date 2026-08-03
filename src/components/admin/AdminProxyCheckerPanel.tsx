@@ -87,6 +87,7 @@ export function AdminProxyCheckerPanel({ onGoToScraper }: AdminProxyCheckerPanel
   const [customCount, setCustomCount] = useState(0);
   const [presets, setPresets] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
+  const busyRef = useRef(false);
   const [msg, setMsg] = useState('');
   const [progress, setProgress] = useState(0);
   const [liveAlive, setLiveAlive] = useState(0);
@@ -157,6 +158,8 @@ export function AdminProxyCheckerPanel({ onGoToScraper }: AdminProxyCheckerPanel
   useVisibilityAwarePoll(() => { void refresh(); }, 15_000);
 
   const runCheck = async () => {
+    if (busyRef.current) return;
+    busyRef.current = true;
     setBusy(true);
     setProgress(0);
     setLiveAlive(0);
@@ -202,6 +205,7 @@ export function AdminProxyCheckerPanel({ onGoToScraper }: AdminProxyCheckerPanel
       if (e instanceof DOMException && e.name === 'AbortError') return;
       setMsg(e instanceof Error ? e.message : 'Check failed');
     } finally {
+      busyRef.current = false;
       setBusy(false);
       setActiveJobId(null);
       setLiveEta(null);
