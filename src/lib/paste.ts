@@ -9,6 +9,9 @@ import { sessionFetch } from './sessionFetch';
 
 const API = '/api/paste';
 const viewInflight = new Map<string, Promise<{ views: number; burned: boolean }>>();
+/** Client soft dedup aligned with server 90m IP window (sessionStorage TTL). */
+const PASTE_VIEW_PREFIX = 'lul_paste_view_ts_';
+const PASTE_VIEW_CLIENT_TTL_MS = 90 * 60 * 1000;
 
 export type PasteMeta = {
   id: string;
@@ -257,7 +260,25 @@ export async function recordPasteView(
   const pending = viewInflight.get(id);
   if (pending) return pending;
 
+  const canUseSession = typeof sessionStorage !== 'undefined';
+  const sessionKey = `${PASTE_VIEW_PREFIX}${id}`;
+
   const run = (async () => {
+    // Soft client skip within 90m — server still authoritative; burn pastes always POST
+    if (canUseSession && !opts.burnAfterRead) {
+      const raw = sessionStorage.getItem(sessionKey);
+      const at = raw ? Number(raw) : 0;
+      if (at > 0 && Date.now() - at < PASTE_VIEW_CLIENT_TTL_MS) {
+        if (typeof opts.knownViews === 'number' && opts.knownViews >= 0) {
+          return { views: opts.knownViews, burned: false };
+        }
+        try {
+          const meta = await fetchPasteMeta(id, { credentialed: true });
+          if (meta) return { views: meta.views ?? 0, burned: false };
+        } catch { /* ignore */ }
+        return { views: 0, burned: false };
+      }
+    }
     try {
       const res = await sessionFetch(
         `${API}/${id}/view`,
@@ -266,6 +287,9 @@ export async function recordPasteView(
       );
       if (res.ok) {
         const data = await res.json() as { views?: number; burned?: boolean };
+        if (canUseSession && !opts.burnAfterRead) {
+          sessionStorage.setItem(sessionKey, String(Date.now()));
+        }
         return {
           views: typeof data.views === 'number' ? data.views : (opts.knownViews ?? 0),
           burned: Boolean(data.burned),

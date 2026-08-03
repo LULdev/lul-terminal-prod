@@ -207,6 +207,9 @@ export function GamesPage() {
   const mountedRef = useRef(true);
   const metaGenRef = useRef(0);
   const loadGenRef = useRef(0);
+  /** Shared monotonic seq for all /state writers (load + poll) so stale responses cannot clobber coins. */
+  const stateFetchSeqRef = useRef(0);
+  const lastAppliedStateSeqRef = useRef(0);
   const stateRef = useRef(state);
   stateRef.current = state;
   const waitingRef = useRef(waiting);
@@ -323,18 +326,21 @@ export function GamesPage() {
       return;
     }
     const gen = ++loadGenRef.current;
+    const fetchSeq = ++stateFetchSeqRef.current;
     pendingLoadRef.current = false;
     pendingLoadGameIdRef.current = null;
     const seqBefore = matchSeqRef.current;
     try {
       const s = await fetchGamesState();
       if (gen !== loadGenRef.current || !mountedRef.current) return;
+      // Drop if a newer load/poll already applied state
+      if (fetchSeq < lastAppliedStateSeqRef.current) return;
       if (actingRef.current || matchSeqRef.current !== seqBefore) {
         pendingLoadRef.current = true;
         pendingLoadGameIdRef.current = gameId;
         return;
       }
-      // Apply global state even if selection changed mid-fetch
+      lastAppliedStateSeqRef.current = fetchSeq;
       setState(s);
       const activeId = selectedGameRef.current;
       if (opts?.applySlice !== false) {
@@ -353,22 +359,21 @@ export function GamesPage() {
     }
   }, [applySliceState]);
 
-  const pollGenRef = useRef(0);
-
   const pollState = useCallback(async (opts?: {
     force?: boolean;
     gameId?: GameId;
     applySlice?: boolean;
   }): Promise<GamesState | null> => {
     if (!opts?.force && actingRef.current) return null;
-    const gen = ++pollGenRef.current;
+    const fetchSeq = ++stateFetchSeqRef.current;
     const seqBefore = matchSeqRef.current;
     try {
       const s = await fetchGamesState();
       // Drop stale responses (overlapping polls / force after background)
-      if (gen !== pollGenRef.current) return null;
+      if (fetchSeq < lastAppliedStateSeqRef.current) return null;
       if (!opts?.force && (actingRef.current || matchSeqRef.current !== seqBefore)) return null;
       if (!mountedRef.current) return null;
+      lastAppliedStateSeqRef.current = fetchSeq;
       setState(s);
       if (opts?.applySlice !== false) {
         const game = opts?.gameId ?? selectedGameRef.current;
@@ -378,7 +383,7 @@ export function GamesPage() {
       setPollError('');
       return s;
     } catch (e) {
-      if (gen === pollGenRef.current && mountedRef.current) {
+      if (fetchSeq >= lastAppliedStateSeqRef.current && mountedRef.current) {
         setPollError(e instanceof Error ? e.message : 'Sync lost — retry');
       }
       return null;
@@ -1123,12 +1128,18 @@ export function GamesPage() {
             onClaimed={(coins, amount) => {
               setMsg(`Daily reload +${amount} LULcoins`);
               // Authoritative balance from claim response (don't wait for deferred load)
+              // Bump stateFetchSeq so a stale background poll cannot overwrite coins
+              lastAppliedStateSeqRef.current = ++stateFetchSeqRef.current;
               setState((prev) => (prev
                 ? {
                     ...prev,
                     myCoins: coins,
                     dailyBonus: prev.dailyBonus
-                      ? { ...prev.dailyBonus, canClaim: false, remainingMs: prev.dailyBonus.cooldownMs }
+                      ? {
+                          ...prev.dailyBonus,
+                          canClaim: false,
+                          remainingMs: prev.dailyBonus.cooldownMs,
+                        }
                       : prev.dailyBonus,
                   }
                 : prev));

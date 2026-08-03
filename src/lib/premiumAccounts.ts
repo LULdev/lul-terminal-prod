@@ -25,8 +25,12 @@ export type PremiumAccountStats = {
 
 export type { PremiumAccount, PremiumAccountCategory, PremiumAccountStatus };
 
-async function authedJson<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await sessionFetch(`${API}${path}`, init);
+async function authedJson<T>(
+  path: string,
+  init?: RequestInit,
+  opts?: { soft401?: boolean },
+): Promise<T> {
+  const res = await sessionFetch(`${API}${path}`, init, opts?.soft401 ? { soft401: true } : undefined);
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     throw new Error((err as { error?: string }).error ?? `HTTP ${res.status}`);
@@ -34,10 +38,12 @@ async function authedJson<T>(path: string, init?: RequestInit): Promise<T> {
   return res.json() as Promise<T>;
 }
 
+/** Read-only: soft401 so a flaky poll does not global-logout. */
 export async function fetchPremiumAccountStats(): Promise<PremiumAccountStats> {
-  return authedJson('/stats');
+  return authedJson('/stats', undefined, { soft401: true });
 }
 
+/** Read-only: soft401 so list refresh does not wipe session. */
 export async function fetchPremiumAccounts(opts: {
   category?: PremiumAccountCategory | 'all';
   status?: PremiumAccountStatus | 'all';
@@ -48,7 +54,7 @@ export async function fetchPremiumAccounts(opts: {
   if (opts.status && opts.status !== 'all') params.set('status', opts.status);
   if (opts.search?.trim()) params.set('search', opts.search.trim());
   const q = params.toString();
-  return authedJson(`/accounts${q ? `?${q}` : ''}`);
+  return authedJson(`/accounts${q ? `?${q}` : ''}`, undefined, { soft401: true });
 }
 
 export function exportAccountsTxt(accounts: PremiumAccount[], workingOnly = true) {
@@ -259,6 +265,8 @@ export async function rejectAccountReport(reportId: string): Promise<void> {
   await authedJson(`/reports/${reportId}/reject`, { method: 'POST' });
 }
 
+const ACCOUNT_VIEW_CLIENT_TTL_MS = 90 * 60 * 1000;
+
 export async function recordAccountView(id: string, currentViews = 0): Promise<number> {
   const pending = accountViewInflight.get(id);
   if (pending) return pending;
@@ -266,20 +274,25 @@ export async function recordAccountView(id: string, currentViews = 0): Promise<n
   const canUseSession = typeof sessionStorage !== 'undefined';
   const run = (async () => {
     const sessionKey = `${ACCOUNT_VIEW_PREFIX}${id}`;
-    if (!canUseSession || !sessionStorage.getItem(sessionKey)) {
-      try {
-        const res = await fetch(`${API}/accounts/${id}/view`, {
-          method: 'POST',
-          credentials: 'include',
-          headers: { 'Content-Type': 'application/json' },
-        });
-        if (res.ok) {
-          if (canUseSession) sessionStorage.setItem(sessionKey, '1');
-          const data = await res.json() as { views: number };
-          return data.views;
-        }
-      } catch { /* fall through */ }
+    if (canUseSession) {
+      const raw = sessionStorage.getItem(sessionKey);
+      // Support legacy permanent '1' flag and timestamp TTL (90m, site-wide policy)
+      if (raw === '1') return currentViews;
+      const at = raw ? Number(raw) : 0;
+      if (at > 0 && Date.now() - at < ACCOUNT_VIEW_CLIENT_TTL_MS) return currentViews;
     }
+    try {
+      const res = await fetch(`${API}/accounts/${id}/view`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      if (res.ok) {
+        if (canUseSession) sessionStorage.setItem(sessionKey, String(Date.now()));
+        const data = await res.json() as { views: number };
+        return data.views;
+      }
+    } catch { /* fall through */ }
     return currentViews;
   })();
 

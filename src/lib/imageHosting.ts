@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { invalidateSession } from './sessionEvents';
+import { getSessionEpoch, invalidateSession } from './sessionEvents';
 import { validateImageFileMagic } from './imageMime';
 import { SessionExpiredError, sessionFetch } from './sessionFetch';
 
@@ -175,6 +175,8 @@ export async function uploadHostedImage(
   }
 
   return new Promise((resolve, reject) => {
+    // Capture epoch at upload start so a late 401 after re-login cannot wipe the new session
+    const epochAtStart = getSessionEpoch();
     const xhr = new XMLHttpRequest();
     xhr.upload.onprogress = (e) => {
       if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100));
@@ -182,7 +184,7 @@ export async function uploadHostedImage(
     xhr.onload = () => {
       try {
         if (xhr.status === 401) {
-          invalidateSession();
+          invalidateSession({ epoch: epochAtStart });
           reject(new SessionExpiredError());
           return;
         }

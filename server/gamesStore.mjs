@@ -131,6 +131,15 @@ export async function addToJackpot(amount) {
  */
 export async function payoutJackpot(winner, meta = {}) {
   return withGamesAuxWrite(async () => {
+    // Never overwrite an unconfirmed pending payout (would lose the prior winner's amount)
+    const existingPending = await readJackpotPending();
+    if (existingPending && Number(existingPending.amount) > 0) {
+      console.warn('[games] jackpot payout deferred — prior pending still open', {
+        pendingWinner: existingPending.winner,
+        pendingAmount: existingPending.amount,
+      });
+      return 0;
+    }
     const db = await readJackpotFromDisk();
     const amount = Math.max(0, Math.floor(Number(db.pool) || 0));
     // Empty pool is a miss — do not bump hits / lastWinner
@@ -186,32 +195,42 @@ async function readJackpotPending() {
  * @param {(pending: {amount:number,winner:string,matchId?:string}) => Promise<'credited'|'restored'|'skipped'>} [settle]
  */
 export async function recoverJackpotPendingOnBoot(settle) {
-  return withGamesAuxWrite(async () => {
-    const pending = await readJackpotPending();
+  // Read pending under lock, then RELEASE games-aux before settle (users lock)
+  // to avoid games-aux → users deadlock with concurrent settleMatch (users → games-aux).
+  let pending = null;
+  await withGamesAuxWrite(async () => {
+    pending = await readJackpotPending();
     if (!pending || !(Number(pending.amount) > 0)) {
       try { await fs.unlink(JACKPOT_PENDING_FILE); } catch { /* */ }
-      return null;
+      pending = null;
     }
-    const amount = Math.floor(Number(pending.amount) || 0);
-    let outcome = 'restored';
-    if (typeof settle === 'function') {
-      try {
-        outcome = await settle({
-          amount,
-          winner: pending.winner,
-          matchId: pending.matchId,
-          gameId: pending.gameId,
-          at: pending.at,
-        });
-      } catch (err) {
-        console.error('[games] jackpot pending settle failed — restoring pool', err);
-        outcome = 'restored';
-      }
+  });
+  if (!pending) return null;
+
+  const amount = Math.floor(Number(pending.amount) || 0);
+  let outcome = 'restored';
+  if (typeof settle === 'function') {
+    try {
+      outcome = await settle({
+        amount,
+        winner: pending.winner,
+        matchId: pending.matchId,
+        gameId: pending.gameId,
+        at: pending.at,
+      });
+    } catch (err) {
+      console.error('[games] jackpot pending settle failed — restoring pool', err);
+      outcome = 'restored';
     }
+  }
+
+  await withGamesAuxWrite(async () => {
+    // Another process may have confirmed already — re-check pending identity
+    const still = await readJackpotPending();
+    if (!still || still.id !== pending.id) return;
     if (outcome === 'restored') {
       const db = await readJackpotFromDisk();
       db.pool = Math.max(0, Number(db.pool) || 0) + amount;
-      // Reverse the optimistic totalPaidOut/hits from the incomplete payout
       db.totalPaidOut = Math.max(0, (Number(db.totalPaidOut) || 0) - amount);
       db.hits = Math.max(0, (Number(db.hits) || 0) - 1);
       await saveJackpot(db);
@@ -222,8 +241,8 @@ export async function recoverJackpotPendingOnBoot(settle) {
     try {
       await fs.unlink(JACKPOT_PENDING_FILE);
     } catch { /* */ }
-    return { outcome, amount, winner: pending.winner };
   });
+  return { outcome, amount, winner: pending.winner };
 }
 
 export async function loadMatchHistory() {

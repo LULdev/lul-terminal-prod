@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Crown, LogIn, UserPlus, X } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
@@ -19,6 +19,7 @@ export function AuthModal() {
   const [error, setError] = useState('');
   const [referralCode, setReferralCode] = useState('');
   const [loading, setLoading] = useState(false);
+  const submittingRef = useRef(false);
   const [honeypot, setHoneypot] = useState('');
 
   useEffect(() => {
@@ -35,7 +36,7 @@ export function AuthModal() {
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (loading) return;
+    if (submittingRef.current) return;
     const trimmedEmail = email.trim();
     if (!trimmedEmail) {
       setError('Email or username is required');
@@ -45,6 +46,7 @@ export function AuthModal() {
       setError('Password must be at least 6 characters');
       return;
     }
+    submittingRef.current = true;
     setLoading(true);
     setError('');
     try {
@@ -63,6 +65,7 @@ export function AuthModal() {
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error');
     } finally {
+      submittingRef.current = false;
       setLoading(false);
     }
   };

@@ -136,8 +136,12 @@ async function writeContentAtomic(id, text) {
 
 let pasteWriteChain = Promise.resolve();
 
+/** Process-local chain + cross-process lock (multi-worker burn/meta RMW safety). */
 function withPasteWrite(task) {
-  const run = pasteWriteChain.then(() => task());
+  const run = pasteWriteChain.then(async () => {
+    const { withCrossProcessLock } = await import('./fileLock.mjs');
+    return withCrossProcessLock('paste', () => task(), { maxWaitMs: 8000 });
+  });
   pasteWriteChain = run.then(() => undefined, () => undefined);
   return run;
 }

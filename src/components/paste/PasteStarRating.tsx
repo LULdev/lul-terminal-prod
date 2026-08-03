@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Star } from 'lucide-react';
 import { ratePaste } from '../../lib/paste';
 
@@ -47,6 +47,7 @@ export function PasteStarRating({
   const [mine, setMine] = useState(userRating ?? 0);
   const [hover, setHover] = useState(0);
   const [busy, setBusy] = useState(false);
+  const busyRef = useRef(false);
   const [error, setError] = useState('');
   const [lockedUntil, setLockedUntil] = useState<number | null>(ratingLockedUntil ?? null);
   const [allowRate, setAllowRate] = useState(canRate);
@@ -82,8 +83,9 @@ export function PasteStarRating({
   const interactive = !busy;
 
   const submit = async (stars: number) => {
-    if (busy) return;
+    if (busyRef.current) return;
     // Always attempt the API — server enforces 24h lock; never soft-block owner/guests in UI only
+    busyRef.current = true;
     setBusy(true);
     setError('');
     try {
@@ -119,6 +121,7 @@ export function PasteStarRating({
       }
       setError(msg);
     } finally {
+      busyRef.current = false;
       setBusy(false);
     }
   };

@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useMountedLoad } from '../../hooks/useMountedLoad';
 import { safeAvatarUrl } from '../../lib/safeAvatarUrl';
 import {
@@ -75,6 +75,7 @@ export function UserDashboardPage({ onNavigate }: UserDashboardPageProps) {
   const [password, setPassword] = useState('');
   const [currentPassword, setCurrentPassword] = useState('');
   const [saving, setSaving] = useState(false);
+  const savingRef = useRef(false);
   const [msg, setMsg] = useState('');
   const [err, setErr] = useState('');
   const [inviteUrl, setInviteUrl] = useState('');
@@ -127,13 +128,14 @@ export function UserDashboardPage({ onNavigate }: UserDashboardPageProps) {
   }, [earnedSorted]);
 
   const saveSecurity = async () => {
-    if (saving) return;
+    if (savingRef.current) return;
     if (!email.trim() || !user) return;
     const emailChanged = email.trim().toLowerCase() !== user.email.trim().toLowerCase();
     if (emailChanged && !currentPassword) {
       setErr('Current password required to change email');
       return;
     }
+    savingRef.current = true;
     setSaving(true);
     setErr('');
     setMsg('');
@@ -152,6 +154,7 @@ export function UserDashboardPage({ onNavigate }: UserDashboardPageProps) {
     } catch (e) {
       setErr(e instanceof Error ? e.message : 'Failed to save');
     } finally {
+      savingRef.current = false;
       setSaving(false);
     }
   };

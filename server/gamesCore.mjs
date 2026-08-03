@@ -511,8 +511,9 @@ export async function settleMatch({
   }
   const unlocks = await syncAchievementsOnLoadedUser(p1, db, { flag: achievementFlag });
 
-  m.status = 'done';
-  m.result = {
+  // Prepare result fields but do NOT mark done until user balances are durable
+  // (else a save failure leaves RAM "done" and never re-settles).
+  const resultPayload = {
     outcome: m.mode === 'bot' ? outcome : (r === 'draw' ? 'draw' : outcome),
     winner: r,
     p1Move: m.player1.move,
@@ -523,10 +524,13 @@ export async function settleMatch({
   m.streakBonus = streakBonus;
   m.jackpotHit = jackpotHit;
   m.jackpotAmount = jackpotAmount;
-  m.doneAt = Date.now();
 
   await saveUsersDb(db);
-  // User balance durable — release jackpot pending journal
+  // User balance durable — mark match terminal only after save
+  m.status = 'done';
+  m.result = resultPayload;
+  m.doneAt = Date.now();
+  // Release jackpot pending journal
   if (jackpotAmount > 0) {
     await confirmJackpotPayout().catch((err) => {
       console.error('[games] confirmJackpotPayout failed (user already credited)', err);

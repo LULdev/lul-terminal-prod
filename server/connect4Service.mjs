@@ -173,7 +173,7 @@ export async function releaseConnect4UserSession(userId) {
 
 export async function submitConnect4Move(userId, matchId, move) {
   const col = Math.floor(Number(move));
-  if (col < 0 || col >= COLS) throw new Error('Invalid column');
+  if (!Number.isInteger(col) || col < 0 || col >= COLS) throw new Error('Invalid column');
   return runCoinTransaction(async () => {
   const m = mm.activeMatches.get(matchId);
   if (!m || m.status !== 'playing') throw new Error('Match not found');

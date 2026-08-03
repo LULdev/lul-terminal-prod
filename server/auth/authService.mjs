@@ -339,6 +339,18 @@ export async function reconcileExpiredSession(token) {
     cleanup = await leaveAllGameQueues(session.userId).catch(() => cleanup);
   }
   await refundOrphanEscrowsAfterCleanup(session.userId, cleanup);
+
+  // Do not drop the session token while arcade is still live — residual refunds skip
+  // when session is gone; keep token so the next request can retry cleanup.
+  const stillLive = await userHasActiveArcadeSession(session.userId).catch(() => true);
+  if (stillLive) {
+    console.warn('[auth] expired session kept for arcade cleanup retry', {
+      userId: session.userId,
+      cleanupOk: cleanup?.ok,
+    });
+    return;
+  }
+
   await withSessionsWrite(async () => {
     const sessionsDb = await loadSessionsDb();
     sessionsDb.sessions = sessionsDb.sessions.filter((s) => s.token !== token);

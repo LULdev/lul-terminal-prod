@@ -65,6 +65,8 @@ export function ProfilePage({ routeUsername, profileTabReadyTick = 0, onNavigate
   const [customization, setCustomization] = useState<ProfileCustomization>(DEFAULT_PROFILE_CUSTOMIZATION);
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const savingRef = useRef(false);
+  const avatarUploadingRef = useRef(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState<React.ReactNode>('');
 
@@ -248,13 +250,15 @@ export function ProfilePage({ routeUsername, profileTabReadyTick = 0, onNavigate
   if (!user) return null;
 
   const save = async () => {
-    if (saving || avatarUploading) return;
+    if (savingRef.current || avatarUploadingRef.current) return;
+    savingRef.current = true;
     setSaving(true);
     setError('');
     setSuccess('');
     const emailChanged = email.trim().toLowerCase() !== user.email.trim().toLowerCase();
     if (emailChanged && !currentPassword) {
       setError('Current password required to change email');
+      savingRef.current = false;
       setSaving(false);
       return;
     }
@@ -280,12 +284,14 @@ export function ProfilePage({ routeUsername, profileTabReadyTick = 0, onNavigate
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to save');
     } finally {
+      savingRef.current = false;
       setSaving(false);
     }
   };
 
   const uploadAvatar = async (file: File) => {
-    if (avatarUploading || saving) return;
+    if (avatarUploadingRef.current || savingRef.current) return;
+    avatarUploadingRef.current = true;
     setAvatarUploading(true);
     setError('');
     try {
@@ -297,6 +303,7 @@ export function ProfilePage({ routeUsername, profileTabReadyTick = 0, onNavigate
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Upload failed');
     } finally {
+      avatarUploadingRef.current = false;
       setAvatarUploading(false);
     }
   };

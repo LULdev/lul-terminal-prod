@@ -32,18 +32,17 @@ async function settlePendingJackpotOnBoot(pending) {
       // Unknown winner — put money back in the pool
       return 'restored';
     }
-    // Idempotent: skip re-credit if a jackpot ledger row for this match already exists
+    // Idempotent: only skip when we can prove THIS pending payout was credited
+    // (pendingId or exact matchId). Same amount + time window is NOT enough —
+    // that caused silent coin loss when a second jackpot matched the first.
     const ledger = Array.isArray(user.coinLedger) ? user.coinLedger : [];
-    const already = ledger.some(
-      (e) =>
-        e.kind === 'jackpot'
-        && Number(e.amount) === Number(pending.amount)
-        && (
-          !pending.matchId
-          || e.meta?.matchId === pending.matchId
-          || (pending.at && Math.abs((Number(e.at) || 0) - Number(pending.at)) < 120_000)
-        ),
-    );
+    const already = ledger.some((e) => {
+      if (e.kind !== 'jackpot') return false;
+      if (Number(e.amount) !== Number(pending.amount)) return false;
+      if (pending.id && e.meta?.pendingId === pending.id) return true;
+      if (pending.matchId && e.meta?.matchId === pending.matchId) return true;
+      return false;
+    });
     if (already) {
       return 'skipped';
     }
@@ -52,6 +51,7 @@ async function settlePendingJackpotOnBoot(pending) {
       matchId: pending.matchId,
       bet: null,
       amount: pending.amount,
+      pendingId: pending.id,
     });
     user.gameJackpotsWon = (Number(user.gameJackpotsWon) || 0) + 1;
     user.updatedAt = Date.now();

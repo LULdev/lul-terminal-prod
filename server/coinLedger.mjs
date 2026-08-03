@@ -80,12 +80,15 @@ export function logStreakCredit(user, { gameId, chatLabel, matchId, bet, amount 
   });
 }
 
-export function logJackpotCredit(user, { gameId, matchId, bet, amount }) {
+export function logJackpotCredit(user, { gameId, matchId, bet, amount, pendingId }) {
   return creditUserCoins(user, amount, {
     kind: 'jackpot',
     label: 'Community jackpot hit',
     icon: '🎰',
-    meta: ledgerMeta(gameId, matchId, bet),
+    meta: {
+      ...ledgerMeta(gameId, matchId, bet),
+      ...(pendingId ? { pendingId: String(pendingId).slice(0, 32) } : {}),
+    },
   });
 }
 

@@ -6,7 +6,7 @@
 import type { UserRole } from '../types/auth';
 import { fetchMe } from './auth';
 import { parseRetryAfterMs } from './retryAfter';
-import { invalidateSession } from './sessionEvents';
+import { getSessionEpoch, invalidateSession } from './sessionEvents';
 
 const API = '/api/chat';
 
@@ -14,12 +14,14 @@ let chatAudioCtx: AudioContext | null = null;
 
 /** Invalidate only when /me confirms no user (HTTP 401 or explicit null). Network/5xx keep session. */
 async function invalidateSessionIfMeConfirmsLogout(): Promise<void> {
+  // Epoch at start so a late /me after re-login cannot wipe the new session
+  const epochAtStart = getSessionEpoch();
   try {
     const me = await fetchMe();
-    if (!me.user) invalidateSession();
+    if (!me.user) invalidateSession({ epoch: epochAtStart });
   } catch (e) {
     const status = (e as { status?: number })?.status;
-    if (status === 401) invalidateSession();
+    if (status === 401) invalidateSession({ epoch: epochAtStart });
   }
 }
 

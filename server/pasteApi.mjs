@@ -561,7 +561,9 @@ export async function handlePasteRequest(req, res) {
         });
       }
       const pasteId = viewMatch[1];
-      const payload = await countPasteViewDeduped(req, pasteId, { consumeBurn: meta.burnAfterRead });
+      // Never consume burn on count-only endpoint (would destroy paste without delivering content).
+      // Burn is consumed only on GET content / raw / unlock paths that return the body.
+      const payload = await countPasteViewDeduped(req, pasteId, { consumeBurn: false });
       if (!payload) return sendJson(res, 404, { error: 'Not found' });
       const viewerId = req.auth?.user?.id ?? null;
       if (payload.meta?.userId && viewerId && !payload.deduped) {
@@ -572,7 +574,8 @@ export async function handlePasteRequest(req, res) {
       }
       return sendJson(res, 200, {
         views: payload.views,
-        burned: payload.burned,
+        burned: false,
+        burnAfterRead: Boolean(meta.burnAfterRead),
       });
     }
 
@@ -675,7 +678,8 @@ export async function handlePasteRequest(req, res) {
       if (meta.burnAfterRead) {
         const viewResult = await countPasteViewDeduped(req, meta.id, { consumeBurn: true });
         if (!viewResult) return sendJson(res, 404, { error: 'Not found' });
-        const content = viewResult.content ?? await getContent(meta.id);
+        // Only serve body from atomic burn path — never re-open disk after consume
+        const content = viewResult.content;
         if (!content) return sendJson(res, 404, { error: 'Not found' });
         if (viewResult.meta?.userId && unlockUid && !viewResult.deduped) {
           await incrementUserPasteViews(viewResult.meta.userId, { viewerId: unlockUid, pasteId: meta.id });
@@ -718,19 +722,24 @@ export async function handlePasteRequest(req, res) {
             let content = null;
             let outMeta = meta;
             let burned = false;
+            const mustBurn = Boolean(meta.burnAfterRead);
             try {
               const viewResult = await countPasteViewDeduped(req, id, {
-                consumeBurn: Boolean(meta.burnAfterRead),
+                consumeBurn: mustBurn,
               });
-              if (viewResult) {
-                content = viewResult.content ?? await getContent(id);
+              if (!viewResult) {
+                // Burn path: fail closed (no content without successful consume)
+                if (mustBurn) return sendJson(res, 404, { error: 'Paste not found or expired' });
+                content = await getContent(id);
+              } else {
+                content = viewResult.content;
+                if (content == null && !mustBurn) content = await getContent(id);
                 outMeta = viewResult.meta ?? meta;
                 burned = Boolean(viewResult.burned);
-              } else {
-                content = await getContent(id);
               }
             } catch (viewErr) {
-              console.warn('[paste] owner view count failed, still returning content', viewErr);
+              console.warn('[paste] owner view count failed', viewErr);
+              if (mustBurn) return sendJson(res, 503, { error: 'Paste temporarily unavailable' });
               content = await getContent(id);
             }
             if (!content) return sendJson(res, 404, { error: 'Paste not found or expired' });
@@ -762,12 +771,18 @@ export async function handlePasteRequest(req, res) {
         let content = null;
         let outMeta = meta;
         let burned = false;
+        const mustBurn = Boolean(meta.burnAfterRead);
         try {
           const viewResult = await countPasteViewDeduped(req, id, {
-            consumeBurn: Boolean(meta.burnAfterRead),
+            consumeBurn: mustBurn,
           });
-          if (viewResult) {
-            content = viewResult.content ?? await getContent(id);
+          if (!viewResult) {
+            // Burn path: never fall back to getContent without successful consume
+            if (mustBurn) return sendJson(res, 404, { error: 'Paste not found or expired' });
+            content = await getContent(id);
+          } else {
+            content = viewResult.content;
+            if (content == null && !mustBurn) content = await getContent(id);
             outMeta = viewResult.meta ?? meta;
             burned = Boolean(viewResult.burned);
             // Profile pasteViewsTotal: only non-self viewers
@@ -777,11 +792,10 @@ export async function handlePasteRequest(req, res) {
                 pasteId: id,
               }).catch(() => {});
             }
-          } else {
-            content = await getContent(id);
           }
         } catch (viewErr) {
-          console.warn('[paste] view count failed, still returning content', viewErr);
+          console.warn('[paste] view count failed', viewErr);
+          if (mustBurn) return sendJson(res, 503, { error: 'Paste temporarily unavailable' });
           content = await getContent(id);
         }
         if (!content) return sendJson(res, 404, { error: 'Paste not found or expired' });

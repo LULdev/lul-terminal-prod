@@ -111,8 +111,12 @@ export async function loadAccountsDb() {
 
 let accountsWriteChain = Promise.resolve();
 
+/** Process-local chain + cross-process lock (multi-worker vault RMW safety). */
 export function withAccountsWrite(task) {
-  const run = accountsWriteChain.then(() => task());
+  const run = accountsWriteChain.then(async () => {
+    const { withCrossProcessLock } = await import('./fileLock.mjs');
+    return withCrossProcessLock('premium-accounts', () => task(), { maxWaitMs: 10_000 });
+  });
   accountsWriteChain = run.then(() => undefined, () => undefined);
   return run;
 }

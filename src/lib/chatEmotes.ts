@@ -4,7 +4,7 @@
  */
 
 import { fetchMe } from './auth';
-import { invalidateSession } from './sessionEvents';
+import { getSessionEpoch, invalidateSession } from './sessionEvents';
 
 const API = '/api/chat/emotes';
 
@@ -33,12 +33,13 @@ export async function fetchChatEmotes(): Promise<ChatEmotesResponse> {
   const res = await fetch(API, { credentials: 'include' });
   if (res.status === 401) {
     // Only wipe session when /me confirms logout — network/5xx must not force logout
+    const epochAtStart = getSessionEpoch();
     try {
       const me = await fetchMe();
-      if (!me.user) invalidateSession();
+      if (!me.user) invalidateSession({ epoch: epochAtStart });
     } catch (e) {
       const status = (e as { status?: number })?.status;
-      if (status === 401) invalidateSession();
+      if (status === 401) invalidateSession({ epoch: epochAtStart });
     }
     throw new ChatEmotesAuthError();
   }

@@ -259,6 +259,7 @@ const PremiumAccountCard: React.FC<{
   const accent = CATEGORY_ACCENTS[account.category];
   const [views, setViews] = useState(account.views ?? 0);
   const [reporting, setReporting] = useState(false);
+  const reportingRef = useRef(false);
   const [reportMsg, setReportMsg] = useState('');
   const [reportError, setReportError] = useState('');
   const [needsRegistration, setNeedsRegistration] = useState(!canReport);
@@ -277,7 +278,8 @@ const PremiumAccountCard: React.FC<{
   }, [account.id]);
 
   const submitReport = async () => {
-    if (!canReport || isOwnSubmission || reporting) return;
+    if (!canReport || isOwnSubmission || reportingRef.current) return;
+    reportingRef.current = true;
     setReporting(true);
     setReportError('');
     setReportMsg('');
@@ -294,6 +296,7 @@ const PremiumAccountCard: React.FC<{
         setReportError(e instanceof Error ? e.message : 'Report failed');
       }
     } finally {
+      reportingRef.current = false;
       setReporting(false);
     }
   };

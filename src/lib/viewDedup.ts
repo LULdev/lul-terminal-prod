@@ -6,7 +6,7 @@
 const PREFIXES = [
   'lul_page_view_',
   'lul_post_view_',
-  'lul_paste_view_',
+  'lul_paste_view_', // includes lul_paste_view_ts_
   'lul_img_view_',
   'lul_profile_view_',
   'lul_acct_view_',

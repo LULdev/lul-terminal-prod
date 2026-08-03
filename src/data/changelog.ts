@@ -23,6 +23,27 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '3.50.0',
+    title: '10-round full audit R1–R10: session epoch, jackpot, burn-paste, multi-worker, client races',
+    date: 'Aug 3, 2026 - 23:30',
+    highlight: true,
+    items: [
+      { priority: 'P1', text: 'P1 — Chat/emotes/image-upload 401 invalidation is epoch-gated (late /me or XHR after re-login cannot wipe new session).' },
+      { priority: 'P1', text: 'P1 — Jackpot: refuse payout while prior pending open (no overwrite loss); recovery matches only pendingId/matchId (no false skip on same amount+2min).' },
+      { priority: 'P1', text: 'P1 — Jackpot boot recovery releases games-aux before users lock (deadlock with settleMatch avoided).' },
+      { priority: 'P2', text: 'P2 — Burn-after-read: GET fail-closed (no getContent fallback); POST /view never consumes burn; unlock uses atomic content only.' },
+      { priority: 'P2', text: 'P2 — settleMatch marks done only after saveUsersDb (save failure can retry settle).' },
+      { priority: 'P2', text: 'P2 — Expired session not deleted while arcade still live (cleanup can retry; residual refund path preserved).' },
+      { priority: 'P2', text: 'P2 — GamesPage shared stateFetchSeq for load+poll (stale /state cannot clobber coins after claim/move).' },
+      { priority: 'P2', text: 'P2 — Soft /me logout leaves arcade queues before clearLocalSession.' },
+      { priority: 'P3', text: 'P3 — Paste + premium-accounts write chains use cross-process locks (multi-worker RMW).' },
+      { priority: 'P3', text: 'P3 — Double-submit refs: AuthModal, Profile save/avatar, Dashboard security, premium report, PasteStarRating.' },
+      { priority: 'P3', text: 'P3 — Paste view client 90m sessionStorage TTL; premium account view 90m TTL (was permanent).' },
+      { priority: 'P4', text: 'P4 — Premium stats/list soft401; Connect4 rejects NaN columns.' },
+      { priority: 'P9', text: 'P9 — Version 3.50.0.' },
+    ],
+  },
+  {
     version: '3.49.0',
     title: 'Multi-worker safety: auth locks, jackpot 2-phase, IP-pinned SSRF, view counters',
     date: 'Aug 3, 2026 - 22:45',
