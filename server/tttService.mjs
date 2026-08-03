@@ -4,7 +4,7 @@
  */
 
 import crypto from 'crypto';
-import { loadUsersDb, saveUsersDb } from './auth/authStore.mjs';
+import { isInsideUsersWrite, loadUsersDb, saveUsersDb, scheduleAfterUsersWrite } from './auth/authStore.mjs';
 import { syncAchievementsOnLoadedUser } from './auth/authService.mjs';
 import { postBotArcadeJackpot, postBotTttVictory } from './chatBot.mjs';
 import {
@@ -291,171 +291,224 @@ function publicMatch(m) {
 }
 
 async function finalizeMatch(m, boardState) {
-  return runCoinTransaction(async () => {
-  if (m.status === 'done') return { match: publicMatch(m) };
+  let deferredLossPot = 0;
+  let deferredJackpot = null; // { userId, username }
+  let victoryChat = null; // { winner, loser, wager }
 
-  const db = await loadUsersDb();
-  const p1 = getUser(db, m.player1.userId);
-  if (!p1) {
-    await expireMatchWithRefund(m, activeMatches, TTT_ESCROW);
-    return { match: publicMatch(m) };
-  }
+  const settled = await runCoinTransaction(async () => {
+    if (m.status === 'done') return { match: publicMatch(m), unlocks: undefined, early: true };
 
-  const bet = m.bet;
-  let outcome;
-  let p1Delta = 0;
-  let p2Delta = 0;
-  let jackpotHit = false;
-  let jackpotAmount = 0;
-  let streakBonus = 0;
-
-  const r = boardState.winner;
-  m.winningLine = boardState.line;
-
-  const ledgerCtx = { gameId: 'ttt', chatLabel: 'Tic-Tac-Toe', matchId: m.id, bet };
-
-  let p2 = null;
-  if (m.mode === 'pvp') {
-    p2 = getUser(db, m.player2.userId);
-    if (!p2) {
+    const db = await loadUsersDb();
+    const p1 = getUser(db, m.player1.userId);
+    if (!p1) {
       await expireMatchWithRefund(m, activeMatches, TTT_ESCROW);
-      return { match: publicMatch(m) };
+      return { match: publicMatch(m), unlocks: undefined, early: true };
     }
-  }
-  if (!releaseGameEscrow(p1, { ...TTT_ESCROW, amount: bet })) {
-    m.expiresAt = 0;
-    m._finalizeAttempted = true;
-    await expireMatchWithRefund(m, activeMatches, { ...TTT_ESCROW, forceAbandon: true });
-    return { match: publicMatch(m) };
-  }
-  m._releasedStakeByUserId = m._releasedStakeByUserId ?? {};
-  m._releasedStakeByUserId[m.player1.userId] = bet;
-  if (m.mode === 'pvp' && p2) {
-    if (!releaseGameEscrow(p2, { ...TTT_ESCROW, amount: bet })) {
-      m._expireCreditUserIds = new Set([m.player1.userId]);
+
+    const bet = m.bet;
+    let outcome;
+    let p1Delta = 0;
+    let p2Delta = 0;
+    let streakBonus = 0;
+
+    const r = boardState.winner;
+    m.winningLine = boardState.line;
+
+    const ledgerCtx = { gameId: 'ttt', chatLabel: 'Tic-Tac-Toe', matchId: m.id, bet };
+
+    let p2 = null;
+    if (m.mode === 'pvp') {
+      p2 = getUser(db, m.player2.userId);
+      if (!p2) {
+        await expireMatchWithRefund(m, activeMatches, TTT_ESCROW);
+        return { match: publicMatch(m), unlocks: undefined, early: true };
+      }
+    }
+    if (!releaseGameEscrow(p1, { ...TTT_ESCROW, amount: bet })) {
       m.expiresAt = 0;
       m._finalizeAttempted = true;
       await expireMatchWithRefund(m, activeMatches, { ...TTT_ESCROW, forceAbandon: true });
-      return { match: publicMatch(m) };
+      return { match: publicMatch(m), unlocks: undefined, early: true };
     }
-    m._releasedStakeByUserId[m.player2.userId] = bet;
-  }
+    m._releasedStakeByUserId = m._releasedStakeByUserId ?? {};
+    m._releasedStakeByUserId[m.player1.userId] = bet;
+    if (m.mode === 'pvp' && p2) {
+      if (!releaseGameEscrow(p2, { ...TTT_ESCROW, amount: bet })) {
+        m._expireCreditUserIds = new Set([m.player1.userId]);
+        m.expiresAt = 0;
+        m._finalizeAttempted = true;
+        await expireMatchWithRefund(m, activeMatches, { ...TTT_ESCROW, forceAbandon: true });
+        return { match: publicMatch(m), unlocks: undefined, early: true };
+      }
+      m._releasedStakeByUserId[m.player2.userId] = bet;
+    }
 
-  if (m.mode === 'bot') {
-    if (r === 'draw') {
-      outcome = 'draw';
-      creditCoins(p1, bet, logDrawRefund, ledgerCtx);
-      bumpStats(p1, 'draw');
-    } else if (r === 'p1') {
-      outcome = 'win';
-      p1Delta = bet * 2;
-      creditCoins(p1, p1Delta, logGameWinCredit, { ...ledgerCtx, mode: 'bot' });
-      p1.gameTotalWon = (Number(p1.gameTotalWon) || 0) + bet;
-      bumpStats(p1, 'win');
-      streakBonus = calcStreakBonus(bet, p1.gameTttStreak);
-      if (streakBonus > 0) {
-        creditCoins(p1, streakBonus, logStreakCredit, ledgerCtx);
-        p1.gameTotalWon = (Number(p1.gameTotalWon) || 0) + streakBonus;
+    if (m.mode === 'bot') {
+      if (r === 'draw') {
+        outcome = 'draw';
+        creditCoins(p1, bet, logDrawRefund, ledgerCtx);
+        bumpStats(p1, 'draw');
+      } else if (r === 'p1') {
+        outcome = 'win';
+        p1Delta = bet * 2;
+        creditCoins(p1, p1Delta, logGameWinCredit, { ...ledgerCtx, mode: 'bot' });
+        p1.gameTotalWon = (Number(p1.gameTotalWon) || 0) + bet;
+        bumpStats(p1, 'win');
+        streakBonus = calcStreakBonus(bet, p1.gameTttStreak);
+        if (streakBonus > 0) {
+          creditCoins(p1, streakBonus, logStreakCredit, ledgerCtx);
+          p1.gameTotalWon = (Number(p1.gameTotalWon) || 0) + streakBonus;
+        }
+      } else {
+        outcome = 'loss';
+        deferredLossPot = bet; // pot write after users lock
+        p1.gameTotalLost = (Number(p1.gameTotalLost) || 0) + bet;
+        bumpStats(p1, 'loss');
       }
     } else {
-      outcome = 'loss';
-      await addToJackpot(bet);
-      p1.gameTotalLost = (Number(p1.gameTotalLost) || 0) + bet;
-      bumpStats(p1, 'loss');
-    }
-  } else {
-    if (r === 'draw') {
-      outcome = 'draw';
-      creditCoins(p1, bet, logDrawRefund, ledgerCtx);
-      creditCoins(p2, bet, logDrawRefund, ledgerCtx);
-      bumpStats(p1, 'draw');
-      bumpStats(p2, 'draw');
-    } else {
-      outcome = r === 'p1' ? 'win' : 'loss';
-      const winner = r === 'p1' ? p1 : p2;
-      const loser = r === 'p1' ? p2 : p1;
-      const pot = bet * 2;
-      creditCoins(winner, pot, logGameWinCredit, { ...ledgerCtx, mode: 'pvp' });
-      winner.gameTotalWon = (Number(winner.gameTotalWon) || 0) + bet;
-      loser.gameTotalLost = (Number(loser.gameTotalLost) || 0) + bet;
-      bumpStats(winner, 'win');
-      bumpStats(loser, 'loss');
-      streakBonus = calcStreakBonus(bet, winner.gameTttStreak);
-      if (streakBonus > 0) {
-        creditCoins(winner, streakBonus, logStreakCredit, ledgerCtx);
-        winner.gameTotalWon = (Number(winner.gameTotalWon) || 0) + streakBonus;
-      }
+      if (r === 'draw') {
+        outcome = 'draw';
+        creditCoins(p1, bet, logDrawRefund, ledgerCtx);
+        creditCoins(p2, bet, logDrawRefund, ledgerCtx);
+        bumpStats(p1, 'draw');
+        bumpStats(p2, 'draw');
+      } else {
+        outcome = r === 'p1' ? 'win' : 'loss';
+        const winner = r === 'p1' ? p1 : p2;
+        const loser = r === 'p1' ? p2 : p1;
+        const pot = bet * 2;
+        creditCoins(winner, pot, logGameWinCredit, { ...ledgerCtx, mode: 'pvp' });
+        winner.gameTotalWon = (Number(winner.gameTotalWon) || 0) + bet;
+        loser.gameTotalLost = (Number(loser.gameTotalLost) || 0) + bet;
+        bumpStats(winner, 'win');
+        bumpStats(loser, 'loss');
+        streakBonus = calcStreakBonus(bet, winner.gameTttStreak);
+        if (streakBonus > 0) {
+          creditCoins(winner, streakBonus, logStreakCredit, ledgerCtx);
+          winner.gameTotalWon = (Number(winner.gameTotalWon) || 0) + streakBonus;
+        }
 
-      if (Math.random() < JACKPOT_CHANCE) {
-        const jp = await payoutJackpot(winner.username, { matchId: m.id, gameId: 'ttt' });
+        if (Math.random() < JACKPOT_CHANCE) {
+          deferredJackpot = { userId: winner.id, username: winner.username };
+        }
+
+        victoryChat = {
+          winner: winner.username,
+          loser: loser.username,
+          wager: bet,
+        };
+      }
+    }
+
+    p1.updatedAt = Date.now();
+    if (m.mode === 'pvp') {
+      const p2u = getUser(db, m.player2.userId);
+      if (p2u) {
+        p2u.updatedAt = Date.now();
+        await syncAchievementsOnLoadedUser(p2u, db, { flag: 'ttt_played' });
+      }
+    }
+
+    const unlocks = await syncAchievementsOnLoadedUser(p1, db, { flag: 'ttt_played' });
+    await saveUsersDb(db);
+
+    m.status = 'done';
+    m.result = {
+      outcome,
+      winner: r,
+      p1Delta,
+      p2Delta,
+    };
+    m.streakBonus = streakBonus;
+    m.jackpotHit = false;
+    m.jackpotAmount = 0;
+    m.doneAt = Date.now();
+
+    return {
+      early: false,
+      unlocks,
+      historyBase: {
+        id: m.id,
+        game: 'ttt',
+        mode: m.mode,
+        bet,
+        at: Date.now(),
+        player1: m.player1.username,
+        player2: m.mode === 'bot' ? 'BOT' : m.player2.username,
+        outcome,
+        board: [...m.board],
+        winningLine: m.winningLine,
+        streakBonus,
+      },
+    };
+  });
+
+  if (settled?.early) return { match: settled.match, unlocks: settled.unlocks };
+
+  const runDeferredAux = async () => {
+    if (deferredLossPot > 0) {
+      await addToJackpot(deferredLossPot).catch((e) => console.error('[ttt] addToJackpot loss failed', e));
+    }
+
+    let jackpotHit = false;
+    let jackpotAmount = 0;
+    if (deferredJackpot) {
+      try {
+        const jp = await payoutJackpot(deferredJackpot.username, { matchId: m.id, gameId: 'ttt' });
         jackpotAmount = jackpotPayoutAmount(jp);
         if (jackpotAmount > 0) {
-          jackpotHit = true;
-          creditCoins(winner, jackpotAmount, logJackpotCredit, {
-            ...ledgerCtx,
-            pendingId: jackpotPayoutPendingId(jp),
+          await runCoinTransaction(async () => {
+            const db = await loadUsersDb();
+            const u = getUser(db, deferredJackpot.userId);
+            if (!u) return;
+            logJackpotCredit(u, {
+              gameId: 'ttt',
+              chatLabel: 'Tic-Tac-Toe',
+              matchId: m.id,
+              bet: m.bet,
+              amount: jackpotAmount,
+              pendingId: jackpotPayoutPendingId(jp),
+            });
+            u.gameJackpotsWon = (Number(u.gameJackpotsWon) || 0) + 1;
+            u.updatedAt = Date.now();
+            await saveUsersDb(db);
           });
-          winner.gameJackpotsWon = (Number(winner.gameJackpotsWon) || 0) + 1;
-          postBotArcadeJackpot({ username: winner.username, amount: jackpotAmount }).catch(() => {});
+          await confirmJackpotPayout().catch((err) => {
+            console.error('[ttt] confirmJackpotPayout failed (user already credited)', err);
+          });
+          jackpotHit = true;
+          m.jackpotHit = true;
+          m.jackpotAmount = jackpotAmount;
+          postBotArcadeJackpot({ username: deferredJackpot.username, amount: jackpotAmount }).catch(() => {});
         }
+      } catch (e) {
+        console.error('[ttt] deferred jackpot failed', e);
       }
+    }
 
+    if (victoryChat) {
       postBotTttVictory({
-        winner: winner.username,
-        loser: loser.username,
-        wager: bet,
+        winner: victoryChat.winner,
+        loser: victoryChat.loser,
+        wager: victoryChat.wager,
         jackpotHit,
       }).catch(() => {});
     }
-  }
 
-  p1.updatedAt = Date.now();
-  if (m.mode === 'pvp') {
-    const p2 = getUser(db, m.player2.userId);
-    if (p2) {
-      p2.updatedAt = Date.now();
-      await syncAchievementsOnLoadedUser(p2, db, { flag: 'ttt_played' });
-    }
-  }
-
-  const unlocks = await syncAchievementsOnLoadedUser(p1, db, { flag: 'ttt_played' });
-  await saveUsersDb(db);
-  if (jackpotAmount > 0) {
-    await confirmJackpotPayout().catch((err) => {
-      console.error('[ttt] confirmJackpotPayout failed (user already credited)', err);
-    });
-  }
-
-  m.status = 'done';
-  m.result = {
-    outcome,
-    winner: r,
-    p1Delta,
-    p2Delta,
+    await appendMatchHistory({
+      ...settled.historyBase,
+      jackpotHit,
+      jackpotAmount,
+    }).catch((e) => console.error('[ttt] appendMatchHistory failed', e));
   };
-  m.streakBonus = streakBonus;
-  m.jackpotHit = jackpotHit;
-  m.jackpotAmount = jackpotAmount;
-  m.doneAt = Date.now();
 
-  await appendMatchHistory({
-    id: m.id,
-    game: 'ttt',
-    mode: m.mode,
-    bet,
-    at: Date.now(),
-    player1: m.player1.username,
-    player2: m.mode === 'bot' ? 'BOT' : m.player2.username,
-    outcome,
-    board: [...m.board],
-    winningLine: m.winningLine,
-    streakBonus,
-    jackpotHit,
-    jackpotAmount,
-  });
+  if (isInsideUsersWrite()) {
+    scheduleAfterUsersWrite(runDeferredAux);
+  } else {
+    await runDeferredAux();
+  }
 
-  return { match: publicMatch(m), unlocks };
-  });
+  return { match: publicMatch(m), unlocks: settled.unlocks };
 }
 
 export async function getTttUserSlice(userId) {

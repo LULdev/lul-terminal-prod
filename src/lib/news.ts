@@ -8,8 +8,8 @@ import { sessionFetch } from './sessionFetch';
 
 const API = '/api/news';
 
-async function api<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await sessionFetch(`${API}${path}`, init);
+async function api<T>(path: string, init?: RequestInit, opts?: { soft401?: boolean }): Promise<T> {
+  const res = await sessionFetch(`${API}${path}`, init, opts?.soft401 ? { soft401: true } : undefined);
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data.error ?? `HTTP ${res.status}`);
   return data as T;
@@ -32,7 +32,8 @@ export async function fetchNewsFeed(): Promise<NewsFeedResponse> {
 }
 
 export async function fetchAdminNews(): Promise<NewsFeedResponse> {
-  return api('/admin');
+  // soft401: admin panel load must not wipe global session on flaky 401
+  return api('/admin', undefined, { soft401: true });
 }
 
 export async function createNewsArticle(input: NewsArticleInput): Promise<{ article: NewsArticle; feedVersion: string }> {

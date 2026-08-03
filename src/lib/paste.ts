@@ -398,19 +398,20 @@ export async function fetchAdminPastes(opts: {
   if (opts.sort) params.set('sort', opts.sort);
   if (opts.limit) params.set('limit', String(opts.limit));
   if (opts.offset) params.set('offset', String(opts.offset));
-  const res = await sessionFetch(`${API}/admin?${params}`);
+  // soft401: admin list poll must not wipe global session
+  const res = await sessionFetch(`${API}/admin?${params}`, undefined, { soft401: true });
   if (!res.ok) throw new Error(await parseError(res));
   return res.json();
 }
 
 export async function fetchAdminPasteStats(): Promise<AdminPasteStats> {
-  const res = await sessionFetch(`${API}/admin/stats`);
+  const res = await sessionFetch(`${API}/admin/stats`, undefined, { soft401: true });
   if (!res.ok) throw new Error(await parseError(res));
   return res.json();
 }
 
 export async function fetchAdminPaste(id: string): Promise<PasteRecord & { hasPassword?: boolean }> {
-  const res = await sessionFetch(`${API}/admin/${id}`);
+  const res = await sessionFetch(`${API}/admin/${id}`, undefined, { soft401: true });
   if (!res.ok) throw new Error(await parseError(res));
   return res.json();
 }

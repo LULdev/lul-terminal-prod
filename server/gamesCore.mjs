@@ -5,7 +5,7 @@
 
 import crypto from 'crypto';
 import { sanitizeAvatarUrl } from './auth/safeMediaUrl.mjs';
-import { loadUsersDb, saveUsersDb } from './auth/authStore.mjs';
+import { isInsideUsersWrite, loadUsersDb, saveUsersDb, scheduleAfterUsersWrite } from './auth/authStore.mjs';
 import { syncAchievementsOnLoadedUser } from './auth/authService.mjs';
 import { postBotArcadeJackpot, postBotArcadeVictory } from './chatBot.mjs';
 import { defaultGameStats, statFields } from './gameStatsConfig.mjs';
@@ -542,55 +542,64 @@ export async function settleMatch({
 
   if (settled?.early) return { match: settled.match, unlocks: settled.unlocks };
 
-  // Outside users lock: pot + jackpot (games-aux) then optional user credit
-  if (deferredLossPot > 0) {
-    await addToJackpot(deferredLossPot).catch((e) => console.error('[games] addToJackpot loss failed', e));
-  }
-  if (deferredHouseSeed > 0) {
-    await addToJackpot(deferredHouseSeed).catch((e) => console.error('[games] addToJackpot seed failed', e));
-  }
-
-  let jackpotHit = false;
-  let jackpotAmount = 0;
-  if (deferredJackpot) {
-    try {
-      const jp = await payoutJackpot(deferredJackpot.username, { matchId: m.id, gameId });
-      jackpotAmount = jackpotPayoutAmount(jp);
-      if (jackpotAmount > 0) {
-        await runCoinTransaction(async () => {
-          const db = await loadUsersDb();
-          const u = getUser(db, deferredJackpot.userId);
-          if (!u) return;
-          logJackpotCredit(u, {
-            gameId,
-            chatLabel,
-            matchId: m.id,
-            bet: m.bet,
-            amount: jackpotAmount,
-            pendingId: jackpotPayoutPendingId(jp),
-          });
-          u.gameJackpotsWon = (Number(u.gameJackpotsWon) || 0) + 1;
-          u.updatedAt = Date.now();
-          await saveUsersDb(db);
-        });
-        await confirmJackpotPayout().catch((err) => {
-          console.error('[games] confirmJackpotPayout failed (user already credited)', err);
-        });
-        jackpotHit = true;
-        m.jackpotHit = true;
-        m.jackpotAmount = jackpotAmount;
-        postBotArcadeJackpot({ username: deferredJackpot.username, amount: jackpotAmount }).catch(() => {});
-      }
-    } catch (e) {
-      console.error('[games] deferred jackpot failed', e);
+  // Pot + jackpot + history must not nest users→games-aux. When settleMatch runs
+  // inside submitMove/expire (nested users write), schedule after outermost unlock.
+  const runDeferredAux = async () => {
+    if (deferredLossPot > 0) {
+      await addToJackpot(deferredLossPot).catch((e) => console.error('[games] addToJackpot loss failed', e));
     }
-  }
+    if (deferredHouseSeed > 0) {
+      await addToJackpot(deferredHouseSeed).catch((e) => console.error('[games] addToJackpot seed failed', e));
+    }
 
-  await appendMatchHistory({
-    ...settled.historyBase,
-    jackpotHit,
-    jackpotAmount,
-  }).catch((e) => console.error('[games] appendMatchHistory failed', e));
+    let jackpotHit = false;
+    let jackpotAmount = 0;
+    if (deferredJackpot) {
+      try {
+        const jp = await payoutJackpot(deferredJackpot.username, { matchId: m.id, gameId });
+        jackpotAmount = jackpotPayoutAmount(jp);
+        if (jackpotAmount > 0) {
+          await runCoinTransaction(async () => {
+            const db = await loadUsersDb();
+            const u = getUser(db, deferredJackpot.userId);
+            if (!u) return;
+            logJackpotCredit(u, {
+              gameId,
+              chatLabel,
+              matchId: m.id,
+              bet: m.bet,
+              amount: jackpotAmount,
+              pendingId: jackpotPayoutPendingId(jp),
+            });
+            u.gameJackpotsWon = (Number(u.gameJackpotsWon) || 0) + 1;
+            u.updatedAt = Date.now();
+            await saveUsersDb(db);
+          });
+          await confirmJackpotPayout().catch((err) => {
+            console.error('[games] confirmJackpotPayout failed (user already credited)', err);
+          });
+          jackpotHit = true;
+          m.jackpotHit = true;
+          m.jackpotAmount = jackpotAmount;
+          postBotArcadeJackpot({ username: deferredJackpot.username, amount: jackpotAmount }).catch(() => {});
+        }
+      } catch (e) {
+        console.error('[games] deferred jackpot failed', e);
+      }
+    }
+
+    await appendMatchHistory({
+      ...settled.historyBase,
+      jackpotHit,
+      jackpotAmount,
+    }).catch((e) => console.error('[games] appendMatchHistory failed', e));
+  };
+
+  if (isInsideUsersWrite()) {
+    scheduleAfterUsersWrite(runDeferredAux);
+  } else {
+    await runDeferredAux();
+  }
 
   return { match: publicMatch(m), unlocks: settled.unlocks };
 }
@@ -1091,7 +1100,8 @@ export async function expireMatchWithRefund(m, activeMatches, expireMeta) {
         m.streakBonus = 0;
         m.jackpotHit = false;
         m.jackpotAmount = 0;
-        await appendMatchHistory({
+        // History is games-aux — never nest under users write (deadlock risk)
+        const forfeitHistory = {
           id: m.id,
           game: gameId,
           mode: m.mode,
@@ -1104,7 +1114,12 @@ export async function expireMatchWithRefund(m, activeMatches, expireMeta) {
           streakBonus: 0,
           jackpotHit: false,
           jackpotAmount: 0,
-        });
+        };
+        scheduleAfterUsersWrite(() =>
+          appendMatchHistory(forfeitHistory).catch((e) =>
+            console.error('[games] forfeit appendMatchHistory failed', e),
+          ),
+        );
         return;
       }
       // Partial release: force-credit anyone whose escrow was already stripped
@@ -1136,7 +1151,7 @@ export async function expireMatchWithRefund(m, activeMatches, expireMeta) {
   m.status = 'done';
   m.doneAt = Date.now();
   m.result = { outcome: 'expired', winner: 'draw' };
-  await appendMatchHistory({
+  const expireHistory = {
     id: m.id,
     game: gameId,
     mode: m.mode,
@@ -1148,7 +1163,12 @@ export async function expireMatchWithRefund(m, activeMatches, expireMeta) {
     streakBonus: 0,
     jackpotHit: false,
     jackpotAmount: 0,
-  });
+  };
+  scheduleAfterUsersWrite(() =>
+    appendMatchHistory(expireHistory).catch((e) =>
+      console.error('[games] expire appendMatchHistory failed', e),
+    ),
+  );
   });
 }
 

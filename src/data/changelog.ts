@@ -23,6 +23,21 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '3.54.0',
+    title: '25-round full system audit (Server+Client P0–P9): afterUsersWrite jackpot, RPS/TTT unnest, soft401 admin reads',
+    date: 'Aug 4, 2026 - 02:15',
+    highlight: true,
+    items: [
+      { priority: 'P0', text: 'P0 — withUsersWrite: afterUnlock hooks run after file lock + write-chain free (scheduleAfterUsersWrite / isInsideUsersWrite).' },
+      { priority: 'P0', text: 'P0 — settleMatch pot/jackpot/history use scheduleAfterUsersWrite when nested under submitMove/expire (no users→games-aux nest).' },
+      { priority: 'P0', text: 'P0 — RPS finalizeMatch: jackpot drain/credit, loss pot, history deferred outside users lock (parity with settleMatch).' },
+      { priority: 'P0', text: 'P0 — TTT finalizeMatch: same deferred jackpot/pot/history unnest (no deadlock under submit/expire).' },
+      { priority: 'P1', text: 'P1 — expireMatchWithRefund: appendMatchHistory scheduled after users unlock (forfeit + refund paths).' },
+      { priority: 'P1', text: 'P1 — Client soft401 reads: admin paste list/stats/detail, custom proxies, page-visibility admin, news admin, emotes list, colon-db stats (xml scraper).' },
+      { priority: 'P9', text: 'P9 — Version 3.54.0; every fix listed here (25-round Server P0–P9 + Client P0–P9).' },
+    ],
+  },
+  {
     version: '3.53.1',
     title: 'Client residual: soft /me epoch-gated leave, admin/checker soft401 polls, memes mount, storage NaN',
     date: 'Aug 4, 2026 - 01:30',

@@ -347,7 +347,8 @@ export async function saveXmlMatchesToDatabase(
 }
 
 export async function fetchColonDbStats(): Promise<ColonDbStats> {
-  const res = await sessionFetch('/api/xml-scraper/colon-db/stats');
+  // soft401: stats poll must not wipe global session (parity with adminModules)
+  const res = await sessionFetch('/api/xml-scraper/colon-db/stats', undefined, { soft401: true });
   if (!res.ok) throw new Error('Failed to load database stats');
   return res.json();
 }

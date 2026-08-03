@@ -113,7 +113,8 @@ export async function fetchProxyResults(): Promise<{
 }
 
 export async function fetchCustomProxies(): Promise<{ count: number; proxies: CustomProxy[]; updatedAt: string | null }> {
-  const res = await sessionFetch(`${API}/custom`);
+  // soft401: admin panel poll must not wipe global session
+  const res = await sessionFetch(`${API}/custom`, undefined, { soft401: true });
   if (!res.ok) return { count: 0, proxies: [], updatedAt: null };
   return res.json() as Promise<{ count: number; proxies: CustomProxy[]; updatedAt: string | null }>;
 }

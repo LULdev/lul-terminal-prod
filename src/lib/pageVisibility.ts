@@ -46,7 +46,8 @@ export async function fetchPageVisibility(): Promise<PublicAccessControl> {
 }
 
 export async function fetchAdminPageVisibility(): Promise<AdminAccessControl> {
-  const res = await sessionFetch(`${API}/admin`);
+  // soft401: admin panel load must not wipe global session on flaky 401
+  const res = await sessionFetch(`${API}/admin`, undefined, { soft401: true });
   if (!res.ok) throw new Error('Admin visibility unavailable');
   return res.json() as Promise<AdminAccessControl>;
 }

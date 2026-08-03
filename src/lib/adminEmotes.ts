@@ -20,15 +20,16 @@ export type AdminEmotesResponse = {
   emotes: AdminChatEmote[];
 };
 
-async function adminApi<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await sessionFetch(`${API}${path}`, init);
+async function adminApi<T>(path: string, init?: RequestInit, opts?: { soft401?: boolean }): Promise<T> {
+  const res = await sessionFetch(`${API}${path}`, init, opts?.soft401 ? { soft401: true } : undefined);
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data.error ?? `HTTP ${res.status}`);
   return data as T;
 }
 
 export async function fetchAdminEmotes(): Promise<AdminEmotesResponse> {
-  return adminApi('');
+  // soft401: admin panel load must not wipe global session on flaky 401
+  return adminApi('', undefined, { soft401: true });
 }
 
 export async function createAdminEmote(input: {

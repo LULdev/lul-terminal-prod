@@ -56,6 +56,9 @@ let usersWriteChain = Promise.resolve();
  * Re-entrant withUsersWrite context.
  * Holds a single shared users DB snapshot so nested settle/expire/join
  * cannot load a second copy and clobber earlier credits on save.
+ * `afterUnlock` hooks run AFTER the outermost lock is released (and after the
+ * write chain is free) so nested settle can schedule games-aux jackpot/history
+ * without users→games-aux deadlock, and without deadlocking the users chain.
  */
 const usersWriteAls = new AsyncLocalStorage();
 
@@ -69,16 +72,59 @@ export function withUsersWrite(task) {
   if (usersWriteAls.getStore()) {
     return Promise.resolve().then(() => task());
   }
-  const ctx = { db: null };
-  const run = usersWriteChain.then(() =>
-    withCrossProcessLock(
-      'auth-users',
-      () => usersWriteAls.run(ctx, () => task()),
-      { maxWaitMs: 20_000 },
-    ),
-  );
-  usersWriteChain = run.then(() => undefined, () => undefined);
-  return run;
+  const ctx = { db: null, afterUnlock: [] };
+  let result;
+  let taskError;
+  // Free the write chain as soon as the file lock drops so afterUnlock hooks
+  // may call runCoinTransaction / withUsersWrite without deadlocking.
+  const lockedWork = usersWriteChain.then(async () => {
+    try {
+      await withCrossProcessLock(
+        'auth-users',
+        async () => {
+          result = await usersWriteAls.run(ctx, () => task());
+        },
+        { maxWaitMs: 20_000 },
+      );
+    } catch (e) {
+      taskError = e;
+    }
+  });
+  usersWriteChain = lockedWork.then(() => undefined, () => undefined);
+
+  return lockedWork.then(async () => {
+    const hooks = Array.isArray(ctx.afterUnlock) ? ctx.afterUnlock.splice(0) : [];
+    for (const fn of hooks) {
+      try {
+        await fn();
+      } catch (e) {
+        console.error('[auth] afterUsersWrite hook failed', e);
+      }
+    }
+    if (taskError) throw taskError;
+    return result;
+  });
+}
+
+/** True while running inside an outermost withUsersWrite / runCoinTransaction. */
+export function isInsideUsersWrite() {
+  return Boolean(usersWriteAls.getStore());
+}
+
+/**
+ * Run `fn` after the outermost users write lock is fully released.
+ * If not inside a write, runs on a microtask immediately.
+ * Prefer for games-aux (jackpot/history) work that must not nest under users lock.
+ * When nested, the caller's await returns before `fn` runs — schedule only
+ * non-blocking follow-up (match object may update after the current return).
+ */
+export function scheduleAfterUsersWrite(fn) {
+  const store = usersWriteAls.getStore();
+  if (store && Array.isArray(store.afterUnlock)) {
+    store.afterUnlock.push(fn);
+    return Promise.resolve();
+  }
+  return Promise.resolve().then(() => fn());
 }
 
 let sessionsWriteChain = Promise.resolve();
