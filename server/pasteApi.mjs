@@ -221,10 +221,9 @@ async function loadAlive(id) {
 }
 
 /**
- * Count a paste view with dedup.
- * - Owner's first view counts (same as any viewer).
- * - Dedup: logged-in user id OR guest IP (file/redis claim — NOT user activity flags).
- * - Does NOT run inside withUsersWrite (avoids view-count deadlocks / silent failures).
+ * Count a paste view with site-wide 90m IP dedup.
+ * Everyone counts (guest, owner, registered). Same IP within 90m = 1 view.
+ * Does NOT run inside withUsersWrite (avoids view-count deadlocks / silent failures).
  */
 async function countPasteViewDeduped(req, pasteId, { consumeBurn = false } = {}) {
   try {
@@ -242,12 +241,7 @@ async function countPasteViewDeduped(req, pasteId, { consumeBurn = false } = {})
 
   let firstTime = true;
   try {
-    if (viewerId) {
-      // Fresh scope "paste-u" — old paste_meta_view_* achievement flags no longer block counting
-      firstTime = await claimGuestView('paste-u', String(viewerId), pasteId);
-    } else {
-      firstTime = await claimGuestView('paste', clientIp(req), pasteId);
-    }
+    firstTime = await claimGuestView('paste', clientIp(req), pasteId);
   } catch (err) {
     console.warn('[paste] view dedup claim failed — counting view anyway', err);
     firstTime = true;

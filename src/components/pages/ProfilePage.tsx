@@ -51,7 +51,7 @@ const TABS: { id: ProfileTab; label: string; icon: React.ReactNode; ownOnly?: bo
 ];
 
 export function ProfilePage({ routeUsername, profileTabReadyTick = 0, onNavigateTab }: ProfilePageProps) {
-  const { user, refresh, logout, openAuth, isLoggedIn, loading: authLoading, permissions, handleUnlocks } = useAuth();
+  const { user, refresh, patchUser, logout, openAuth, isLoggedIn, loading: authLoading, permissions, handleUnlocks } = useAuth();
   const [activeTab, setActiveTab] = useState<ProfileTab>('overview');
   const [displayName, setDisplayName] = useState('');
   const [bio, setBio] = useState('');
@@ -130,39 +130,43 @@ export function ProfilePage({ routeUsername, profileTabReadyTick = 0, onNavigate
     return () => clearTimeout(t);
   }, [isLoggedIn, isOwnProfile, routeUsername, profileTabReadyTick]);
 
+  // Count every profile open (guest / self / other) — server applies 90m IP dedup
   React.useEffect(() => {
-    if (!routeUsername || isOwnProfile) {
+    if (!routeUsername) {
       setPublicProfile(null);
       setPublicError('');
       return;
     }
-    if (isLoggedIn && !profileTabReadyTick && !profileTabFallback) {
+    let cancelled = false;
+    if (!isOwnProfile) {
       setPublicLoading(true);
       setPublicError('');
-      return;
     }
-    let cancelled = false;
-    setPublicLoading(true);
-    setPublicError('');
-    const load = isLoggedIn && (profileTabReadyTick > 0 || profileTabFallback)
-      ? authApi.recordProfileView(routeUsername, {
-          skipDwell: profileTabReadyTick > 0 || profileTabFallback,
-        })
-      : authApi.fetchPublicProfile(routeUsername).then((profile) => ({ user: profile, credited: false as const }));
-    load
-      .then(({ user: profile, credited }) => {
-        if (!cancelled) {
+    void authApi.recordProfileView(routeUsername)
+      .then(({ user: profile }) => {
+        if (cancelled) return;
+        if (isOwnProfile) {
+          // Keep own hero views in sync after counting
+          if (profile && typeof profile.profileViews === 'number') {
+            patchUser((prev) => (prev ? { ...prev, profileViews: profile.profileViews } : prev));
+          } else {
+            void refresh();
+          }
+        } else {
           setPublicProfile(profile);
         }
       })
       .catch((e) => {
-        if (!cancelled) setPublicError(e instanceof Error ? e.message : 'Profile not found');
+        if (cancelled) return;
+        if (!isOwnProfile) {
+          setPublicError(e instanceof Error ? e.message : 'Profile not found');
+        }
       })
       .finally(() => {
-        if (!cancelled) setPublicLoading(false);
+        if (!cancelled && !isOwnProfile) setPublicLoading(false);
       });
     return () => { cancelled = true; };
-  }, [routeUsername, isOwnProfile, isLoggedIn, profileTabReadyTick, profileTabFallback]);
+  }, [routeUsername, isOwnProfile, patchUser, refresh]);
 
   React.useEffect(() => {
     if (!isOwnProfile || !isLoggedIn || authLoading || !customization.privacy.showCoins) {

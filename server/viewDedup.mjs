@@ -2,8 +2,11 @@
  * @license
  * SPDX-License-Identifier: Apache-2.0
  *
- * Guest view dedup — file (cross-process lock) or Redis (multi-instance).
- * GUEST_VIEW_DEDUP_FAIL_OPEN=1 (default): store errors allow first view (no under-count).
+ * Site-wide view dedup: one counted view per IP per resource within VIEW_DEDUP_WINDOW_MS.
+ * After the window elapses the same IP can count again.
+ *
+ * Backend: file (cross-process lock) or Redis (multi-instance).
+ * GUEST_VIEW_DEDUP_FAIL_OPEN=1 (default non-prod): store errors allow the view (no under-count).
  * GUEST_VIEW_DEDUP_FAIL_OPEN=0: store errors block counting (fail-closed).
  */
 
@@ -16,9 +19,12 @@ import { getSharedRedisClient } from './redisClient.mjs';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const GUEST_VIEWS_FILE = path.join(__dirname, '..', 'data', 'analytics', 'guest-views.json');
 
+/** 90 minutes — same IP + resource only counts once in this window. */
+export const VIEW_DEDUP_WINDOW_MS = 90 * 60 * 1000;
+const REDIS_TTL_SEC = Math.ceil(VIEW_DEDUP_WINDOW_MS / 1000);
 const PRUNE_INTERVAL_MS = 5 * 60_000;
-const ENTRY_TTL_MS = 90 * 24 * 60 * 60_000;
-const REDIS_ENTRY_TTL_SEC = Math.ceil(ENTRY_TTL_MS / 1000);
+/** Keep file store a bit longer than the window so restarts don't thrash. */
+const ENTRY_RETENTION_MS = VIEW_DEDUP_WINDOW_MS + 30 * 60_000;
 
 const guestViews = new Map();
 let lastPruneAt = Date.now();
@@ -45,7 +51,7 @@ async function ensureGuestViewsStore() {
     await fs.access(GUEST_VIEWS_FILE);
   } catch {
     const tmp = `${GUEST_VIEWS_FILE}.tmp`;
-    await fs.writeFile(tmp, JSON.stringify({ version: 1, entries: {} }, null, 2), 'utf8');
+    await fs.writeFile(tmp, JSON.stringify({ version: 2, entries: {} }, null, 2), 'utf8');
     await fs.rename(tmp, GUEST_VIEWS_FILE);
   }
 }
@@ -81,14 +87,14 @@ function pruneStale() {
   if (now - lastPruneAt < PRUNE_INTERVAL_MS) return;
   lastPruneAt = now;
   for (const [key, seenAt] of guestViews) {
-    if (now - seenAt > ENTRY_TTL_MS) guestViews.delete(key);
+    if (now - seenAt > ENTRY_RETENTION_MS) guestViews.delete(key);
   }
 }
 
 async function persistGuestViews() {
   const entries = Object.fromEntries(guestViews.entries());
   const tmp = `${GUEST_VIEWS_FILE}.tmp`;
-  await fs.writeFile(tmp, JSON.stringify({ version: 1, updatedAt: Date.now(), entries }, null, 2), 'utf8');
+  await fs.writeFile(tmp, JSON.stringify({ version: 2, updatedAt: Date.now(), entries }, null, 2), 'utf8');
   await fs.rename(tmp, GUEST_VIEWS_FILE);
 }
 
@@ -98,17 +104,30 @@ function withGuestViewWrite(task) {
   return run;
 }
 
+/**
+ * @returns {boolean} true if this is a fresh view (should increment counter)
+ */
+function claimInMemory(key, now = Date.now()) {
+  const prev = guestViews.get(key);
+  if (prev != null && now - prev < VIEW_DEDUP_WINDOW_MS) {
+    return false;
+  }
+  guestViews.set(key, now);
+  return true;
+}
+
 async function claimGuestViewFile(key) {
   await guestViewsReady;
   pruneStale();
   return withGuestViewWrite(async () => withCrossProcessLock('guest-views', async () => {
     await loadGuestViewsFromDisk();
     pruneStale();
-    if (guestViews.has(key)) return false;
-    guestViews.set(key, Date.now());
-    pruneStale();
-    await persistGuestViews();
-    return true;
+    const ok = claimInMemory(key);
+    if (ok) {
+      pruneStale();
+      await persistGuestViews();
+    }
+    return ok;
   }));
 }
 
@@ -116,13 +135,15 @@ async function claimGuestViewRedis(key) {
   const client = await getSharedRedisClient();
   if (!client) return claimGuestViewFile(key);
   const redisKey = `gv:${key}`;
-  const result = await client.set(redisKey, '1', { NX: true, EX: REDIS_ENTRY_TTL_SEC });
+  // NX + EX = only first claim in the window succeeds; key auto-expires after 90m
+  const result = await client.set(redisKey, String(Date.now()), { NX: true, EX: REDIS_TTL_SEC });
   return result === 'OK';
 }
 
 /**
- * Returns true when this IP has not yet viewed the resource (caller should count the view).
- * On persistence failure: fail-open (default) returns true; fail-closed returns false.
+ * Returns true when this IP may count a view for the resource (first hit in 90m window).
+ * Same IP + same resource within 90 minutes → false (deduped).
+ * After 90 minutes → true again.
  */
 export async function claimGuestView(scope, ip, resourceId) {
   if (!ip || !resourceId) return true;
@@ -137,6 +158,13 @@ export async function claimGuestView(scope, ip, resourceId) {
   }
 }
 
+/** Alias used site-wide for clarity. */
+export const claimIpView = claimGuestView;
+
 export function getGuestViewDedupBackend() {
   return resolveBackend();
+}
+
+export function getViewDedupWindowMs() {
+  return VIEW_DEDUP_WINDOW_MS;
 }

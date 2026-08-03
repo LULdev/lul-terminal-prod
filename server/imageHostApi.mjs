@@ -10,10 +10,7 @@ import { resolvePublicOrigin } from './resolvePublicOrigin.mjs';
 import { checkRateLimit, clientIp, isRateLimitError } from './rateLimit.mjs';
 import { claimGuestView } from './viewDedup.mjs';
 import { requireMemberTab } from './tabAccessGuard.mjs';
-import { ensureActivity } from './auth/achievements.mjs';
-import { loadUsersDb, saveUsersDb } from './auth/authStore.mjs';
 import { incrementUserImageUpload } from './auth/authService.mjs';
-import { runCoinTransaction } from './gamesCoinLock.mjs';
 import { imageViewLink, postBotImageHosted } from './chatBot.mjs';
 import {
   computeUserGalleryStats,
@@ -79,84 +76,16 @@ export async function handleImageHostRequest(req, res) {
       await checkRateLimit(`image-view:${clientIp(req)}:${viewMatch[1]}`, { max: 40, windowMs: 60_000 });
       await attachAuth(req);
       const imageId = viewMatch[1];
-      const viewerId = req.auth?.user?.id ?? null;
       const ownerMeta = await getMeta(imageId);
       if (!ownerMeta) return sendJson(res, 404, { error: 'Not found' });
-      if (viewerId && String(ownerMeta.userId) === String(viewerId)) {
-        return sendJson(res, 200, { views: ownerMeta.views ?? 0, deduped: true, selfView: true });
+      const ip = clientIp(req);
+      // Everyone counts (self + guest + member); 90m IP window only
+      if (!(await claimGuestView('image', ip, imageId))) {
+        return sendJson(res, 200, { views: ownerMeta.views ?? 0, deduped: true });
       }
-      const result = await runCoinTransaction(async () => {
-        if (viewerId) {
-          const db = await loadUsersDb();
-          const viewer = db.users.find((u) => u.id === viewerId);
-          if (viewer) {
-            const flagKey = `image_meta_view_${imageId}`;
-            const act = ensureActivity(viewer);
-            if (act.flags[flagKey]) {
-              const meta = await getMeta(imageId);
-              if (!meta) return null;
-              return { views: meta.views ?? 0, deduped: true };
-            }
-          }
-          if (!(await claimGuestView('image', clientIp(req), imageId))) {
-            const meta = await getMeta(imageId);
-            if (!meta) return null;
-            if (viewerId) {
-              const db = await loadUsersDb();
-              const viewer = db.users.find((u) => u.id === viewerId);
-              if (viewer) {
-                const flagKey = `image_meta_view_${imageId}`;
-                const act = ensureActivity(viewer);
-                if (!act.flags[flagKey]) {
-                  act.flags[flagKey] = true;
-                  viewer.updatedAt = Date.now();
-                  await saveUsersDb(db);
-                }
-              }
-            }
-            return { views: meta.views ?? 0, deduped: true };
-          }
-        } else if (!(await claimGuestView('image', clientIp(req), imageId))) {
-          const meta = await getMeta(imageId);
-          if (!meta) return null;
-          return { views: meta.views ?? 0, deduped: true };
-        }
-        let reservedDb = null;
-        let reservedViewer = null;
-        let reservedFlagKey = null;
-        if (viewerId) {
-          reservedDb = await loadUsersDb();
-          reservedViewer = reservedDb.users.find((u) => u.id === viewerId);
-          if (reservedViewer) {
-            reservedFlagKey = `image_meta_view_${imageId}`;
-            const act = ensureActivity(reservedViewer);
-            act.flags[reservedFlagKey] = true;
-            reservedViewer.updatedAt = Date.now();
-            await saveUsersDb(reservedDb);
-          }
-        }
-        let recorded;
-        try {
-          recorded = await recordView(imageId);
-        } catch (e) {
-          if (reservedViewer && reservedFlagKey && reservedDb) {
-            const act = ensureActivity(reservedViewer);
-            delete act.flags[reservedFlagKey];
-            reservedViewer.updatedAt = Date.now();
-            await saveUsersDb(reservedDb);
-          }
-          throw e;
-        }
-        if (!recorded && reservedViewer && reservedFlagKey && reservedDb) {
-          const act = ensureActivity(reservedViewer);
-          delete act.flags[reservedFlagKey];
-          reservedViewer.updatedAt = Date.now();
-          await saveUsersDb(reservedDb);
-        }
-        return recorded;
-      });
-      if (!result) return sendJson(res, 404, { error: 'Not found' });
-      return sendJson(res, 200, result);
+      const recorded = await recordView(imageId);
+      if (!recorded) return sendJson(res, 404, { error: 'Not found' });
+      return sendJson(res, 200, { ...recorded, deduped: false });
     }
 
     const hostingMatch = pathname.match(/^\/hosting\/([a-f0-9]{16})$/);

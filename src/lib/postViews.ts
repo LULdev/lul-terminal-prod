@@ -13,7 +13,8 @@ export type AllPostViews = {
 };
 
 const API = '/api/post-views';
-const VIEW_SESSION_PREFIX = 'lul_post_view_';
+const VIEW_SESSION_PREFIX = 'lul_post_view_ts_';
+const CLIENT_TTL_MS = 90 * 60 * 1000;
 const inflight = new Map<string, Promise<number>>();
 
 export async function fetchAllPostViews(): Promise<AllPostViews> {
@@ -37,8 +38,9 @@ export async function recordPostView(
 
   const run = (async () => {
     const sessionKey = `${VIEW_SESSION_PREFIX}${type}:${id}`;
-    if (typeof sessionStorage !== 'undefined' && sessionStorage.getItem(sessionKey)) {
-      return currentViews;
+    if (typeof sessionStorage !== 'undefined') {
+      const at = Number(sessionStorage.getItem(sessionKey) || 0);
+      if (at > 0 && Date.now() - at < CLIENT_TTL_MS) return currentViews;
     }
     try {
       const res = await fetch(`${API}/view`, {
@@ -49,7 +51,7 @@ export async function recordPostView(
       });
       if (res.ok) {
         if (typeof sessionStorage !== 'undefined') {
-          sessionStorage.setItem(sessionKey, '1');
+          sessionStorage.setItem(sessionKey, String(Date.now()));
         }
         const data = await res.json() as { views: number };
         return data.views;

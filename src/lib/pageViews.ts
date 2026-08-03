@@ -4,7 +4,8 @@
  */
 
 const API = '/api/page-views';
-const SESSION_PREFIX = 'lul_page_view_';
+const SESSION_PREFIX = 'lul_page_view_ts_';
+const CLIENT_TTL_MS = 90 * 60 * 1000;
 const inflight = new Map<string, Promise<number>>();
 const canUseSession = typeof sessionStorage !== 'undefined';
 
@@ -28,20 +29,24 @@ export async function recordPageView(pageId: string): Promise<number> {
 
   const run = (async () => {
     const sessionKey = `${SESSION_PREFIX}${pageId}`;
-    if (!canUseSession || !sessionStorage.getItem(sessionKey)) {
-      try {
-        const res = await fetch(`${API}/${encodeURIComponent(pageId)}/view`, {
-          method: 'POST',
-          credentials: 'include',
-          headers: { 'Content-Type': 'application/json' },
-        });
-        if (res.ok) {
-          const data = await res.json() as { views?: number; deduped?: boolean };
-          if (canUseSession) sessionStorage.setItem(sessionKey, '1');
-          return Math.max(0, Number(data.views) || 0);
-        }
-      } catch { /* fall through */ }
+    if (canUseSession) {
+      const at = Number(sessionStorage.getItem(sessionKey) || 0);
+      if (at > 0 && Date.now() - at < CLIENT_TTL_MS) {
+        return (await fetchPageViews(pageId)) ?? 0;
+      }
     }
+    try {
+      const res = await fetch(`${API}/${encodeURIComponent(pageId)}/view`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      if (res.ok) {
+        const data = await res.json() as { views?: number; deduped?: boolean };
+        if (canUseSession) sessionStorage.setItem(sessionKey, String(Date.now()));
+        return Math.max(0, Number(data.views) || 0);
+      }
+    } catch { /* fall through */ }
     return (await fetchPageViews(pageId)) ?? 0;
   })();
 

@@ -73,27 +73,21 @@ export async function fetchPublicProfile(username: string): Promise<PublicProfil
   return data.user as PublicProfile;
 }
 
-const PROFILE_VIEW_PREFIX = 'lul_profile_view_';
+/** Client-side soft dedup aligned with server 90m IP window (ms). */
+const PROFILE_VIEW_PREFIX = 'lul_profile_view_ts_';
+const PROFILE_VIEW_CLIENT_TTL_MS = 90 * 60 * 1000;
 const MAX_AVATAR_BYTES = 2 * 1024 * 1024;
-/** Mirrors server analyticsTabIntegrity MIN_DWELL_MS + buffer */
-const PROFILE_VIEW_DWELL_MS = 2100;
 const profileViewInflight = new Map<string, Promise<ProfileViewResult>>();
-
-async function waitForProfileDwell() {
-  const deadline = Date.now() + PROFILE_VIEW_DWELL_MS;
-  while (Date.now() < deadline) {
-    await new Promise((r) => setTimeout(r, Math.min(400, deadline - Date.now())));
-  }
-}
 
 export type ProfileViewResult = {
   user: PublicProfile;
   credited: boolean;
+  deduped?: boolean;
 };
 
 export async function recordProfileView(
   username: string,
-  opts: { skipDwell?: boolean } = {},
+  _opts: { skipDwell?: boolean } = {},
 ): Promise<ProfileViewResult> {
   const uname = username.trim().toLowerCase().replace(/[^a-z0-9_]/g, '');
   const pending = profileViewInflight.get(uname);
@@ -102,35 +96,41 @@ export async function recordProfileView(
   const canUseSession = typeof sessionStorage !== 'undefined';
   const run = (async (): Promise<ProfileViewResult> => {
     const sessionKey = `${PROFILE_VIEW_PREFIX}${uname}`;
-    if (!canUseSession || !sessionStorage.getItem(sessionKey)) {
-      if (!opts.skipDwell) await waitForProfileDwell();
-      for (let attempt = 0; attempt < 5; attempt++) {
-        try {
-          const res = await fetch(`${API}/users/${encodeURIComponent(uname)}/view`, {
-            method: 'POST',
-            credentials: 'include',
-            headers: { 'Content-Type': 'application/json' },
-          });
-          if (res.status === 401) {
-            return { user: await fetchPublicProfile(uname), credited: false };
-          }
-          if (res.status === 429) {
-            const waitMs = Math.min(parseRetryAfterMs(res.headers.get('Retry-After'), 2000), 30_000);
-            await new Promise((r) => setTimeout(r, waitMs));
-            continue;
-          }
-          if (res.ok) {
-            const data = await res.json() as { user: PublicProfile; credited?: boolean };
-            if (canUseSession) sessionStorage.setItem(sessionKey, '1');
-            return { user: data.user, credited: Boolean(data.credited) };
-          }
-        } catch { /* fall through */ }
-        if (attempt < 4) {
-          await new Promise((r) => setTimeout(r, 600));
+    if (canUseSession) {
+      const raw = sessionStorage.getItem(sessionKey);
+      const at = raw ? Number(raw) : 0;
+      // Soft client skip only within 90m — server still authoritative
+      if (at > 0 && Date.now() - at < PROFILE_VIEW_CLIENT_TTL_MS) {
+        return { user: await fetchPublicProfile(uname), credited: false, deduped: true };
+      }
+    }
+    for (let attempt = 0; attempt < 5; attempt++) {
+      try {
+        const res = await fetch(`${API}/users/${encodeURIComponent(uname)}/view`, {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+        });
+        if (res.status === 429) {
+          const waitMs = Math.min(parseRetryAfterMs(res.headers.get('Retry-After'), 2000), 30_000);
+          await new Promise((r) => setTimeout(r, waitMs));
           continue;
         }
-        break;
+        if (res.ok) {
+          const data = await res.json() as { user: PublicProfile; credited?: boolean; deduped?: boolean };
+          if (canUseSession) sessionStorage.setItem(sessionKey, String(Date.now()));
+          return {
+            user: data.user,
+            credited: Boolean(data.credited),
+            deduped: Boolean(data.deduped),
+          };
+        }
+      } catch { /* fall through */ }
+      if (attempt < 4) {
+        await new Promise((r) => setTimeout(r, 600));
+        continue;
       }
+      break;
     }
     return { user: await fetchPublicProfile(uname), credited: false };
   })();

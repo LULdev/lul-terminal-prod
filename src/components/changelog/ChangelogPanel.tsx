@@ -21,7 +21,7 @@ type ChangelogPanelProps = {
 
 export const ChangelogPanel = memo(function ChangelogPanel({ isActive = true }: ChangelogPanelProps) {
   const { isLoggedIn } = useAuth();
-  const { views, registerView } = usePostViews('changelog', { enabled: isActive && isLoggedIn });
+  const { views, registerView } = usePostViews('changelog', { enabled: isActive });
   const [page, setPage] = useState(0);
   const timelineRef = useRef<HTMLDivElement>(null);
 

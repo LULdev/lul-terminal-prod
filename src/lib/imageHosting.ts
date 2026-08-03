@@ -233,6 +233,8 @@ export async function fetchHostedImage(
   return res.json() as Promise<HostedImageMeta>;
 }
 
+const IMAGE_VIEW_CLIENT_TTL_MS = 90 * 60 * 1000;
+
 export async function recordImageView(id: string, opts: { credentialed?: boolean } = {}): Promise<number> {
   const pending = viewInflight.get(id);
   if (pending) return pending;
@@ -240,20 +242,25 @@ export async function recordImageView(id: string, opts: { credentialed?: boolean
   const canUseSession = typeof sessionStorage !== 'undefined';
   const run = (async () => {
     const sessionKey = `${VIEW_SESSION_PREFIX}${id}`;
-    if (!canUseSession || !sessionStorage.getItem(sessionKey)) {
-      try {
-        const res = await fetch(`${API}/${id}/view`, {
-          method: 'POST',
-          credentials: 'include',
-          headers: { 'Content-Type': 'application/json' },
-        });
-        if (res.ok) {
-          const data = await res.json() as { views: number; deduped?: boolean };
-          if (canUseSession) sessionStorage.setItem(sessionKey, '1');
-          return data.views;
-        }
-      } catch { /* fall through */ }
+    if (canUseSession) {
+      const at = Number(sessionStorage.getItem(sessionKey) || 0);
+      if (at > 0 && Date.now() - at < IMAGE_VIEW_CLIENT_TTL_MS) {
+        const meta = await fetchHostedImage(id, { credentialed: opts.credentialed });
+        return meta?.views ?? 0;
+      }
     }
+    try {
+      const res = await fetch(`${API}/${id}/view`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      if (res.ok) {
+        const data = await res.json() as { views: number; deduped?: boolean };
+        if (canUseSession) sessionStorage.setItem(sessionKey, String(Date.now()));
+        return data.views;
+      }
+    } catch { /* fall through */ }
     const meta = await fetchHostedImage(id, { credentialed: opts.credentialed });
     return meta?.views ?? 0;
   })();

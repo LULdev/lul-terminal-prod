@@ -651,70 +651,71 @@ export async function getPublicProfileByUsername(username) {
   return view;
 }
 
-export async function incrementProfileView(username, { viewer = null, sessionTab = null, sessionToken = null } = {}) {
+/**
+ * Count a profile view for anyone (guest, self, registered).
+ * Dedup: 90-minute IP lock per profile (claimGuestView). Same IP within 90m = 1 view.
+ * @param {string} username
+ * @param {{ viewer?: object|null, clientIp?: string|null }} opts
+ */
+export async function incrementProfileView(username, { viewer = null, clientIp: viewerIp = null } = {}) {
+  const dbPeek = await loadUsersDb();
+  const targetPeek = findUserByUsername(dbPeek.users, username);
+  if (!targetPeek || !isEffectivelyActive(targetPeek)) throw new Error('User not found');
+  const uname = String(targetPeek.username).toLowerCase();
+
+  // Site-wide rule: IP window only (self + guest + registered all count)
+  const ip = String(viewerIp ?? '').trim() || 'unknown';
+  const { claimIpView } = await import('../viewDedup.mjs');
+  const mayCount = await claimIpView('profile', ip, uname);
+
   return runCoinTransaction(async () => {
     const db = await loadUsersDb();
     const user = findUserByUsername(db.users, username);
     if (!user || !isEffectivelyActive(user)) throw new Error('User not found');
-    const uname = String(user.username).toLowerCase();
-    const viewerUname = viewer?.username ? String(viewer.username).toLowerCase() : null;
-    if (viewerUname && viewerUname === uname) {
-      const { accountsSubmitted, reportedNotWorkingAccounts, profileStats } = await profileExtrasForUser(user);
-      return {
-        user: publicProfileView(user, accountsSubmitted, reportedNotWorkingAccounts, profileStats),
-        credited: false,
-      };
-    }
 
     let dirty = false;
     let credited = false;
+
+    if (mayCount) {
+      user.profileViews = (Number(user.profileViews) || 0) + 1;
+      user.updatedAt = Date.now();
+      dirty = true;
+      credited = true;
+      syncAchievements(user, { accountsSubmitted: await countAccountsByCreator(user.id) });
+    }
+
+    // Optional achievement side-effects for logged-in viewers (does not gate the counter)
     if (viewer && viewer.id && viewer.role !== 'bot') {
       const viewerUser = db.users.find((u) => u.id === viewer.id);
-      const onProfileTab = String(sessionTab ?? '') === 'profile';
-      if (viewerUser && onProfileTab) {
-        const visitKey = `profile_visit_${uname}`;
-        const alreadyVisited = Boolean(ensureActivity(viewerUser).flags[visitKey]);
-        if (!alreadyVisited) {
-          const { tryClaimProfileViewCredit, releaseProfileViewCredit } = await import('../analyticsTabIntegrity.mjs');
-          const burstOk = sessionToken ? await tryClaimProfileViewCredit(sessionToken) : false;
-          if (burstOk) {
-            try {
-              user.profileViews = (Number(user.profileViews) || 0) + 1;
-              user.updatedAt = Date.now();
-              dirty = true;
-              credited = true;
-              syncAchievements(user, { accountsSubmitted: await countAccountsByCreator(user.id) });
-              const ctx = { visitedProfile: uname };
-              if (user.role === 'admin') ctx.flag = 'visited_admin_profile';
-              applyActivityCtx(viewerUser, ctx);
-              const viewerSubmitted = await countAccountsByCreator(viewerUser.id);
-              syncAchievements(viewerUser, { ...ctx, accountsSubmitted: viewerSubmitted });
-              viewerUser.updatedAt = Date.now();
-              dirty = true;
-            } catch (creditErr) {
-              if (sessionToken) await releaseProfileViewCredit(sessionToken);
-              throw creditErr;
-            }
-          }
-        }
+      if (viewerUser) {
+        const ctx = { visitedProfile: uname };
+        if (user.role === 'admin') ctx.flag = 'visited_admin_profile';
+        applyActivityCtx(viewerUser, ctx);
+        const viewerSubmitted = await countAccountsByCreator(viewerUser.id);
+        syncAchievements(viewerUser, { ...ctx, accountsSubmitted: viewerSubmitted });
+        viewerUser.updatedAt = Date.now();
+        dirty = true;
       }
     }
-    const { accountsSubmitted, reportedNotWorkingAccounts, profileStats } = await profileExtrasForUser(user);
 
+    const { accountsSubmitted, reportedNotWorkingAccounts, profileStats } = await profileExtrasForUser(user);
     if (dirty) await saveUsersDb(db);
-    if (credited && viewer?.id) {
+
+    if (credited) {
       const { recordEvent } = await import('../analyticsService.mjs');
       await recordEvent({
         type: 'profile_view',
-        userId: viewer.id,
-        username: viewer.username ?? null,
+        userId: viewer?.id ?? null,
+        username: viewer?.username ?? null,
         tab: 'profile',
-        meta: { target: uname },
+        meta: { target: uname, ip: ip === 'unknown' ? undefined : ip },
       }).catch(() => {});
     }
+
     return {
       user: publicProfileView(user, accountsSubmitted, reportedNotWorkingAccounts, profileStats),
       credited,
+      deduped: !credited,
     };
   });
 }

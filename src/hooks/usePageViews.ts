@@ -5,11 +5,9 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { fetchPageViews, recordPageView } from '../lib/pageViews';
-import { useAuth } from '../context/AuthContext';
 import { useVisibilityAwarePoll } from './useVisibilityAwarePoll';
 
 export function usePageViews(pageId: string | undefined, enabled = true) {
-  const { isLoggedIn } = useAuth();
   const [views, setViews] = useState<number | null>(null);
   const loadGenRef = useRef(0);
   const mountedRef = useRef(true);
@@ -28,7 +26,8 @@ export function usePageViews(pageId: string | undefined, enabled = true) {
     } catch { /* ignore */ }
   }, [pageId]);
 
-  const active = Boolean(pageId && enabled && isLoggedIn);
+  // Guests + members both count (server 90m IP dedup)
+  const active = Boolean(pageId && enabled);
 
   useEffect(() => {
     if (!active) {

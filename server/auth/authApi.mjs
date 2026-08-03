@@ -295,16 +295,19 @@ export async function handleAuthRequest(req, res) {
 
     const profileViewMatch = pathname.match(/^\/api\/auth\/users\/([a-z0-9_]+)\/view$/);
     if (profileViewMatch && req.method === 'POST') {
+      // Public: guests + self + members all count; 90m IP dedup on server
       await attachAuth(req);
-      const viewer = requireAuth(req);
-      await requireMemberTab(req, 'profile');
-      await checkRateLimit(`profile-view:${viewer.id}`, { max: 40, windowMs: 60_000 });
+      const ip = clientIp(req);
+      await checkRateLimit(`profile-view:${ip}`, { max: 60, windowMs: 60_000 });
       const result = await incrementProfileView(profileViewMatch[1], {
         viewer: req.auth?.user ?? null,
-        sessionTab: req.auth?.session?.analyticsLastTab ?? null,
-        sessionToken: req.auth?.token ?? null,
+        clientIp: ip,
       });
-      return sendJson(res, 200, { user: result.user, credited: result.credited });
+      return sendJson(res, 200, {
+        user: result.user,
+        credited: result.credited,
+        deduped: Boolean(result.deduped),
+      });
     }
 
     if (pathname.startsWith('/api/auth/admin')) {
