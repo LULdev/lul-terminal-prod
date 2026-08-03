@@ -23,6 +23,20 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '3.56.2',
+    title: 'Server residual: durable jackpot ids, no blind stale restore, paste/proxy caps, TTT LB awards',
+    date: 'Aug 4, 2026 - 05:00',
+    highlight: true,
+    items: [
+      { priority: 'P1', text: 'P1 — jackpotCreditedPendingIds survives coinLedger rotation (no re-mint after 80-entry cap).' },
+      { priority: 'P1', text: 'P1 — payoutJackpot never blind-restores stale pending (recovery settles with idempotency first).' },
+      { priority: 'P2', text: 'P2 — Paste password scrypt capped at 128 chars (CPU DoS).' },
+      { priority: 'P2', text: 'P2 — lb_top_ttt_losses / lb_top_ttt_games grantable (STORED_ACHIEVEMENT_IDS).' },
+      { priority: 'P3', text: 'P3 — Proxy checker probe body capped at 256KB (OOM protection).' },
+      { priority: 'P9', text: 'P9 — Version 3.56.2 residual server sweep after 3.56.1.' },
+    ],
+  },
+  {
     version: '3.56.1',
     title: 'Client residual: lulCoins merge protect, proxy job busyRef, admin double-submit sweep',
     date: 'Aug 4, 2026 - 04:40',

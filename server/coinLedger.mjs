@@ -7,6 +7,8 @@ import crypto from 'crypto';
 import { ARCADE_GAMES_META } from './arcadeMeta.mjs';
 
 export const COIN_LEDGER_MAX = 80;
+/** Durable jackpot idempotency — survives coinLedger rotation (max 80 rows). */
+export const JACKPOT_CREDITED_IDS_MAX = 48;
 
 const GAME_ICON = Object.fromEntries(ARCADE_GAMES_META.map((g) => [g.id, g.icon]));
 
@@ -80,8 +82,39 @@ export function logStreakCredit(user, { gameId, chatLabel, matchId, bet, amount 
   });
 }
 
+/** Remember pendingId so boot recovery never re-mints after ledger rotation. */
+export function rememberJackpotPendingCredited(user, pendingId) {
+  if (!user || !pendingId) return;
+  const id = String(pendingId).slice(0, 32);
+  if (!id) return;
+  if (!Array.isArray(user.jackpotCreditedPendingIds)) user.jackpotCreditedPendingIds = [];
+  if (user.jackpotCreditedPendingIds.includes(id)) return;
+  user.jackpotCreditedPendingIds.unshift(id);
+  if (user.jackpotCreditedPendingIds.length > JACKPOT_CREDITED_IDS_MAX) {
+    user.jackpotCreditedPendingIds.length = JACKPOT_CREDITED_IDS_MAX;
+  }
+}
+
+/** True if this jackpot pending was already credited (durable ids + ledger fallback). */
+export function hasJackpotPendingCredited(user, { pendingId, matchId, amount } = {}) {
+  if (!user) return false;
+  const pid = pendingId ? String(pendingId).slice(0, 32) : null;
+  if (pid && Array.isArray(user.jackpotCreditedPendingIds) && user.jackpotCreditedPendingIds.includes(pid)) {
+    return true;
+  }
+  const ledger = Array.isArray(user.coinLedger) ? user.coinLedger : [];
+  const amt = amount != null ? Number(amount) : null;
+  return ledger.some((e) => {
+    if (e.kind !== 'jackpot') return false;
+    if (amt != null && Number(e.amount) !== amt) return false;
+    if (pid && e.meta?.pendingId === pid) return true;
+    if (matchId && e.meta?.matchId === matchId) return true;
+    return false;
+  });
+}
+
 export function logJackpotCredit(user, { gameId, matchId, bet, amount, pendingId }) {
-  return creditUserCoins(user, amount, {
+  const credited = creditUserCoins(user, amount, {
     kind: 'jackpot',
     label: 'Community jackpot hit',
     icon: '🎰',
@@ -90,6 +123,8 @@ export function logJackpotCredit(user, { gameId, matchId, bet, amount, pendingId
       ...(pendingId ? { pendingId: String(pendingId).slice(0, 32) } : {}),
     },
   });
+  if (pendingId) rememberJackpotPendingCredited(user, pendingId);
+  return credited;
 }
 
 export function logDrawRefund(user, { gameId, chatLabel, matchId, bet, amount }) {

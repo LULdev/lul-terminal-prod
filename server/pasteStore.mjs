@@ -35,9 +35,16 @@ export function generateId() {
   return crypto.randomBytes(8).toString('base64url').slice(0, 12);
 }
 
+/** Cap paste passwords to match auth (avoids scrypt CPU DoS on huge bodies). */
+const MAX_PASTE_PASSWORD_LENGTH = 128;
+
 export function hashPassword(password) {
+  const pw = String(password ?? '');
+  if (pw.length > MAX_PASTE_PASSWORD_LENGTH) {
+    throw new Error(`Password max. ${MAX_PASTE_PASSWORD_LENGTH} characters`);
+  }
   const salt = crypto.randomBytes(16).toString('hex');
-  const hash = crypto.scryptSync(String(password), salt, 64).toString('hex');
+  const hash = crypto.scryptSync(pw, salt, 64).toString('hex');
   return `${salt}:${hash}`;
 }
 
@@ -71,10 +78,13 @@ export function normalizeVisibilityInput(visibility, password) {
 
 export function verifyPassword(password, stored) {
   if (!stored || typeof stored !== 'string') return false;
+  const pw = String(password ?? '');
+  // Reject oversize without hashing (CPU DoS)
+  if (pw.length > MAX_PASTE_PASSWORD_LENGTH) return false;
   const [salt, hash] = stored.split(':');
   if (!salt || !hash) return false;
   try {
-    const test = crypto.scryptSync(String(password), salt, 64).toString('hex');
+    const test = crypto.scryptSync(pw, salt, 64).toString('hex');
     return crypto.timingSafeEqual(Buffer.from(hash, 'hex'), Buffer.from(test, 'hex'));
   } catch {
     return false;

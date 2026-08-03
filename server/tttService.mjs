@@ -8,6 +8,7 @@ import { isInsideUsersWrite, loadUsersDb, saveUsersDb, scheduleAfterUsersWrite }
 import { syncAchievementsOnLoadedUser } from './auth/authService.mjs';
 import { postBotArcadeJackpot, postBotTttVictory } from './chatBot.mjs';
 import {
+  hasJackpotPendingCredited,
   logDrawRefund,
   logGameWinCredit,
   logJackpotCredit,
@@ -464,15 +465,7 @@ async function finalizeMatch(m, boardState) {
             const db = await loadUsersDb();
             const u = getUser(db, deferredJackpot.userId);
             if (!u) return;
-            const ledger = Array.isArray(u.coinLedger) ? u.coinLedger : [];
-            const already = ledger.some((e) => {
-              if (e.kind !== 'jackpot') return false;
-              if (Number(e.amount) !== jackpotAmount) return false;
-              if (pendingId && e.meta?.pendingId === pendingId) return true;
-              if (m.id && e.meta?.matchId === m.id) return true;
-              return false;
-            });
-            if (already) {
+            if (hasJackpotPendingCredited(u, { pendingId, matchId: m.id, amount: jackpotAmount })) {
               credited = true;
               return;
             }

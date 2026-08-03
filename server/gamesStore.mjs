@@ -145,19 +145,14 @@ export async function payoutJackpot(winner, meta = {}) {
       if (existingPending.userCredited === true) {
         try { await fs.unlink(JACKPOT_PENDING_FILE); } catch { /* */ }
       } else if (Date.now() - (Number(existingPending.at) || 0) > JACKPOT_PENDING_STALE_MS) {
-        // Stuck pending freezes ALL future jackpots — restore pool in-process (boot recovery also runs)
-        const amount = Math.floor(Number(existingPending.amount) || 0);
-        const db = await readJackpotFromDisk();
-        db.pool = Math.max(0, Number(db.pool) || 0) + amount;
-        db.totalPaidOut = Math.max(0, (Number(db.totalPaidOut) || 0) - amount);
-        db.hits = Math.max(0, (Number(db.hits) || 0) - 1);
-        await saveJackpot(db);
-        try { await fs.unlink(JACKPOT_PENDING_FILE); } catch { /* */ }
-        console.warn('[games] restored stale jackpot pending to pool (live)', {
-          amount,
-          winner: existingPending.winner,
+        // Do NOT restore pool here — user may already be credited without confirm.
+        // Live recovery (sweep) settles with durable idempotency; blind restore double-mints.
+        console.warn('[games] jackpot payout deferred — stale pending awaits recovery (no blind restore)', {
+          pendingWinner: existingPending.winner,
+          pendingAmount: existingPending.amount,
           ageMs: Date.now() - (Number(existingPending.at) || 0),
         });
+        return { amount: 0, pendingId: null };
       } else {
         console.warn('[games] jackpot payout deferred — prior pending still open', {
           pendingWinner: existingPending.winner,

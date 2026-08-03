@@ -137,6 +137,8 @@ const STORED_ACHIEVEMENT_IDS = [
   'lb_top_game_wins',
   'lb_top_game_losses',
   'lb_top_game_games',
+  'lb_top_ttt_losses',
+  'lb_top_ttt_games',
   'lb_top_lul_coins',
   'games_explorer',
   'rps_first_play',
@@ -556,6 +558,8 @@ const ACTIVITY_ACHIEVEMENT_IDS = new Set([
   'lb_top_game_wins',
   'lb_top_game_losses',
   'lb_top_game_games',
+  'lb_top_ttt_losses',
+  'lb_top_ttt_games',
   'lb_top_lul_coins',
   ...STANDARD_ARCADE_ACHIEVEMENT_IDS,
   ...ARCADE_META_ACHIEVEMENT_IDS,
@@ -567,7 +571,7 @@ export function isActivitySensitiveAchievement(id) {
   if (ACTIVITY_ACHIEVEMENT_IDS.has(aid)) return true;
   if (aid.startsWith('rps_') || aid.startsWith('ttt_')) return true;
   if (aid.startsWith('lul_coins_') || aid.startsWith('jackpot_')) return true;
-  if (aid.startsWith('lb_top_game_')) return true;
+  if (aid.startsWith('lb_top_game_') || aid.startsWith('lb_top_ttt_')) return true;
   return ARCADE_GAMES_META.some((g) => aid.startsWith(`${g.id}_`));
 }
 

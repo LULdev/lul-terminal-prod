@@ -11,7 +11,7 @@ import { startMatchExpirySweep } from './gamesExpirySweep.mjs';
 import { recoverJackpotPendingOnBoot } from './gamesStore.mjs';
 import { runCoinTransaction } from './gamesCoinLock.mjs';
 import { loadUsersDb, saveUsersDb } from './auth/authStore.mjs';
-import { logJackpotCredit } from './coinLedger.mjs';
+import { hasJackpotPendingCredited, logJackpotCredit } from './coinLedger.mjs';
 
 let ready = false;
 let bootPromise = null;
@@ -38,18 +38,12 @@ async function settlePendingJackpotOnBoot(pending) {
       // Unknown winner — put money back in the pool
       return 'restored';
     }
-    // Idempotent: only skip when we can prove THIS pending payout was credited
-    // (pendingId or exact matchId). Same amount + time window is NOT enough —
-    // that caused silent coin loss when a second jackpot matched the first.
-    const ledger = Array.isArray(user.coinLedger) ? user.coinLedger : [];
-    const already = ledger.some((e) => {
-      if (e.kind !== 'jackpot') return false;
-      if (Number(e.amount) !== Number(pending.amount)) return false;
-      if (pending.id && e.meta?.pendingId === pending.id) return true;
-      if (pending.matchId && e.meta?.matchId === pending.matchId) return true;
-      return false;
-    });
-    if (already) {
+    // Durable idempotency: jackpotCreditedPendingIds survives coinLedger rotation
+    if (hasJackpotPendingCredited(user, {
+      pendingId: pending.id,
+      matchId: pending.matchId,
+      amount: pending.amount,
+    })) {
       return 'skipped';
     }
     logJackpotCredit(user, {

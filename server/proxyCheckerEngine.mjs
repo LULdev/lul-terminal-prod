@@ -25,6 +25,9 @@ function proxyUrl(proxy) {
   return `http://${host}:${port}`;
 }
 
+/** Cap probe response size (hostile proxy/test URL OOM protection). */
+const PROXY_PROBE_MAX_BYTES = 256 * 1024;
+
 function fetchThroughProxy(proxy, testUrl, timeoutMs) {
   const start = Date.now();
   const url = proxyUrl(proxy);
@@ -38,11 +41,33 @@ function fetchThroughProxy(proxy, testUrl, timeoutMs) {
       const req = mod.get(testUrl, { agent, timeout: timeoutMs }, (res) => {
         clearTimeout(timer);
         const chunks = [];
-        res.on('data', (c) => chunks.push(c));
+        let total = 0;
+        let truncated = false;
+        res.on('data', (c) => {
+          if (truncated) return;
+          total += c.length;
+          if (total > PROXY_PROBE_MAX_BYTES) {
+            truncated = true;
+            chunks.push(c.subarray(0, Math.max(0, PROXY_PROBE_MAX_BYTES - (total - c.length))));
+            res.destroy();
+            return;
+          }
+          chunks.push(c);
+        });
         res.on('end', () => {
           const ok = res.statusCode >= 200 && res.statusCode < 400;
           resolve({
             alive: ok,
+            latency: ok ? Date.now() - start : null,
+            body: Buffer.concat(chunks).toString('utf8'),
+            headers: res.headers ?? {},
+          });
+        });
+        res.on('error', () => {
+          // destroyed after cap — still resolve with partial body if we got status
+          const ok = res.statusCode >= 200 && res.statusCode < 400;
+          resolve({
+            alive: ok && !truncated ? ok : ok,
             latency: ok ? Date.now() - start : null,
             body: Buffer.concat(chunks).toString('utf8'),
             headers: res.headers ?? {},
