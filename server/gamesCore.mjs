@@ -770,22 +770,26 @@ export async function sweepExpiredMatchesForUser(activeMatches, userId, expireMe
 /** Logout / account removal — expire in-progress matches and refund escrow immediately. */
 export async function forceExpireMatchesForUser(activeMatches, userId, expireMeta) {
   if (!userId || !expireMeta || !activeMatches) return;
-  const mine = [...activeMatches.values()].filter(
-    (m) => m.status === 'playing'
-      && (m.player1?.userId === userId || m.player2?.userId === userId),
-  );
-  for (const m of mine) {
-    // PvP: leaver forfeits (opponent takes pot). Bot/solo: refund via forceAbandon.
-    if (m.mode === 'pvp') {
-      await expireMatchWithRefund(m, activeMatches, {
-        ...expireMeta,
-        forceAbandon: false,
-        leaverForfeitUserId: userId,
-      });
-    } else {
-      await expireMatchWithRefund(m, activeMatches, { ...expireMeta, forceAbandon: true });
+  const run = async () => {
+    const mine = [...activeMatches.values()].filter(
+      (m) => m.status === 'playing'
+        && (m.player1?.userId === userId || m.player2?.userId === userId),
+    );
+    for (const m of mine) {
+      // PvP: leaver forfeits (opponent takes pot). Bot/solo: refund via forceAbandon.
+      if (m.mode === 'pvp') {
+        await expireMatchWithRefund(m, activeMatches, {
+          ...expireMeta,
+          forceAbandon: false,
+          leaverForfeitUserId: userId,
+        });
+      } else {
+        await expireMatchWithRefund(m, activeMatches, { ...expireMeta, forceAbandon: true });
+      }
     }
-  }
+  };
+  if (expireMeta?.mm?.gameId) return withMatchmakerWrite(expireMeta.mm, run);
+  return run();
 }
 
 export async function getMatchWithExpiry(activeMatches, matchId, userId, expireMeta, publicMatch) {
@@ -863,16 +867,15 @@ export async function buildLeaderboard(statKey) {
   };
 }
 
-export function createMatchmaker() {
-  return {
-    queue: [],
-    rooms: new Map(),
-    consumedRooms: new Map(),
-    activeMatches: new Map(),
-  };
-}
+export { createMatchmaker, withMatchmakerWrite, hydrateMatchmaker } from './gamesMatchmakerStore.mjs';
+import { withMatchmakerWrite } from './gamesMatchmakerStore.mjs';
 
 export async function joinMatchQueue(params) {
+  const mm = params.mm;
+  // Matchmaker lock outer — coin lock inner (never reverse)
+  if (mm?.gameId) {
+    return withMatchmakerWrite(mm, () => runCoinTransaction(() => joinMatchQueueInner(params)));
+  }
   return runCoinTransaction(() => joinMatchQueueInner(params));
 }
 
@@ -1041,26 +1044,28 @@ async function joinMatchQueueInner({
 }
 
 export async function leaveMatchQueue(mm, userId, { gameId = 'arcade', chatLabel = 'Arcade' } = {}) {
-  return runCoinTransaction(async () => {
-  const db = await loadUsersDb();
-  const user = getUser(db, userId);
-  let refunded = 0;
-  while (true) {
-    const idx = mm.queue.findIndex((q) => q.userId === userId);
-    if (idx < 0) break;
-    const entry = mm.queue[idx];
-    if (user && entry?.bet) {
-      refunded += releaseOrRecoverQueueBet(user, gameId, chatLabel, entry.bet);
-      user.updatedAt = Date.now();
+  const run = async () => runCoinTransaction(async () => {
+    const db = await loadUsersDb();
+    const user = getUser(db, userId);
+    let refunded = 0;
+    while (true) {
+      const idx = mm.queue.findIndex((q) => q.userId === userId);
+      if (idx < 0) break;
+      const entry = mm.queue[idx];
+      if (user && entry?.bet) {
+        refunded += releaseOrRecoverQueueBet(user, gameId, chatLabel, entry.bet);
+        user.updatedAt = Date.now();
+      }
+      mm.queue.splice(idx, 1);
     }
-    mm.queue.splice(idx, 1);
-  }
-  for (const [code, room] of mm.rooms.entries()) {
-    if (room.hostId === userId) mm.rooms.delete(code);
-  }
-  if (user && refunded > 0) await saveUsersDb(db);
-  return { ok: true };
+    for (const [code, room] of mm.rooms.entries()) {
+      if (room.hostId === userId) mm.rooms.delete(code);
+    }
+    if (user && refunded > 0) await saveUsersDb(db);
+    return { ok: true };
   });
+  if (mm?.gameId) return withMatchmakerWrite(mm, run);
+  return run();
 }
 
 /**
@@ -1084,7 +1089,9 @@ function resolveTimeoutForfeit(m) {
 export async function expireMatchWithRefund(m, activeMatches, expireMeta) {
   if (!m) return;
   const { gameId, chatLabel } = expireMeta ?? {};
-  return runCoinTransaction(async () => {
+  // expireMeta.mm = full durable matchmaker; activeMatches alone is the Map
+  const durableMm = expireMeta?.mm ?? null;
+  const runExpire = () => runCoinTransaction(async () => {
   if (m.status === 'done') return;
   if (m.status !== 'playing') return;
   if (m.player1?.move != null && m.player2?.move != null && !expireMeta?.forceAbandon) {
@@ -1261,6 +1268,11 @@ export async function expireMatchWithRefund(m, activeMatches, expireMeta) {
     ),
   );
   });
+
+  if (durableMm?.gameId) {
+    return withMatchmakerWrite(durableMm, runExpire);
+  }
+  return runExpire();
 }
 
 export async function createPvpMatchFromQueue(joinerId, hostId, bet, mm, buildMatch, publicMatch, refundMeta) {

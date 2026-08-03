@@ -16,12 +16,13 @@ import {
   MATCH_TIMEOUT_MS,
   newMatchId,
   settleMatch,
+  withMatchmakerWrite,
 } from './gamesCore.mjs';
 import { runCoinTransaction } from './gamesCoinLock.mjs';
 import { sweepExpiredInMap } from './gamesExpirySweep.mjs';
 
-const mm = createMatchmaker();
-const NIM_EXPIRE = { gameId: 'nim', chatLabel: 'Nim' };
+const mm = createMatchmaker('nim');
+const NIM_EXPIRE = { gameId: 'nim', chatLabel: 'Nim', mm };
 const START_PILES = [3, 5, 7];
 
 function parseMove(raw) {
@@ -131,7 +132,7 @@ export async function joinNimQueue(userId, opts = {}) {
         return match;
       }, publicMatch, { gameId: 'nim', chatLabel: 'Nim' }),
     matchOptions: { publicMatch },
-    expireMeta: { gameId: 'nim', chatLabel: 'Nim' },
+    expireMeta: NIM_EXPIRE,
   });
 }
 
@@ -146,7 +147,7 @@ export async function releaseNimUserSession(userId) {
 export async function submitNimMove(userId, matchId, move) {
   const parsed = parseMove(move);
   if (!parsed) throw new Error('Invalid move');
-  return runCoinTransaction(async () => {
+  return withMatchmakerWrite(mm, () => runCoinTransaction(async () => {
   const m = mm.activeMatches.get(matchId);
   if (!m || m.status !== 'playing') throw new Error('Match not found');
   const { pile, take } = parsed;
@@ -157,7 +158,7 @@ export async function submitNimMove(userId, matchId, move) {
   if (m.mode === 'bot') {
     if (m.player1.userId !== userId || m.turn !== 'p1') throw new Error('Not your turn');
     if (Date.now() > m.expiresAt) {
-      await expireMatchWithRefund(m, mm.activeMatches, { gameId: 'nim', chatLabel: 'Nim' });
+      await expireMatchWithRefund(m, mm.activeMatches, NIM_EXPIRE);
       throw new Error('Match expired');
     }
     m.piles[pile] -= take;
@@ -178,7 +179,7 @@ export async function submitNimMove(userId, matchId, move) {
   if (!isP1 && !isP2) throw new Error('Not your match');
   if ((isP1 && m.turn !== 'p1') || (isP2 && m.turn !== 'p2')) throw new Error('Not your turn');
   if (Date.now() > m.expiresAt) {
-    await expireMatchWithRefund(m, mm.activeMatches, { gameId: 'nim', chatLabel: 'Nim' });
+    await expireMatchWithRefund(m, mm.activeMatches, NIM_EXPIRE);
     throw new Error('Match expired');
   }
   m.piles[pile] -= take;
@@ -188,11 +189,13 @@ export async function submitNimMove(userId, matchId, move) {
   m.expiresAt = Date.now() + MATCH_TIMEOUT_MS;
   m.turn = m.turn === 'p1' ? 'p2' : 'p1';
   return { match: publicMatch(m) };
-  });
+  }));
 }
 
 export async function getNimMatch(matchId, userId) {
-  return getMatchWithExpiry(mm.activeMatches, matchId, userId, { gameId: 'nim', chatLabel: 'Nim' }, publicMatch);
+  return withMatchmakerWrite(mm, () =>
+    getMatchWithExpiry(mm.activeMatches, matchId, userId, NIM_EXPIRE, publicMatch),
+  );
 }
 
 export const getNimUserSlice = buildUserSlice({
@@ -200,7 +203,7 @@ export const getNimUserSlice = buildUserSlice({
   queue: mm.queue,
   activeMatches: mm.activeMatches,
   publicMatch,
-  expireMeta: { gameId: 'nim', chatLabel: 'Nim' },
+  expireMeta: NIM_EXPIRE,
   mm,
 });
 

@@ -16,14 +16,15 @@ import {
   MATCH_TIMEOUT_MS,
   newMatchId,
   settleMatch,
+  withMatchmakerWrite,
 } from './gamesCore.mjs';
 import { runCoinTransaction } from './gamesCoinLock.mjs';
 import { sweepExpiredInMap } from './gamesExpirySweep.mjs';
 
 const ROWS = 6;
-const C4_EXPIRE = { gameId: 'connect4', chatLabel: 'Connect Four' };
 const COLS = 7;
-const mm = createMatchmaker();
+const mm = createMatchmaker('connect4');
+const C4_EXPIRE = { gameId: 'connect4', chatLabel: 'Connect Four', mm };
 
 function emptyBoard() {
   return Array.from({ length: ROWS }, () => Array(COLS).fill(null));
@@ -159,7 +160,7 @@ export async function joinConnect4Queue(userId, opts = {}) {
         return match;
       }, publicMatch, { gameId: 'connect4', chatLabel: 'Connect Four' }),
     matchOptions: { publicMatch },
-    expireMeta: { gameId: 'connect4', chatLabel: 'Connect Four' },
+    expireMeta: C4_EXPIRE,
   });
 }
 
@@ -174,7 +175,7 @@ export async function releaseConnect4UserSession(userId) {
 export async function submitConnect4Move(userId, matchId, move) {
   const col = Math.floor(Number(move));
   if (!Number.isInteger(col) || col < 0 || col >= COLS) throw new Error('Invalid column');
-  return runCoinTransaction(async () => {
+  return withMatchmakerWrite(mm, () => runCoinTransaction(async () => {
   const m = mm.activeMatches.get(matchId);
   if (!m || m.status !== 'playing') throw new Error('Match not found');
   if (!validColumns(m.board).includes(col)) throw new Error('Column full');
@@ -182,7 +183,7 @@ export async function submitConnect4Move(userId, matchId, move) {
   if (m.mode === 'bot') {
     if (m.player1.userId !== userId || m.turn !== 'p1') throw new Error('Not your turn');
     if (Date.now() > m.expiresAt) {
-      await expireMatchWithRefund(m, mm.activeMatches, { gameId: 'connect4', chatLabel: 'Connect Four' });
+      await expireMatchWithRefund(m, mm.activeMatches, C4_EXPIRE);
       throw new Error('Match expired');
     }
     drop(m.board, col, 'X');
@@ -203,7 +204,7 @@ export async function submitConnect4Move(userId, matchId, move) {
   if (!isP1 && !isP2) throw new Error('Not your match');
   if ((isP1 && m.turn !== 'p1') || (isP2 && m.turn !== 'p2')) throw new Error('Not your turn');
   if (Date.now() > m.expiresAt) {
-    await expireMatchWithRefund(m, mm.activeMatches, { gameId: 'connect4', chatLabel: 'Connect Four' });
+    await expireMatchWithRefund(m, mm.activeMatches, C4_EXPIRE);
     throw new Error('Match expired');
   }
   const mark = isP1 ? 'X' : 'O';
@@ -213,11 +214,13 @@ export async function submitConnect4Move(userId, matchId, move) {
   m.expiresAt = Date.now() + MATCH_TIMEOUT_MS;
   m.turn = m.turn === 'p1' ? 'p2' : 'p1';
   return { match: publicMatch(m) };
-  });
+  }));
 }
 
 export async function getConnect4Match(matchId, userId) {
-  return getMatchWithExpiry(mm.activeMatches, matchId, userId, { gameId: 'connect4', chatLabel: 'Connect Four' }, publicMatch);
+  return withMatchmakerWrite(mm, () =>
+    getMatchWithExpiry(mm.activeMatches, matchId, userId, C4_EXPIRE, publicMatch),
+  );
 }
 
 export const getConnect4UserSlice = buildUserSlice({
@@ -225,7 +228,7 @@ export const getConnect4UserSlice = buildUserSlice({
   queue: mm.queue,
   activeMatches: mm.activeMatches,
   publicMatch,
-  expireMeta: { gameId: 'connect4', chatLabel: 'Connect Four' },
+  expireMeta: C4_EXPIRE,
   mm,
 });
 

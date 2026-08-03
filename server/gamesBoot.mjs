@@ -73,9 +73,18 @@ export function ensureGamesBootstrapped() {
   if (ready) return Promise.resolve();
   if (!bootPromise) {
     bootPromise = (async () => {
+      // Register all matchmakers then hydrate durable queue/match state BEFORE escrow refund
+      try {
+        await import('./gameRegistry.mjs');
+        const { hydrateAllMatchmakers } = await import('./gamesMatchmakerStore.mjs');
+        const nMm = await hydrateAllMatchmakers();
+        if (nMm > 0) console.log(`[games] Hydrated ${nMm} durable matchmaker(s)`);
+      } catch (e) {
+        console.error('[games] Matchmaker hydrate failed', e);
+      }
       try {
         const n = await refundAllEscrowsOnBoot();
-        if (n > 0) console.log(`[games] Refunded ${n} escrow(s) after restart`);
+        if (n > 0) console.log(`[games] Refunded ${n} orphan escrow(s) after restart`);
       } catch (e) {
         console.error('[games] Boot escrow refund failed', e);
       }

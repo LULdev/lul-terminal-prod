@@ -19,6 +19,8 @@ Single Node.js process:
 
 No external DB required. Optional: Redis for shared rate-limits / view-dedup across workers.
 
+**Arcade matchmaking** is durable under `data/games/matchmaker/*.json` (cross-process file locks). Multiple PM2 workers on **one host / shared `data/`** can share queues and matches. Without shared storage, use **one instance**.
+
 ---
 
 ## 2. Requirements

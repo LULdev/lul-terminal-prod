@@ -23,6 +23,18 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '3.57.0',
+    title: 'Durable arcade matchmaker: queue/matches on disk + multi-worker file locks',
+    date: 'Aug 4, 2026 - 05:30',
+    highlight: true,
+    items: [
+      { priority: 'P0', text: 'P0 — Arcade queue/rooms/activeMatches persisted under data/games/matchmaker/{gameId}.json with cross-process locks.' },
+      { priority: 'P0', text: 'P0 — withMatchmakerWrite outer, coin lock inner; join/leave/move/sweep/expire all persist (RPS/TTT/C4/Nim/instant).' },
+      { priority: 'P1', text: 'P1 — Boot hydrates matchmakers before escrow refund; only orphan escrows refunded (live sessions kept).' },
+      { priority: 'P9', text: 'P9 — Version 3.57.0; RUNBOOK notes multi-worker needs shared data/.' },
+    ],
+  },
+  {
     version: '3.56.2',
     title: 'Server residual: durable jackpot ids, no blind stale restore, paste/proxy caps, TTT LB awards',
     date: 'Aug 4, 2026 - 05:00',

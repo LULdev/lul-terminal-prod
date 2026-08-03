@@ -16,6 +16,7 @@ import {
   MATCH_TIMEOUT_MS,
   newMatchId,
   settleMatch,
+  withMatchmakerWrite,
 } from './gamesCore.mjs';
 import { runCoinTransaction } from './gamesCoinLock.mjs';
 import { sweepExpiredInMap } from './gamesExpirySweep.mjs';
@@ -31,7 +32,7 @@ import { sweepExpiredInMap } from './gamesExpirySweep.mjs';
  * @param {(playerMove: string|null, difficulty: string, m: object) => string} cfg.botMove
  */
 export function createInstantDuelGame(cfg) {
-  const mm = createMatchmaker();
+  const mm = createMatchmaker(cfg.gameId);
 
   function buildBaseMatch(user, bet, mode, botDifficulty) {
     return {
@@ -124,6 +125,7 @@ export function createInstantDuelGame(cfg) {
   const expireMeta = {
     gameId: cfg.gameId,
     chatLabel: cfg.chatLabel,
+    mm,
     finalizeDualSubmit: async (m) => {
       if (m.player1?.move && m.player2?.move) await finalizeIfReady(m);
     },
@@ -163,7 +165,7 @@ export function createInstantDuelGame(cfg) {
     submitMove: async (userId, matchId, move) => {
       const raw = String(move ?? '').trim();
       if (!cfg.validateMove(raw)) throw new Error('Invalid move');
-      return runCoinTransaction(async () => {
+      return withMatchmakerWrite(mm, () => runCoinTransaction(async () => {
         const m = mm.activeMatches.get(matchId);
         if (!m || m.status !== 'playing') throw new Error('Match not found');
 
@@ -185,7 +187,6 @@ export function createInstantDuelGame(cfg) {
         if (!isP1 && !isP2) throw new Error('Not your match');
         const slot = isP1 ? m.player1 : m.player2;
         if (slot.move) throw new Error('Move already submitted');
-        const other = isP1 ? m.player2 : m.player1;
         // Expiry BEFORE recording move — never accept late moves (forfeit resolves pot)
         if (Date.now() > m.expiresAt) {
           await expireMatchWithRefund(m, mm.activeMatches, expireMeta);
@@ -198,10 +199,12 @@ export function createInstantDuelGame(cfg) {
 
         if (bothReady) return finalizeIfReady(m);
         return { match: publicMatch(m), waiting: true };
-      });
+      }));
     },
     getMatch: (matchId, userId) =>
-      getMatchWithExpiry(mm.activeMatches, matchId, userId, expireMeta, publicMatch),
+      withMatchmakerWrite(mm, () =>
+        getMatchWithExpiry(mm.activeMatches, matchId, userId, expireMeta, publicMatch),
+      ),
     getUserSlice: buildUserSlice({
       statKey: cfg.statKey,
       queue: mm.queue,

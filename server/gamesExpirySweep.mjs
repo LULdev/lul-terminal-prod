@@ -8,21 +8,27 @@ import {
   sweepStaleConsumedRooms,
   sweepStaleDoneMatches,
   sweepStaleQueueEntries,
+  withMatchmakerWrite,
 } from './gamesCore.mjs';
 
 export async function sweepExpiredInMap(mm, expireMeta) {
   const activeMatches = mm?.activeMatches ?? mm;
   if (!activeMatches || !expireMeta) return 0;
-  sweepStaleDoneMatches(activeMatches);
-  if (mm?.consumedRooms) sweepStaleConsumedRooms(mm.consumedRooms);
-  if (mm?.queue) await sweepStaleQueueEntries(mm, expireMeta);
-  const expired = [...activeMatches.values()].filter(
-    (m) => m.status !== 'done' && Date.now() > m.expiresAt,
-  );
-  for (const m of expired) {
-    await expireMatchWithRefund(m, activeMatches, expireMeta);
-  }
-  return expired.length;
+  const meta = mm?.gameId ? { ...expireMeta, mm } : expireMeta;
+  const run = async () => {
+    sweepStaleDoneMatches(activeMatches);
+    if (mm?.consumedRooms) sweepStaleConsumedRooms(mm.consumedRooms);
+    if (mm?.queue) await sweepStaleQueueEntries(mm, meta);
+    const expired = [...activeMatches.values()].filter(
+      (m) => m.status !== 'done' && Date.now() > m.expiresAt,
+    );
+    for (const m of expired) {
+      await expireMatchWithRefund(m, activeMatches, meta);
+    }
+    return expired.length;
+  };
+  if (mm?.gameId) return withMatchmakerWrite(mm, run);
+  return run();
 }
 
 export async function sweepAllExpiredMatches() {

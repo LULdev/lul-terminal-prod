@@ -20,6 +20,7 @@ import {
   forceExpireMatchesForUser,
   getMatchWithExpiry,
   isRoomConsumed,
+  createMatchmaker,
   leaveMatchQueue,
   queueStatusForUser,
   refundJoinEscrow,
@@ -29,6 +30,7 @@ import {
   sweepExpiredMatchesForUser,
   sweepStaleQueueEntries,
   touchQueueHeartbeat,
+  withMatchmakerWrite,
 } from './gamesCore.mjs';
 import { runCoinTransaction } from './gamesCoinLock.mjs';
 import { assertNoOtherArcadeSession, assertPvpPairReady } from './gamesSessionGuard.mjs';
@@ -60,12 +62,13 @@ const WIN_LINES = [
   [0, 4, 8], [2, 4, 6],
 ];
 
-const queue = [];
-const rooms = new Map();
-const consumedRooms = new Map();
-const activeMatches = new Map();
+const mm = createMatchmaker('ttt');
+const queue = mm.queue;
+const rooms = mm.rooms;
+const consumedRooms = mm.consumedRooms;
+const activeMatches = mm.activeMatches;
 
-const TTT_EXPIRE_META = { gameId: 'ttt', chatLabel: 'Tic-Tac-Toe' };
+const TTT_EXPIRE_META = { gameId: 'ttt', chatLabel: 'Tic-Tac-Toe', mm };
 
 async function refundHostQueueEscrow(db, user, amount) {
   if (!user || !amount) return;
@@ -116,7 +119,7 @@ function ensureCoins(user) {
   user.lulCoins = Math.max(0, Number(user.lulCoins) || 0);
 }
 
-const TTT_ESCROW = { gameId: 'ttt', chatLabel: 'Tic-Tac-Toe' };
+const TTT_ESCROW = { gameId: 'ttt', chatLabel: 'Tic-Tac-Toe', mm };
 
 function deductCoins(user, amount) {
   ensureCoins(user);
@@ -563,7 +566,7 @@ export async function getTttUserSlice(userId) {
 }
 
 export async function joinTttQueue(userId, opts = {}) {
-  return runCoinTransaction(() => joinTttQueueInner(userId, opts));
+  return withMatchmakerWrite(mm, () => runCoinTransaction(() => joinTttQueueInner(userId, opts)));
 }
 
 async function joinTttQueueInner(userId, { bet, mode = 'pvp', botDifficulty = 'normal', roomCode } = {}) {
@@ -747,7 +750,7 @@ async function createPvpMatch(joinerId, hostId, bet) {
 }
 
 export async function leaveTttQueue(userId) {
-  return leaveMatchQueue({ queue, rooms }, userId, { gameId: 'ttt', chatLabel: 'Tic-Tac-Toe' });
+  return leaveMatchQueue(mm, userId, { gameId: 'ttt', chatLabel: 'Tic-Tac-Toe' });
 }
 
 export async function releaseTttUserSession(userId) {
@@ -761,7 +764,7 @@ export async function submitTttMove(userId, matchId, cell) {
     throw new Error('Invalid cell');
   }
 
-  return runCoinTransaction(async () => {
+  return withMatchmakerWrite(mm, () => runCoinTransaction(async () => {
   const m = activeMatches.get(matchId);
   if (!m || m.status !== 'playing') throw new Error('Match not found');
 
@@ -769,7 +772,7 @@ export async function submitTttMove(userId, matchId, cell) {
     if (m.player1.userId !== userId) throw new Error('Not your match');
     if (m.turn !== 'p1') throw new Error('Not your turn');
     if (Date.now() > m.expiresAt) {
-      await expireMatchWithRefund(m, activeMatches, { gameId: 'ttt', chatLabel: 'Tic-Tac-Toe' });
+      await expireMatchWithRefund(m, activeMatches, TTT_ESCROW);
       throw new Error('Match expired');
     }
     if (m.board[idx] !== null) throw new Error('Cell taken');
@@ -795,7 +798,7 @@ export async function submitTttMove(userId, matchId, cell) {
   if (!isP1 && !isP2) throw new Error('Not your match');
   if ((isP1 && m.turn !== 'p1') || (isP2 && m.turn !== 'p2')) throw new Error('Not your turn');
   if (Date.now() > m.expiresAt) {
-    await expireMatchWithRefund(m, activeMatches, { gameId: 'ttt', chatLabel: 'Tic-Tac-Toe' });
+    await expireMatchWithRefund(m, activeMatches, TTT_ESCROW);
     throw new Error('Match expired');
   }
   if (m.board[idx] !== null) throw new Error('Cell taken');
@@ -808,15 +811,17 @@ export async function submitTttMove(userId, matchId, cell) {
   m.expiresAt = Date.now() + MATCH_TIMEOUT_MS;
   m.turn = m.turn === 'p1' ? 'p2' : 'p1';
   return { match: publicMatch(m) };
-  });
+  }));
 }
 
 export async function getTttMatch(matchId, userId) {
-  return getMatchWithExpiry(activeMatches, matchId, userId, TTT_ESCROW, publicMatch);
+  return withMatchmakerWrite(mm, () =>
+    getMatchWithExpiry(activeMatches, matchId, userId, TTT_ESCROW, publicMatch),
+  );
 }
 
 export async function sweepTttExpired() {
-  return sweepExpiredInMap({ activeMatches, queue, rooms }, TTT_ESCROW);
+  return sweepExpiredInMap(mm, TTT_ESCROW);
 }
 
 export async function getTttLeaderboard() {

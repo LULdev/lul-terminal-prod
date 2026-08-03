@@ -22,6 +22,7 @@ import {
   forceExpireMatchesForUser,
   getMatchWithExpiry,
   isRoomConsumed,
+  createMatchmaker,
   leaveMatchQueue,
   queueStatusForUser,
   refundJoinEscrow,
@@ -31,6 +32,7 @@ import {
   sweepExpiredMatchesForUser,
   sweepStaleQueueEntries,
   touchQueueHeartbeat,
+  withMatchmakerWrite,
 } from './gamesCore.mjs';
 import { runCoinTransaction } from './gamesCoinLock.mjs';
 import { assertNoOtherArcadeSession, assertPvpPairReady } from './gamesSessionGuard.mjs';
@@ -58,10 +60,11 @@ import {
 const MOVES = ['rock', 'paper', 'scissors'];
 const MOVE_EMOJI = { rock: '✊', paper: '✋', scissors: '✌️' };
 
-const queue = [];
-const rooms = new Map();
-const consumedRooms = new Map();
-const activeMatches = new Map();
+const mm = createMatchmaker('rps');
+const queue = mm.queue;
+const rooms = mm.rooms;
+const consumedRooms = mm.consumedRooms;
+const activeMatches = mm.activeMatches;
 
 async function refundHostQueueEscrow(db, user, amount) {
   if (!user || !amount) return;
@@ -122,6 +125,7 @@ async function finalizeDualSubmitRps(m) {
 
 const RPS_EXPIRE_META = {
   ...RPS_ESCROW,
+  mm,
   finalizeDualSubmit: finalizeDualSubmitRps,
 };
 
@@ -654,7 +658,7 @@ export async function claimDailyBonus(userId) {
 }
 
 export async function joinQueue(userId, opts = {}) {
-  return runCoinTransaction(() => joinQueueInner(userId, opts));
+  return withMatchmakerWrite(mm, () => runCoinTransaction(() => joinQueueInner(userId, opts)));
 }
 
 async function joinQueueInner(userId, { bet, mode = 'pvp', botDifficulty = 'normal', roomCode, seriesType } = {}) {
@@ -846,7 +850,7 @@ async function createPvpMatch(joinerId, hostId, bet, seriesType = 'single') {
 
 export async function leaveRpsQueue(userId) {
   // Shared leave recovers stuck escrow without throwing (no permanent queue pin)
-  return leaveMatchQueue({ queue, rooms }, userId, { gameId: 'rps', chatLabel: 'RPS' });
+  return leaveMatchQueue(mm, userId, { gameId: 'rps', chatLabel: 'RPS' });
 }
 
 export const leaveQueue = leaveRpsQueue;
@@ -858,7 +862,7 @@ export async function releaseRpsUserSession(userId) {
 
 export async function submitMove(userId, matchId, move) {
   if (!MOVES.includes(move)) throw new Error('Invalid move');
-  return runCoinTransaction(async () => {
+  return withMatchmakerWrite(mm, () => runCoinTransaction(async () => {
     const m = activeMatches.get(matchId);
     if (!m || m.status !== 'playing') throw new Error('Match not found');
 
@@ -897,15 +901,17 @@ export async function submitMove(userId, matchId, move) {
 
     m.expiresAt = Date.now() + MATCH_TIMEOUT_MS;
     return { match: publicMatch(m), waiting: true };
-  });
+  }));
 }
 
 export async function getMatch(matchId, userId) {
-  return getMatchWithExpiry(activeMatches, matchId, userId, RPS_EXPIRE_META, publicMatch);
+  return withMatchmakerWrite(mm, () =>
+    getMatchWithExpiry(activeMatches, matchId, userId, RPS_EXPIRE_META, publicMatch),
+  );
 }
 
 export async function sweepRpsExpired() {
-  return sweepExpiredInMap({ activeMatches, queue, rooms }, RPS_EXPIRE_META);
+  return sweepExpiredInMap(mm, RPS_EXPIRE_META);
 }
 
 export async function getRpsLeaderboard() {

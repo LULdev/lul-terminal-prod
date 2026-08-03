@@ -111,13 +111,19 @@ export function releaseAnyGameEscrow(user, amount, opts = {}) {
   return releaseEscrowAt(user, candidates[0].i, amt);
 }
 
-/** Refund persisted escrows after restart — queue/match state is RAM-only. */
+/**
+ * Refund persisted escrows after restart for users NOT in a live matchmaker session.
+ * Matchmaker is durable (data/games/matchmaker/) — hydrate before calling.
+ */
 export async function refundAllEscrowsOnBoot() {
+  const { userInAnyMatchmakerSession } = await import('./gamesMatchmakerStore.mjs');
   return runCoinTransaction(async () => {
   const db = await loadUsersDb();
   let refunded = 0;
   for (const user of db.users) {
     if (user.role === 'bot' || !user.gameEscrows?.length) continue;
+    // Keep stakes for users still in queue/match after durable hydrate
+    if (userInAnyMatchmakerSession(user.id)) continue;
     for (const e of user.gameEscrows) {
       logQueueRefund(user, {
         gameId: e.gameId,
