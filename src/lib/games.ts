@@ -344,8 +344,15 @@ export function joinGameQueue(gameId: string, body: Record<string, unknown>) {
   });
 }
 
-export function leaveGameQueue(gameId: string) {
-  return api<{ ok: boolean }>(`/${gameId}/queue`, { method: 'DELETE' });
+export async function leaveGameQueue(gameId: string) {
+  // soft401: logout/invalidation cleanup must not re-fire global session wipe storms
+  const res = await sessionFetch(`${API}/${gameId}/queue`, { method: 'DELETE' }, { soft401: true });
+  if (res.status === 401) return { ok: false as const };
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error((data as { error?: string }).error ?? `HTTP ${res.status}`);
+  }
+  return data as { ok: boolean };
 }
 
 export function submitGameMove(gameId: string, matchId: string, move: string | number) {

@@ -83,9 +83,18 @@ export async function handleImageHostRequest(req, res) {
       if (!(await claimGuestView('image', ip, imageId))) {
         return sendJson(res, 200, { views: ownerMeta.views ?? 0, deduped: true });
       }
-      const recorded = await recordView(imageId);
-      if (!recorded) return sendJson(res, 404, { error: 'Not found' });
-      return sendJson(res, 200, { ...recorded, deduped: false });
+      try {
+        const recorded = await recordView(imageId);
+        if (!recorded) return sendJson(res, 404, { error: 'Not found' });
+        return sendJson(res, 200, { ...recorded, deduped: false });
+      } catch (recErr) {
+        console.warn('[image-host] recordView failed after claim', recErr);
+        return sendJson(res, 200, {
+          views: ownerMeta.views ?? 0,
+          deduped: false,
+          recordFailed: true,
+        });
+      }
     }
 
     const hostingMatch = pathname.match(/^\/hosting\/([a-f0-9]{16})$/);

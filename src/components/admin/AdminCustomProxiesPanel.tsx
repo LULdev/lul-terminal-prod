@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowRight, Plus, Trash2 } from 'lucide-react';
 import { useMountedLoad } from '../../hooks/useMountedLoad';
 import { detectProxyPaste } from '../../lib/proxyParse';
@@ -35,6 +35,7 @@ export function AdminCustomProxiesPanel({ onAdded, onGoToChecker }: AdminCustomP
   const [pasteText, setPasteText] = useState('');
   const [defaultType, setDefaultType] = useState<ProxyType>('http');
   const [busy, setBusy] = useState(false);
+  const busyRef = useRef(false);
   const [msg, setMsg] = useState('');
   const [search, setSearch] = useState('');
   const { mountedRef, loadGenRef } = useMountedLoad();
@@ -56,40 +57,55 @@ export function AdminCustomProxiesPanel({ onAdded, onGoToChecker }: AdminCustomP
   }, [load]);
 
   const addProxies = async () => {
-    if (!pasteText.trim()) return;
+    if (!pasteText.trim() || busyRef.current) return;
+    busyRef.current = true;
     setBusy(true);
     setMsg('');
     try {
       const result = await addCustomProxies({ text: pasteText, defaultType });
       setPasteText('');
       await load();
-      setMsg(`${result.added.toLocaleString('en-US')} added${result.skipped ? ` · ${result.skipped} duplicates skipped` : ''} — pool: ${result.count.toLocaleString('en-US')}`);
+      if (mountedRef.current) {
+        setMsg(`${result.added.toLocaleString('en-US')} added${result.skipped ? ` · ${result.skipped} duplicates skipped` : ''} — pool: ${result.count.toLocaleString('en-US')}`);
+      }
       if (result.added > 0) onAdded?.();
     } catch (e) {
-      setMsg(e instanceof Error ? e.message : 'Add failed');
+      if (mountedRef.current) setMsg(e instanceof Error ? e.message : 'Add failed');
     } finally {
-      setBusy(false);
+      busyRef.current = false;
+      if (mountedRef.current) setBusy(false);
     }
   };
 
   const removeOne = async (key: string) => {
+    if (busyRef.current) return;
+    busyRef.current = true;
+    setBusy(true);
     try {
       await deleteCustomProxy(key);
       await load();
-      setMsg('Proxy removed');
+      if (mountedRef.current) setMsg('Proxy removed');
     } catch (e) {
-      setMsg(e instanceof Error ? e.message : 'Delete failed');
+      if (mountedRef.current) setMsg(e instanceof Error ? e.message : 'Delete failed');
+    } finally {
+      busyRef.current = false;
+      if (mountedRef.current) setBusy(false);
     }
   };
 
   const removeAll = async () => {
-    if (!proxies.length || !confirm('Really delete all custom proxies?')) return;
+    if (busyRef.current || !proxies.length || !confirm('Really delete all custom proxies?')) return;
+    busyRef.current = true;
+    setBusy(true);
     try {
       await clearCustomProxies();
       await load();
-      setMsg('Custom proxies cleared');
+      if (mountedRef.current) setMsg('Custom proxies cleared');
     } catch (e) {
-      setMsg(e instanceof Error ? e.message : 'Clear failed');
+      if (mountedRef.current) setMsg(e instanceof Error ? e.message : 'Clear failed');
+    } finally {
+      busyRef.current = false;
+      if (mountedRef.current) setBusy(false);
     }
   };
 

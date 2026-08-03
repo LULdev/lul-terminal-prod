@@ -337,14 +337,19 @@ export async function settleMatch({
   historyExtra = {},
   activeMatches,
 }) {
-  return runCoinTransaction(async () => {
-  if (m.status === 'done') return { match: publicMatch(m) };
+  // Deferred pot/jackpot work runs AFTER users write lock is released (no users→games-aux nest).
+  let deferredLossPot = 0;
+  let deferredHouseSeed = 0;
+  let deferredJackpot = null; // { userId, username }
+
+  const settled = await runCoinTransaction(async () => {
+  if (m.status === 'done') return { match: publicMatch(m), unlocks: undefined, early: true };
 
   const db = await loadUsersDb();
   const p1 = getUser(db, m.player1.userId);
   if (!p1) {
     await expireMatchWithRefund(m, activeMatches, { gameId, chatLabel });
-    return { match: publicMatch(m) };
+    return { match: publicMatch(m), unlocks: undefined, early: true };
   }
 
   const bet = m.bet;
@@ -363,7 +368,7 @@ export async function settleMatch({
     p2 = getUser(db, m.player2.userId);
     if (!p2) {
       await expireMatchWithRefund(m, activeMatches, { gameId, chatLabel });
-      return { match: publicMatch(m) };
+      return { match: publicMatch(m), unlocks: undefined, early: true };
     }
   }
   if (!releaseGameEscrow(p1, { gameId, amount: bet })) {
@@ -371,7 +376,7 @@ export async function settleMatch({
     m._finalizeAttempted = true; // skip dual-finalize loop
     // No stake released — refund path must NOT mint (forceAbandon without forceIds)
     await expireMatchWithRefund(m, activeMatches, { gameId, chatLabel, forceAbandon: true });
-    return { match: publicMatch(m) };
+    return { match: publicMatch(m), unlocks: undefined, early: true };
   }
   // Track released stakes so force-credit only applies where escrow was stripped
   m._releasedStakeByUserId = m._releasedStakeByUserId ?? {};
@@ -383,7 +388,7 @@ export async function settleMatch({
       m.expiresAt = 0;
       m._finalizeAttempted = true;
       await expireMatchWithRefund(m, activeMatches, { gameId, chatLabel, forceAbandon: true });
-      return { match: publicMatch(m) };
+      return { match: publicMatch(m), unlocks: undefined, early: true };
     }
     m._releasedStakeByUserId[m.player2.userId] = bet;
   }
@@ -421,7 +426,7 @@ export async function settleMatch({
       if (dicePotSeed > 0 && p1Delta > 0) {
         const take = Math.min(dicePotSeed, Math.max(0, p1Delta - 1));
         p1Delta -= take;
-        if (take > 0) await addToJackpot(take);
+        if (take > 0) deferredHouseSeed = take; // pot write after users lock released
       }
       // Keep public payoutExact / reveal in sync with actual credit
       if (p1Delta > 0) {
@@ -438,25 +443,14 @@ export async function settleMatch({
         logStreakCredit(p1, { ...ledgerCtx, amount: streakBonus });
         p1.gameTotalWon = (Number(p1.gameTotalWon) || 0) + streakBonus;
       }
-      // Same jackpot spice as PvP wins (only count when pool actually pays)
+      // Jackpot chance: defer drain+credit outside users lock
       if (Math.random() < JACKPOT_CHANCE) {
-        const jp = await payoutJackpot(p1.username, { matchId: m.id, gameId });
-        jackpotAmount = jackpotPayoutAmount(jp);
-        if (jackpotAmount > 0) {
-          jackpotHit = true;
-          logJackpotCredit(p1, {
-            ...ledgerCtx,
-            amount: jackpotAmount,
-            pendingId: jackpotPayoutPendingId(jp),
-          });
-          p1.gameJackpotsWon = (Number(p1.gameJackpotsWon) || 0) + 1;
-          postBotArcadeJackpot({ username: p1.username, amount: jackpotAmount }).catch(() => {});
-        }
+        deferredJackpot = { userId: p1.id, username: p1.username };
       }
     } else {
       outcome = 'loss';
-      // Full lost stake feeds the community jackpot pot
-      await addToJackpot(bet);
+      // Full lost stake feeds the community jackpot pot (after users lock)
+      deferredLossPot = bet;
       p1.gameTotalLost = (Number(p1.gameTotalLost) || 0) + bet;
       bumpGameStats(p1, statKey, 'loss');
     }
@@ -482,41 +476,29 @@ export async function settleMatch({
         winner.gameTotalWon = (Number(winner.gameTotalWon) || 0) + streakBonus;
       }
       if (Math.random() < JACKPOT_CHANCE) {
-        const jp = await payoutJackpot(winner.username, { matchId: m.id, gameId });
-        jackpotAmount = jackpotPayoutAmount(jp);
-        if (jackpotAmount > 0) {
-          jackpotHit = true;
-          logJackpotCredit(winner, {
-            ...ledgerCtx,
-            amount: jackpotAmount,
-            pendingId: jackpotPayoutPendingId(jp),
-          });
-          winner.gameJackpotsWon = (Number(winner.gameJackpotsWon) || 0) + 1;
-          postBotArcadeJackpot({ username: winner.username, amount: jackpotAmount }).catch(() => {});
-        }
+        deferredJackpot = { userId: winner.id, username: winner.username };
       }
       postBotArcadeVictory({
         gameLabel: chatLabel,
         winner: winner.username,
         loser: loser.username,
         wager: bet,
-        jackpotHit,
+        jackpotHit: false, // may update after deferred jackpot
       }).catch(() => {});
     }
   }
 
   p1.updatedAt = Date.now();
   if (m.mode === 'pvp') {
-    const p2 = getUser(db, m.player2.userId);
-    if (p2) {
-      p2.updatedAt = Date.now();
-      await syncAchievementsOnLoadedUser(p2, db, { flag: achievementFlag });
+    const p2u = getUser(db, m.player2.userId);
+    if (p2u) {
+      p2u.updatedAt = Date.now();
+      await syncAchievementsOnLoadedUser(p2u, db, { flag: achievementFlag });
     }
   }
   const unlocks = await syncAchievementsOnLoadedUser(p1, db, { flag: achievementFlag });
 
   // Prepare result fields but do NOT mark done until user balances are durable
-  // (else a save failure leaves RAM "done" and never re-settles).
   const resultPayload = {
     outcome: m.mode === 'bot' ? outcome : (r === 'draw' ? 'draw' : outcome),
     winner: r,
@@ -526,41 +508,91 @@ export async function settleMatch({
     ...(m.resultExtra ?? {}),
   };
   m.streakBonus = streakBonus;
-  m.jackpotHit = jackpotHit;
-  m.jackpotAmount = jackpotAmount;
+  m.jackpotHit = false;
+  m.jackpotAmount = 0;
 
   await saveUsersDb(db);
   // User balance durable — mark match terminal only after save
   m.status = 'done';
   m.result = resultPayload;
   m.doneAt = Date.now();
-  // Release jackpot pending journal
-  if (jackpotAmount > 0) {
-    await confirmJackpotPayout().catch((err) => {
-      console.error('[games] confirmJackpotPayout failed (user already credited)', err);
-    });
+
+  return {
+    match: publicMatch(m),
+    unlocks,
+    early: false,
+    historyBase: {
+      id: m.id,
+      game: gameId,
+      mode: m.mode,
+      bet,
+      at: Date.now(),
+      player1: m.player1.username,
+      player2: m.mode === 'bot' ? 'BOT' : m.player2.username,
+      p1Move: m.player1.move,
+      p2Move: m.mode === 'bot' ? m.player2.move : m.player2.move,
+      outcome: m.mode === 'bot' ? outcome : (r === 'draw' ? 'draw' : outcome),
+      streakBonus,
+      reveal: m.reveal ?? null,
+      ...historyExtra,
+    },
+    ledgerCtx,
+  };
+  });
+
+  if (settled?.early) return { match: settled.match, unlocks: settled.unlocks };
+
+  // Outside users lock: pot + jackpot (games-aux) then optional user credit
+  if (deferredLossPot > 0) {
+    await addToJackpot(deferredLossPot).catch((e) => console.error('[games] addToJackpot loss failed', e));
+  }
+  if (deferredHouseSeed > 0) {
+    await addToJackpot(deferredHouseSeed).catch((e) => console.error('[games] addToJackpot seed failed', e));
+  }
+
+  let jackpotHit = false;
+  let jackpotAmount = 0;
+  if (deferredJackpot) {
+    try {
+      const jp = await payoutJackpot(deferredJackpot.username, { matchId: m.id, gameId });
+      jackpotAmount = jackpotPayoutAmount(jp);
+      if (jackpotAmount > 0) {
+        await runCoinTransaction(async () => {
+          const db = await loadUsersDb();
+          const u = getUser(db, deferredJackpot.userId);
+          if (!u) return;
+          logJackpotCredit(u, {
+            gameId,
+            chatLabel,
+            matchId: m.id,
+            bet: m.bet,
+            amount: jackpotAmount,
+            pendingId: jackpotPayoutPendingId(jp),
+          });
+          u.gameJackpotsWon = (Number(u.gameJackpotsWon) || 0) + 1;
+          u.updatedAt = Date.now();
+          await saveUsersDb(db);
+        });
+        await confirmJackpotPayout().catch((err) => {
+          console.error('[games] confirmJackpotPayout failed (user already credited)', err);
+        });
+        jackpotHit = true;
+        m.jackpotHit = true;
+        m.jackpotAmount = jackpotAmount;
+        postBotArcadeJackpot({ username: deferredJackpot.username, amount: jackpotAmount }).catch(() => {});
+      }
+    } catch (e) {
+      console.error('[games] deferred jackpot failed', e);
+    }
   }
 
   await appendMatchHistory({
-    id: m.id,
-    game: gameId,
-    mode: m.mode,
-    bet,
-    at: Date.now(),
-    player1: m.player1.username,
-    player2: m.mode === 'bot' ? 'BOT' : m.player2.username,
-    p1Move: m.player1.move,
-    p2Move: m.mode === 'bot' ? m.player2.move : m.player2.move,
-    outcome: m.mode === 'bot' ? outcome : (r === 'draw' ? 'draw' : outcome),
-    streakBonus,
+    ...settled.historyBase,
     jackpotHit,
     jackpotAmount,
-    reveal: m.reveal ?? null,
-    ...historyExtra,
-  });
+  }).catch((e) => console.error('[games] appendMatchHistory failed', e));
 
-  return { match: publicMatch(m), unlocks };
-  });
+  return { match: publicMatch(m), unlocks: settled.unlocks };
 }
 
 export function userInActiveMatch(activeMatches, userId) {

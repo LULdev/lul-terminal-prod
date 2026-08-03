@@ -23,6 +23,20 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '3.53.0',
+    title: '25-round audit pass: settle jackpot unnested, leave-all queues, image views, admin proxy refs',
+    date: 'Aug 4, 2026 - 01:15',
+    highlight: true,
+    items: [
+      { priority: 'P0', text: 'P0 — settleMatch: jackpot drain/credit + pot adds + history run AFTER users write lock (no users→games-aux nest deadlock risk).' },
+      { priority: 'P1', text: 'P1 — leaveAllArcadeQueuesBestEffort always leaves every catalog game (stale snapshot no longer skips queues).' },
+      { priority: 'P1', text: 'P1 — leaveGameQueue uses soft401 (logout cleanup no longer re-triggers invalidateSession storms).' },
+      { priority: 'P2', text: 'P2 — Image view POST: recordView failure after claim returns soft 200 (no 500).' },
+      { priority: 'P2', text: 'P2 — AdminCustomProxiesPanel busyRef on add/remove/clear; mounted guards.' },
+      { priority: 'P9', text: 'P9 — Version 3.53.0; complete fix list in release notes + prior 3.49–3.52 changelogs.' },
+    ],
+  },
+  {
     version: '3.52.0',
     title: '25-round full system audit (Server+Client P0–P9): preferGameId, delete-account, auto-submit, soft401',
     date: 'Aug 4, 2026 - 00:45',
