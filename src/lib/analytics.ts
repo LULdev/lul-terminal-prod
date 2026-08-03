@@ -244,18 +244,26 @@ export async function fetchActiveTodayUsers(limit = 48): Promise<ActiveTodayResp
 }
 
 export async function fetchAdminOverview(): Promise<AdminOverview> {
-  return sessionJson<AdminOverview>(`${API}/admin/overview`);
+  return sessionJson<AdminOverview>(`${API}/admin/overview`, undefined, { soft401: true });
 }
 
 export async function fetchAdminUserActivity(search = '', limit = 100) {
   const q = new URLSearchParams();
   if (search) q.set('search', search);
   q.set('limit', String(limit));
-  return sessionJson<{ users: UserActivitySummary['user'][]; total: number }>(`${API}/admin/users?${q}`);
+  return sessionJson<{ users: UserActivitySummary['user'][]; total: number }>(
+    `${API}/admin/users?${q}`,
+    undefined,
+    { soft401: true },
+  );
 }
 
 export async function fetchAdminUserDetail(userId: string): Promise<UserActivitySummary> {
-  return sessionJson<UserActivitySummary>(`${API}/admin/users/${encodeURIComponent(userId)}`);
+  return sessionJson<UserActivitySummary>(
+    `${API}/admin/users/${encodeURIComponent(userId)}`,
+    undefined,
+    { soft401: true },
+  );
 }
 
 export async function exportAdminAnalytics() {

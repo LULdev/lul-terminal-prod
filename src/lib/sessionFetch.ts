@@ -44,8 +44,12 @@ export async function sessionFetch(
   return res;
 }
 
-export async function sessionJson<T>(input: RequestInfo | URL, init?: RequestInit): Promise<T> {
-  const res = await sessionFetch(input, init);
+export async function sessionJson<T>(
+  input: RequestInfo | URL,
+  init?: RequestInit,
+  opts?: SessionFetchOptions,
+): Promise<T> {
+  const res = await sessionFetch(input, init, opts);
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
     throw new Error((data as { error?: string }).error ?? `HTTP ${res.status}`);

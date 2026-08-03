@@ -183,7 +183,9 @@ export function MyImageGallery({ refreshKey = 0, onSelectImage }: MyImageGallery
     } catch { /* ignore */ }
   };
 
-  const storagePct = stats ? Math.min(100, Math.round((stats.totalBytes / stats.storageLimitBytes) * 100)) : 0;
+  const storagePct = stats && stats.storageLimitBytes > 0
+    ? Math.min(100, Math.round((stats.totalBytes / stats.storageLimitBytes) * 100))
+    : 0;
 
   if (loading && !images.length) {
     return (

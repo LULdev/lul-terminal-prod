@@ -13,13 +13,18 @@ import { sessionFetch, sessionJson } from './sessionFetch';
 
 const API = '/api/admin';
 
-async function adminFetch<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await sessionFetch(`${API}${path}`, init);
+async function adminFetch<T>(path: string, init?: RequestInit, opts?: { soft401?: boolean }): Promise<T> {
+  const res = await sessionFetch(`${API}${path}`, init, opts?.soft401 ? { soft401: true } : undefined);
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
     throw new Error((data as { error?: string }).error || 'Request failed');
   }
   return data as T;
+}
+
+/** Read/poll helpers — soft401 so flaky admin polls do not global-logout. */
+async function adminFetchRead<T>(path: string, init?: RequestInit): Promise<T> {
+  return adminFetch<T>(path, init, { soft401: true });
 }
 
 export type ColonDbEntry = {
@@ -42,7 +47,7 @@ export type ColonDbStats = {
 };
 
 export async function fetchColonDbStats(): Promise<ColonDbStats> {
-  return sessionJson<ColonDbStats>('/api/xml-scraper/colon-db/stats');
+  return sessionJson<ColonDbStats>('/api/xml-scraper/colon-db/stats', undefined, { soft401: true });
 }
 
 export async function fetchColonDbEntries(opts?: {
@@ -57,6 +62,8 @@ export async function fetchColonDbEntries(opts?: {
   const qs = params.toString();
   return sessionJson<{ entries: ColonDbEntry[]; total: number }>(
     `/api/xml-scraper/colon-db/entries${qs ? `?${qs}` : ''}`,
+    undefined,
+    { soft401: true },
   );
 }
 
@@ -114,7 +121,7 @@ export async function fetchAdminShoutbox(opts?: {
   if (opts?.kind && opts.kind !== 'all') params.set('kind', opts.kind);
   if (opts?.username) params.set('username', opts.username);
   const qs = params.toString();
-  return adminFetch(`/shoutbox/messages${qs ? `?${qs}` : ''}`);
+  return adminFetchRead(`/shoutbox/messages${qs ? `?${qs}` : ''}`);
 }
 
 export async function adminDeleteShoutboxMessage(id: string): Promise<{ ok: boolean; removed?: number }> {
@@ -209,7 +216,7 @@ export type ContentAnalytics = {
 };
 
 export async function fetchContentAnalytics(): Promise<ContentAnalytics> {
-  return adminFetch('/content-analytics');
+  return adminFetchRead('/content-analytics');
 }
 
 export type PersonaStats = {
@@ -351,7 +358,7 @@ export type OnlineRadarData = {
 };
 
 export async function fetchAdminOnline(): Promise<OnlineRadarData> {
-  return adminFetch('/online');
+  return adminFetchRead('/online');
 }
 
 export type HeatmapData = {
@@ -368,7 +375,7 @@ export type HeatmapData = {
 };
 
 export async function fetchAdminHeatmap(): Promise<HeatmapData> {
-  return adminFetch('/heatmap');
+  return adminFetchRead('/heatmap');
 }
 
 export type AchievementsAdminData = {
@@ -391,7 +398,7 @@ export type ScraperPoolData = {
 };
 
 export async function fetchAdminScraperPool(): Promise<ScraperPoolData> {
-  return adminFetch('/scraper-pool');
+  return adminFetchRead('/scraper-pool');
 }
 
 export type CheckerDashboardData = {
@@ -401,7 +408,7 @@ export type CheckerDashboardData = {
 };
 
 export async function fetchAdminChecker(): Promise<CheckerDashboardData> {
-  return adminFetch('/checker');
+  return adminFetchRead('/checker');
 }
 
 export type ReportsDeskData = {
@@ -412,7 +419,7 @@ export type ReportsDeskData = {
 };
 
 export async function fetchAdminReports(): Promise<ReportsDeskData> {
-  return adminFetch('/reports');
+  return adminFetchRead('/reports');
 }
 
 export type ChangelogConsoleData = {
@@ -443,7 +450,7 @@ export type StorageMapData = {
 };
 
 export async function fetchAdminStorage(): Promise<StorageMapData> {
-  return adminFetch('/storage');
+  return adminFetchRead('/storage');
 }
 
 export { fetchTerminalStats, fetchLeaderboards };

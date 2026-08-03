@@ -74,7 +74,9 @@ export type CheckerJob = {
 };
 
 export async function fetchCheckerStats(): Promise<CheckerStats> {
-  const res = await sessionFetch(`${API}/stats`);
+  // soft401: admin poll must not wipe session
+  const res = await sessionFetch(`${API}/stats`, undefined, { soft401: true });
+  if (res.status === 401) throw new Error('Admin session required');
   if (!res.ok) throw new Error('Checker stats unavailable');
   return res.json() as Promise<CheckerStats>;
 }
@@ -84,13 +86,13 @@ export async function fetchCheckerResults(): Promise<{
   summary: CheckerStats | null;
   stats?: CheckerStats;
 }> {
-  const res = await sessionFetch(`${API}/results`);
+  const res = await sessionFetch(`${API}/results`, undefined, { soft401: true });
   if (!res.ok) return { checked: [], summary: null };
   return res.json() as Promise<{ checked: ExtendedCheckedProxy[]; summary: CheckerStats | null; stats?: CheckerStats }>;
 }
 
 export async function fetchTestUrlPresets(): Promise<Record<string, string>> {
-  const res = await sessionFetch(`${API}/presets`);
+  const res = await sessionFetch(`${API}/presets`, undefined, { soft401: true });
   if (!res.ok) return { google: 'http://www.google.com/generate_204' };
   const data = await res.json() as { testUrls: Record<string, string> };
   return data.testUrls ?? {};

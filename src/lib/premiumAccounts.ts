@@ -233,7 +233,7 @@ export async function reportAccountNotWorking(accountId: string, note?: string):
 }
 
 export async function fetchPendingAccountReports(): Promise<AccountReport[]> {
-  const data = await authedJson<{ reports: AccountReport[] }>('/reports/pending');
+  const data = await authedJson<{ reports: AccountReport[] }>('/reports/pending', undefined, { soft401: true });
   return data.reports;
 }
 

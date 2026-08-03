@@ -23,6 +23,20 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '3.53.1',
+    title: 'Client residual: soft /me epoch-gated leave, admin/checker soft401 polls, memes mount, storage NaN',
+    date: 'Aug 4, 2026 - 01:30',
+    highlight: true,
+    items: [
+      { priority: 'P0', text: 'P0 — Soft /me logout: bumpSessionEpoch + epoch-gated leaveAll (re-login no longer kicked by late leave).' },
+      { priority: 'P1', text: 'P1 — Admin polls soft401: online/shoutbox/heatmap/content/checker/reports/scraper-pool/storage; colon-db stats/entries; analytics overview/users.' },
+      { priority: 'P1', text: 'P1 — Proxy checker stats/results/presets soft401; sessionJson accepts soft401 option.' },
+      { priority: 'P2', text: 'P2 — Premium pending reports soft401 (parity with accounts list).' },
+      { priority: 'P2', text: 'P2 — useFirebaseMemesCreated alive guard; MyImageGallery storage% when limit is 0 → 0 not NaN.' },
+      { priority: 'P9', text: 'P9 — Version 3.53.1 (follow-up residual client audit).' },
+    ],
+  },
+  {
     version: '3.53.0',
     title: '25-round audit pass: settle jackpot unnested, leave-all queues, image views, admin proxy refs',
     date: 'Aug 4, 2026 - 01:15',

@@ -164,8 +164,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setAccountsSubmitted(data.stats?.accountsSubmitted ?? 0);
         resetSessionInvalidation();
       } else {
-        // Soft /me with no user — leave arcade then clear zombie logged-in UI
-        void import('../lib/arcadeCleanup').then((m) => m.leaveAllArcadeQueuesBestEffort()).catch(() => {});
+        // Soft /me with no user — epoch-gate leave so re-login is not kicked mid-flight
+        const epochAtClear = bumpSessionEpoch();
+        void (async () => {
+          if (getSessionEpoch() !== epochAtClear) return;
+          try {
+            const m = await import('../lib/arcadeCleanup');
+            await m.leaveAllArcadeQueuesBestEffort();
+          } catch { /* best-effort */ }
+        })();
         clearLocalSession();
       }
     } catch (e) {
@@ -173,7 +180,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const status = (e as { status?: number })?.status;
       // Network blips must not wipe session; hard 401 does full local cleanup
       if (status === 401) {
-        void import('../lib/arcadeCleanup').then((m) => m.leaveAllArcadeQueuesBestEffort()).catch(() => {});
+        const epochAtClear = bumpSessionEpoch();
+        void (async () => {
+          if (getSessionEpoch() !== epochAtClear) return;
+          try {
+            const m = await import('../lib/arcadeCleanup');
+            await m.leaveAllArcadeQueuesBestEffort();
+          } catch { /* best-effort */ }
+        })();
         clearLocalSession();
       }
     }
