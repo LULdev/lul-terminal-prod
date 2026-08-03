@@ -23,6 +23,22 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '3.49.0',
+    title: 'Multi-worker safety: auth locks, jackpot 2-phase, IP-pinned SSRF, view counters',
+    date: 'Aug 3, 2026 - 22:45',
+    highlight: true,
+    items: [
+      { priority: 'P0', text: 'P0 — Multi-PM2 user/session DB: withUsersWrite / withSessionsWrite use cross-process file locks (auth-users / auth-sessions) so snapshot RMW cannot clobber coins/sessions across workers.' },
+      { priority: 'P0', text: 'P0 — SQLite auth: busy_timeout=8000ms (WAL) so peer writers wait instead of SQLITE_BUSY spam.' },
+      { priority: 'P0', text: 'P0 — Jackpot + balance crash window closed: payout writes jackpot-pending.json, credits user, saveUsersDb, then confirmJackpotPayout(); boot recovers credit or restores pool.' },
+      { priority: 'P0', text: 'P0 — SSRF safeFetch is IP-pinned: DNS resolve → connect only to validated public IPs (lookup override + Host/SNI), manual redirects re-validated (DNS rebinding TOCTOU fixed).' },
+      { priority: 'P1', text: 'P1 — Page + post view counters: cross-process locks (page-views / post-views) so multi-worker RMW no longer under-counts.' },
+      { priority: 'P1', text: 'P1 — Games boot: ensureGamesBootstrapped recovers pending jackpot before arcade accepts traffic.' },
+      { priority: 'P2', text: 'P2 — Ops: docs/RUNBOOK.md + ONE-LINER scripts (install/start/deploy/backup/health) for beginner→expert error-free ops.' },
+      { priority: 'P9', text: 'P9 — Version 3.49.0 (package.json + APP_VERSION).' },
+    ],
+  },
+  {
     version: '3.48.5',
     title: 'Paste author matches profile: avatar, gradient name, Admin/Verified badges',
     date: 'Jul 19, 2026 - 18:30',

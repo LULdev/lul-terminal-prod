@@ -108,6 +108,8 @@ export function getAuthDatabase() {
   dbInstance = new Database(AUTH_DB_FILE);
   dbInstance.pragma('journal_mode = WAL');
   dbInstance.pragma('foreign_keys = ON');
+  // Wait for peer writers (multi-process) instead of failing SQLITE_BUSY immediately
+  dbInstance.pragma('busy_timeout = 8000');
   initSchema(dbInstance);
   maybeMigrateLegacyJson(dbInstance);
   return dbInstance;

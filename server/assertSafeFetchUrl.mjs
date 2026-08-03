@@ -1,10 +1,15 @@
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
+ *
+ * SSRF-safe URL validation + IP-pinned HTTP(S) fetch (anti DNS rebinding).
  */
 
 import dns from 'dns/promises';
+import http from 'http';
+import https from 'https';
 import net from 'net';
+import { URL } from 'url';
 
 const BLOCKED_HOSTS = new Set([
   'localhost',
@@ -15,7 +20,7 @@ const BLOCKED_HOSTS = new Set([
   'metadata',
 ]);
 
-function isPrivateIp(ip) {
+export function isPrivateIp(ip) {
   if (net.isIPv4(ip)) {
     const parts = ip.split('.').map(Number);
     const [a, b] = parts;
@@ -109,11 +114,23 @@ export function assertSafeFetchUrl(urlStr) {
   return parsed.href;
 }
 
-/** DNS-resolve hostnames and reject if any address is private/link-local (anti-rebinding). */
-export async function assertSafeFetchUrlAsync(urlStr) {
+/**
+ * Resolve host to public IPs only. Returns { href, hostname, safeAddresses }.
+ * Rejects if any resolved address is private (anti-rebinding at resolve time).
+ */
+export async function resolveSafeFetchTarget(urlStr) {
   const href = assertSafeFetchUrl(urlStr);
-  const host = new URL(href).hostname;
-  if (net.isIP(host)) return href;
+  const parsed = new URL(href);
+  const host = parsed.hostname;
+
+  if (net.isIP(host)) {
+    if (isPrivateIp(host)) throw new Error('Blocked private IP');
+    return {
+      href,
+      hostname: host,
+      safeAddresses: [{ address: host, family: net.isIPv6(host) ? 6 : 4 }],
+    };
+  }
 
   let results;
   try {
@@ -121,36 +138,152 @@ export async function assertSafeFetchUrlAsync(urlStr) {
   } catch {
     throw new Error('Blocked URL host');
   }
+  if (!results?.length) throw new Error('Blocked URL host');
 
   for (const entry of results) {
     if (isPrivateIp(entry.address)) throw new Error('Blocked private IP');
   }
+  return { href, hostname: host, safeAddresses: results };
+}
+
+/** DNS-resolve hostnames and reject if any address is private/link-local (anti-rebinding). */
+export async function assertSafeFetchUrlAsync(urlStr) {
+  const { href } = await resolveSafeFetchTarget(urlStr);
   return href;
 }
 
 /**
- * Fetch with manual redirect walking — re-validates each hop against SSRF rules.
- * Never uses redirect:'follow' (that would hit private IPs before validation).
+ * Low-level request pinned to a pre-validated IP (Host/SNI still use original hostname).
+ * Prevents DNS rebinding TOCTOU between lookup and connect.
  */
-export async function safeFetch(urlStr, init = {}, { maxRedirects = 5 } = {}) {
-  let current = await assertSafeFetchUrlAsync(urlStr);
-  const headers = { ...(init.headers ?? {}) };
-  const { signal, method } = init;
+function pinnedRequest(parsed, address, family, { method, headers, body, signal, timeoutMs = 30_000 }) {
+  const isHttps = parsed.protocol === 'https:';
+  const lib = isHttps ? https : http;
+  const port = parsed.port
+    ? Number(parsed.port)
+    : (isHttps ? 443 : 80);
+  const pathWithQuery = `${parsed.pathname || '/'}${parsed.search || ''}`;
+
+  const reqHeaders = { ...(headers || {}) };
+  // Ensure Host is the original hostname (not the IP)
+  if (!reqHeaders.Host && !reqHeaders.host) {
+    reqHeaders.Host = parsed.host;
+  }
+
+  return new Promise((resolve, reject) => {
+    const req = lib.request(
+      {
+        protocol: parsed.protocol,
+        hostname: address,
+        port,
+        path: pathWithQuery,
+        method: method || 'GET',
+        headers: reqHeaders,
+        servername: isHttps ? parsed.hostname : undefined,
+        family: family === 6 ? 6 : 4,
+        // Do not re-resolve — we already connected by IP via hostname: address
+        lookup: (hostname, opts, cb) => {
+          // Pin: always return the pre-validated address
+          cb(null, address, family === 6 ? 6 : 4);
+        },
+      },
+      (res) => {
+        const chunks = [];
+        res.on('data', (c) => chunks.push(c));
+        res.on('end', () => {
+          const buf = Buffer.concat(chunks);
+          // Minimal Response-like object compatible with callers expecting fetch Response
+          const headersMap = new Headers();
+          for (const [k, v] of Object.entries(res.headers)) {
+            if (v == null) continue;
+            if (Array.isArray(v)) v.forEach((item) => headersMap.append(k, item));
+            else headersMap.set(k, v);
+          }
+          resolve({
+            status: res.statusCode || 0,
+            statusText: res.statusMessage || '',
+            ok: (res.statusCode || 0) >= 200 && (res.statusCode || 0) < 300,
+            headers: headersMap,
+            url: parsed.href,
+            async arrayBuffer() {
+              return buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength);
+            },
+            async text() {
+              return buf.toString('utf8');
+            },
+            async json() {
+              return JSON.parse(buf.toString('utf8'));
+            },
+          });
+        });
+        res.on('error', reject);
+      },
+    );
+
+    const onAbort = () => {
+      req.destroy(new Error('Aborted'));
+      reject(new Error('Aborted'));
+    };
+    if (signal) {
+      if (signal.aborted) {
+        onAbort();
+        return;
+      }
+      signal.addEventListener('abort', onAbort, { once: true });
+    }
+
+    req.setTimeout(timeoutMs, () => {
+      req.destroy(new Error('Request timeout'));
+      reject(new Error('Request timeout'));
+    });
+    req.on('error', reject);
+
+    if (body != null && body !== '') {
+      req.write(body);
+    }
+    req.end();
+  });
+}
+
+/**
+ * Fetch with manual redirect walking + IP pinning.
+ * Re-validates each hop; connects only to pre-validated public IPs (anti DNS rebinding).
+ */
+export async function safeFetch(urlStr, init = {}, { maxRedirects = 5, timeoutMs = 30_000 } = {}) {
+  let current = String(urlStr);
+  const baseHeaders = { ...(init.headers ?? {}) };
+  const { signal, method, body } = init;
 
   for (let hop = 0; hop <= maxRedirects; hop += 1) {
-    const res = await fetch(current, {
-      method: method ?? 'GET',
-      headers,
-      signal,
-      redirect: 'manual',
-    });
+    const target = await resolveSafeFetchTarget(current);
+    const parsed = new URL(target.href);
+    // Prefer first public address; try next on connect failure
+    let lastErr = null;
+    let res = null;
+    for (const entry of target.safeAddresses) {
+      if (isPrivateIp(entry.address)) continue; // defensive
+      try {
+        res = await pinnedRequest(parsed, entry.address, entry.family, {
+          method: method ?? 'GET',
+          headers: baseHeaders,
+          body,
+          signal,
+          timeoutMs,
+        });
+        lastErr = null;
+        break;
+      } catch (err) {
+        lastErr = err;
+      }
+    }
+    if (!res) {
+      throw lastErr || new Error('Blocked URL host');
+    }
+
     if (res.status >= 300 && res.status < 400) {
       const loc = res.headers.get('location');
       if (!loc) throw new Error('Redirect without Location');
-      const next = new URL(loc, current).href;
-      // Drain body to free the socket
-      await res.arrayBuffer().catch(() => {});
-      current = await assertSafeFetchUrlAsync(next);
+      current = new URL(loc, target.href).href;
       continue;
     }
     return res;

@@ -27,6 +27,7 @@ import {
   QUEUE_TIMEOUT_MS,
   MAX_BET,
   MIN_BET,
+  confirmJackpotPayout,
   payoutJackpot,
   STARTING_LULCOINS,
   STREAK_BONUS_CAP,
@@ -445,7 +446,7 @@ export async function settleMatch({
       }
       // Same jackpot spice as PvP wins (only count when pool actually pays)
       if (Math.random() < JACKPOT_CHANCE) {
-        jackpotAmount = await payoutJackpot(p1.username);
+        jackpotAmount = await payoutJackpot(p1.username, { matchId: m.id, gameId });
         if (jackpotAmount > 0) {
           jackpotHit = true;
           logJackpotCredit(p1, { ...ledgerCtx, amount: jackpotAmount });
@@ -482,7 +483,7 @@ export async function settleMatch({
         winner.gameTotalWon = (Number(winner.gameTotalWon) || 0) + streakBonus;
       }
       if (Math.random() < JACKPOT_CHANCE) {
-        jackpotAmount = await payoutJackpot(winner.username);
+        jackpotAmount = await payoutJackpot(winner.username, { matchId: m.id, gameId });
         if (jackpotAmount > 0) {
           jackpotHit = true;
           logJackpotCredit(winner, { ...ledgerCtx, amount: jackpotAmount });
@@ -525,6 +526,12 @@ export async function settleMatch({
   m.doneAt = Date.now();
 
   await saveUsersDb(db);
+  // User balance durable — release jackpot pending journal
+  if (jackpotAmount > 0) {
+    await confirmJackpotPayout().catch((err) => {
+      console.error('[games] confirmJackpotPayout failed (user already credited)', err);
+    });
+  }
 
   await appendMatchHistory({
     id: m.id,

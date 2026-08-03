@@ -1,6 +1,6 @@
 # LUL Terminal
 
-[![Version](https://img.shields.io/badge/version-3.48.0-blue)](./package.json)
+[![Version](https://img.shields.io/badge/version-3.49.0-blue)](./package.json)
 [![Node](https://img.shields.io/badge/node-%3E%3D18-green)](./package.json)
 [![License](https://img.shields.io/badge/license-Apache--2.0-orange)](./LICENSE)
 
@@ -11,6 +11,32 @@ Self-hosted community platform: authentication, arcade games, profiles, paste & 
 **Repository:** [github.com/LULdev/lul-terminal-prod](https://github.com/LULdev/lul-terminal-prod)
 
 ---
+
+## One-command ops (beginner → expert)
+
+```bash
+# Linux / macOS / WSL
+bash scripts/one-liners.sh setup    # .env + npm ci + build
+bash scripts/one-liners.sh start    # production
+bash scripts/one-liners.sh deploy   # pull + build + pm2 restart
+bash scripts/one-liners.sh backup   # data/ archive
+bash scripts/one-liners.sh doctor   # environment checks
+```
+
+```powershell
+# Windows PowerShell
+.\scripts\one-liners.ps1 setup
+.\scripts\one-liners.ps1 start
+.\scripts\one-liners.ps1 deploy
+```
+
+```bash
+npm run ops          # print quickstart
+npm run ops:doctor
+npm run ops:deploy
+```
+
+**Full runbook:** [docs/RUNBOOK.md](./docs/RUNBOOK.md) · **Production:** [docs/PRODUCTION.md](./docs/PRODUCTION.md)
 
 ## Table of contents
 

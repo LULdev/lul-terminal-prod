@@ -6,6 +6,7 @@
 import fs from 'fs/promises';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { withCrossProcessLock } from './fileLock.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(__dirname, '..', 'data', 'analytics');
@@ -64,8 +65,11 @@ async function writeDb(db) {
 
 let pageViewsWriteChain = Promise.resolve();
 
+/** Process-local chain + cross-process lock — multi-worker cannot under-count. */
 function withPageViewsWrite(task) {
-  const run = pageViewsWriteChain.then(() => task());
+  const run = pageViewsWriteChain.then(() =>
+    withCrossProcessLock('page-views', () => task(), { maxWaitMs: 6000 }),
+  );
   pageViewsWriteChain = run.then(() => undefined, () => undefined);
   return run;
 }

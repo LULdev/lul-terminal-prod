@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import crypto from 'crypto';
 import fs from 'fs/promises';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -12,6 +13,8 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(__dirname, '..', 'data', 'games');
 const JACKPOT_FILE = path.join(ROOT, 'jackpot.json');
 const HISTORY_FILE = path.join(ROOT, 'history.json');
+/** Two-phase jackpot: pot drained here; cleared only after user balance save. */
+const JACKPOT_PENDING_FILE = path.join(ROOT, 'jackpot-pending.json');
 
 const EMPTY_JACKPOT = {
   version: 1,
@@ -121,7 +124,12 @@ export async function addToJackpot(amount) {
   });
 }
 
-export async function payoutJackpot(winner) {
+/**
+ * Drain jackpot pool for a winner. Writes a pending journal BEFORE zeroing the pool
+ * so a crash between drain and user-balance save can recover on boot
+ * (re-credit winner if needed, never lose the amount silently).
+ */
+export async function payoutJackpot(winner, meta = {}) {
   return withGamesAuxWrite(async () => {
     const db = await readJackpotFromDisk();
     const amount = Math.max(0, Math.floor(Number(db.pool) || 0));
@@ -129,6 +137,17 @@ export async function payoutJackpot(winner) {
     if (amount <= 0) {
       return 0;
     }
+    const pending = {
+      id: crypto.randomBytes(6).toString('hex'),
+      amount,
+      winner: String(winner ?? '').slice(0, 48),
+      matchId: meta.matchId ? String(meta.matchId).slice(0, 32) : null,
+      gameId: meta.gameId ? String(meta.gameId).slice(0, 32) : null,
+      at: Date.now(),
+      // user credit is applied by caller under coin lock; cleared after saveUsersDb
+      userCredited: false,
+    };
+    await atomicWriteJson(JACKPOT_PENDING_FILE, pending);
     db.pool = 0;
     db.totalPaidOut = (Number(db.totalPaidOut) || 0) + amount;
     db.hits = (Number(db.hits) || 0) + 1;
@@ -136,6 +155,74 @@ export async function payoutJackpot(winner) {
     db.lastWonAt = Date.now();
     await saveJackpot(db);
     return amount;
+  });
+}
+
+/** Call after user coins for the jackpot were durably saved. */
+export async function confirmJackpotPayout() {
+  return withGamesAuxWrite(async () => {
+    try {
+      await fs.unlink(JACKPOT_PENDING_FILE);
+    } catch {
+      /* already gone */
+    }
+  });
+}
+
+async function readJackpotPending() {
+  try {
+    const raw = await fs.readFile(JACKPOT_PENDING_FILE, 'utf8');
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Boot recovery: if pot was drained but user credit may not have been saved,
+ * re-credit the winner (idempotent if already credited) via callback, then clear pending.
+ * If no users DB access, restore amount back into the pool.
+ *
+ * @param {(pending: {amount:number,winner:string,matchId?:string}) => Promise<'credited'|'restored'|'skipped'>} [settle]
+ */
+export async function recoverJackpotPendingOnBoot(settle) {
+  return withGamesAuxWrite(async () => {
+    const pending = await readJackpotPending();
+    if (!pending || !(Number(pending.amount) > 0)) {
+      try { await fs.unlink(JACKPOT_PENDING_FILE); } catch { /* */ }
+      return null;
+    }
+    const amount = Math.floor(Number(pending.amount) || 0);
+    let outcome = 'restored';
+    if (typeof settle === 'function') {
+      try {
+        outcome = await settle({
+          amount,
+          winner: pending.winner,
+          matchId: pending.matchId,
+          gameId: pending.gameId,
+          at: pending.at,
+        });
+      } catch (err) {
+        console.error('[games] jackpot pending settle failed — restoring pool', err);
+        outcome = 'restored';
+      }
+    }
+    if (outcome === 'restored') {
+      const db = await readJackpotFromDisk();
+      db.pool = Math.max(0, Number(db.pool) || 0) + amount;
+      // Reverse the optimistic totalPaidOut/hits from the incomplete payout
+      db.totalPaidOut = Math.max(0, (Number(db.totalPaidOut) || 0) - amount);
+      db.hits = Math.max(0, (Number(db.hits) || 0) - 1);
+      await saveJackpot(db);
+      console.warn('[games] Restored jackpot pending to pool', { amount, winner: pending.winner });
+    } else if (outcome === 'credited') {
+      console.warn('[games] Recovered jackpot credit for', pending.winner, amount);
+    }
+    try {
+      await fs.unlink(JACKPOT_PENDING_FILE);
+    } catch { /* */ }
+    return { outcome, amount, winner: pending.winner };
   });
 }
 

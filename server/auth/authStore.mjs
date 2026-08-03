@@ -20,6 +20,7 @@ import {
   buildBootstrapUsers,
   writeAdminCredentials,
 } from '../db/seedAuthUsers.mjs';
+import { withCrossProcessLock } from '../fileLock.mjs';
 
 export { BOT_USERNAME };
 
@@ -62,13 +63,20 @@ const usersWriteAls = new AsyncLocalStorage();
  * Serialize user DB read-modify-write to prevent registration/account races.
  * Re-entrant: nested calls (e.g. settleMatch inside submitMove) run inline
  * instead of deadlocking the promise chain.
+ * Cross-process file lock so multi-PM2 / multi-worker cannot clobber snapshot RMW.
  */
 export function withUsersWrite(task) {
   if (usersWriteAls.getStore()) {
     return Promise.resolve().then(() => task());
   }
   const ctx = { db: null };
-  const run = usersWriteChain.then(() => usersWriteAls.run(ctx, () => task()));
+  const run = usersWriteChain.then(() =>
+    withCrossProcessLock(
+      'auth-users',
+      () => usersWriteAls.run(ctx, () => task()),
+      { maxWaitMs: 20_000 },
+    ),
+  );
   usersWriteChain = run.then(() => undefined, () => undefined);
   return run;
 }
@@ -90,13 +98,19 @@ export async function loadSessionsDb() {
 }
 
 
-/** Serialize session DB read-modify-write to prevent login/logout races. Re-entrant. */
+/** Serialize session DB read-modify-write to prevent login/logout races. Re-entrant + cross-process. */
 export function withSessionsWrite(task) {
   if (sessionsWriteAls.getStore()) {
     return Promise.resolve().then(() => task());
   }
   const ctx = { db: null };
-  const run = sessionsWriteChain.then(() => sessionsWriteAls.run(ctx, () => task()));
+  const run = sessionsWriteChain.then(() =>
+    withCrossProcessLock(
+      'auth-sessions',
+      () => sessionsWriteAls.run(ctx, () => task()),
+      { maxWaitMs: 15_000 },
+    ),
+  );
   sessionsWriteChain = run.then(() => undefined, () => undefined);
   return run;
 }

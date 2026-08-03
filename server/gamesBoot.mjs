@@ -2,11 +2,16 @@
  * @license
  * SPDX-License-Identifier: Apache-2.0
  *
- * Awaitable games bootstrap: refund RAM-lost escrows before accepting traffic.
+ * Awaitable games bootstrap: refund RAM-lost escrows + recover jackpot pending
+ * before accepting arcade traffic.
  */
 
 import { refundAllEscrowsOnBoot } from './gamesEscrow.mjs';
 import { startMatchExpirySweep } from './gamesExpirySweep.mjs';
+import { recoverJackpotPendingOnBoot } from './gamesStore.mjs';
+import { runCoinTransaction } from './gamesCoinLock.mjs';
+import { loadUsersDb, saveUsersDb } from './auth/authStore.mjs';
+import { logJackpotCredit } from './coinLedger.mjs';
 
 let ready = false;
 let bootPromise = null;
@@ -16,8 +21,47 @@ export function isGamesBootReady() {
   return ready;
 }
 
+async function settlePendingJackpotOnBoot(pending) {
+  return runCoinTransaction(async () => {
+    const db = await loadUsersDb();
+    const uname = String(pending.winner ?? '').toLowerCase();
+    const user = db.users.find(
+      (u) => u.role !== 'bot' && String(u.username ?? '').toLowerCase() === uname,
+    );
+    if (!user) {
+      // Unknown winner — put money back in the pool
+      return 'restored';
+    }
+    // Idempotent: skip re-credit if a jackpot ledger row for this match already exists
+    const ledger = Array.isArray(user.coinLedger) ? user.coinLedger : [];
+    const already = ledger.some(
+      (e) =>
+        e.kind === 'jackpot'
+        && Number(e.amount) === Number(pending.amount)
+        && (
+          !pending.matchId
+          || e.meta?.matchId === pending.matchId
+          || (pending.at && Math.abs((Number(e.at) || 0) - Number(pending.at)) < 120_000)
+        ),
+    );
+    if (already) {
+      return 'skipped';
+    }
+    logJackpotCredit(user, {
+      gameId: pending.gameId ?? 'arcade',
+      matchId: pending.matchId,
+      bet: null,
+      amount: pending.amount,
+    });
+    user.gameJackpotsWon = (Number(user.gameJackpotsWon) || 0) + 1;
+    user.updatedAt = Date.now();
+    await saveUsersDb(db);
+    return 'credited';
+  });
+}
+
 /**
- * Refund persisted escrows once, then start match expiry sweep.
+ * Refund persisted escrows once, recover incomplete jackpot payouts, start sweep.
  * Safe to call multiple times — single-flight.
  */
 export function ensureGamesBootstrapped() {
@@ -29,6 +73,14 @@ export function ensureGamesBootstrapped() {
         if (n > 0) console.log(`[games] Refunded ${n} escrow(s) after restart`);
       } catch (e) {
         console.error('[games] Boot escrow refund failed', e);
+      }
+      try {
+        const rec = await recoverJackpotPendingOnBoot(settlePendingJackpotOnBoot);
+        if (rec) {
+          console.log(`[games] Jackpot pending recovery: ${rec.outcome} ${rec.amount} → ${rec.winner}`);
+        }
+      } catch (e) {
+        console.error('[games] Jackpot pending recovery failed', e);
       } finally {
         ready = true;
         startMatchExpirySweep();

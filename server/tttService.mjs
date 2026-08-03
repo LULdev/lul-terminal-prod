@@ -38,6 +38,7 @@ import { sweepExpiredInMap } from './gamesExpirySweep.mjs';
 import {
   addToJackpot,
   appendMatchHistory,
+  confirmJackpotPayout,
   JACKPOT_CHANCE,
   MATCH_TIMEOUT_MS,
   MAX_BET,
@@ -384,7 +385,7 @@ async function finalizeMatch(m, boardState) {
       }
 
       if (Math.random() < JACKPOT_CHANCE) {
-        jackpotAmount = await payoutJackpot(winner.username);
+        jackpotAmount = await payoutJackpot(winner.username, { matchId: m.id, gameId: 'ttt' });
         if (jackpotAmount > 0) {
           jackpotHit = true;
           creditCoins(winner, jackpotAmount, logJackpotCredit, ledgerCtx);
@@ -413,6 +414,11 @@ async function finalizeMatch(m, boardState) {
 
   const unlocks = await syncAchievementsOnLoadedUser(p1, db, { flag: 'ttt_played' });
   await saveUsersDb(db);
+  if (jackpotAmount > 0) {
+    await confirmJackpotPayout().catch((err) => {
+      console.error('[ttt] confirmJackpotPayout failed (user already credited)', err);
+    });
+  }
 
   m.status = 'done';
   m.result = {

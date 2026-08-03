@@ -1,7 +1,7 @@
 {
   "name": "lul-terminal",
   "private": true,
-  "version": "3.48.1",
+  "version": "3.49.0",
   "description": "Self-hosted community platform: auth, arcade, paste, image host, tools & admin",
   "repository": {
     "type": "git",
@@ -30,7 +30,13 @@
     "preview": "vite preview",
     "clean": "rm -rf dist server.js",
     "lint": "tsc --noEmit",
-    "hooks:install": "node scripts/install-git-hooks.mjs"
+    "hooks:install": "node scripts/install-git-hooks.mjs",
+    "ops": "node scripts/ops-help.mjs",
+    "ops:doctor": "node scripts/run-one-liner.mjs doctor",
+    "ops:setup": "node scripts/run-one-liner.mjs setup",
+    "ops:deploy": "node scripts/run-one-liner.mjs deploy",
+    "ops:backup": "node scripts/run-one-liner.mjs backup",
+    "ops:health": "node scripts/run-one-liner.mjs health"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",

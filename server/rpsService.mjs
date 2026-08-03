@@ -39,6 +39,7 @@ import {
   BO3_WINS_NEEDED,
   DAILY_BONUS_COINS,
   DAILY_BONUS_COOLDOWN_MS,
+  confirmJackpotPayout,
   JACKPOT_CHANCE,
   MATCH_TIMEOUT_MS,
   MAX_BET,
@@ -417,7 +418,7 @@ async function finalizeMatch(m) {
       }
 
       if (Math.random() < JACKPOT_CHANCE) {
-        jackpotAmount = await payoutJackpot(winner.username);
+        jackpotAmount = await payoutJackpot(winner.username, { matchId: m.id, gameId: 'rps' });
         if (jackpotAmount > 0) {
           jackpotHit = true;
           creditCoins(winner, jackpotAmount, logJackpotCredit, ledgerCtx);
@@ -446,6 +447,11 @@ async function finalizeMatch(m) {
 
   const unlocks = await syncAchievementsOnLoadedUser(p1, db, { flag: 'rps_played' });
   await saveUsersDb(db);
+  if (jackpotAmount > 0) {
+    await confirmJackpotPayout().catch((err) => {
+      console.error('[rps] confirmJackpotPayout failed (user already credited)', err);
+    });
+  }
 
   m.status = 'done';
   m.result = {
