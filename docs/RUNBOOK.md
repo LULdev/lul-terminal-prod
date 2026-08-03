@@ -2,7 +2,7 @@
 
 Everything you need to **install, run, update, backup, and recover** LUL Terminal — from first-time beginner to production ops.
 
-**App version:** see `package.json` / `src/config/version.ts` (current **3.49.0**).
+**App version:** see `package.json` / `src/config/version.ts` (current **3.57.0**).
 
 ---
 
@@ -103,7 +103,7 @@ Internet → HTTPS reverse proxy → Node :3000
                                   └── ./data  (bind-mount or volume)
 ```
 
-**One PM2 instance only** for coin/user correctness historically; as of **3.49.0** cross-process locks protect user/session/view/jackpot file RMW — still prefer **1 writer process** unless you also run Redis for rate-limit/dedup.
+As of **3.57.0**, arcade matchmaking is durable on disk + locked; users/sessions/jackpot also use cross-process locks. Prefer **`pm2 -i 1`** unless all workers share the same `data/` directory (and ideally Redis for rate-limit/dedup).
 
 ```bash
 pm2 start server/start.mjs --name lul-terminal
