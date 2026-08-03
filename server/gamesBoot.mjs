@@ -24,10 +24,16 @@ export function isGamesBootReady() {
 async function settlePendingJackpotOnBoot(pending) {
   return runCoinTransaction(async () => {
     const db = await loadUsersDb();
-    const uname = String(pending.winner ?? '').toLowerCase();
-    const user = db.users.find(
-      (u) => u.role !== 'bot' && String(u.username ?? '').toLowerCase() === uname,
-    );
+    let user = null;
+    if (pending.userId) {
+      user = db.users.find((u) => u.id === pending.userId && u.role !== 'bot') ?? null;
+    }
+    if (!user) {
+      const uname = String(pending.winner ?? '').toLowerCase();
+      user = db.users.find(
+        (u) => u.role !== 'bot' && String(u.username ?? '').toLowerCase() === uname,
+      ) ?? null;
+    }
     if (!user) {
       // Unknown winner — put money back in the pool
       return 'restored';

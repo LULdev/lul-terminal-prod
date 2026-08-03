@@ -150,7 +150,8 @@ export async function fetchXmlScraperPresets(): Promise<{
   scraperSkills: ScraperSkill[];
   crawlPresets: CrawlPreset[];
 }> {
-  const res = await sessionFetch('/api/xml-scraper/presets');
+  // soft401: admin panel load must not wipe global session
+  const res = await sessionFetch('/api/xml-scraper/presets', undefined, { soft401: true });
   if (!res.ok) return { presets: [], websiteFeatures: [], scraperSkills: [], crawlPresets: [] };
   const data = await res.json();
   return {

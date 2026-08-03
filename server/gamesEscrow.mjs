@@ -139,6 +139,18 @@ export async function refundAllEscrowsOnBoot() {
 export async function refundUserEscrows(userId) {
   if (!userId) return 0;
   return runCoinTransaction(async () => {
+    // Re-check under coin lock so a concurrent join cannot be stripped after it escrowed
+    // (leaveAll then refund without lock was TOCTOU free-stake / double-pay risk).
+    try {
+      const { userHasActiveArcadeSession } = await import('./gamesService.mjs');
+      if (await userHasActiveArcadeSession(userId)) {
+        console.warn('[games] refundUserEscrows skipped — live arcade session under coin lock', { userId });
+        return 0;
+      }
+    } catch (e) {
+      console.warn('[games] refundUserEscrows live-session check failed — abort refund', userId, e);
+      return 0;
+    }
     const db = await loadUsersDb();
     const user = db.users.find((u) => u.id === userId);
     if (!user || user.role === 'bot' || !user.gameEscrows?.length) return 0;

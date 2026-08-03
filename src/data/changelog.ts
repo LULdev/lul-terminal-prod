@@ -23,6 +23,22 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '3.54.1',
+    title: 'Residual P0–P1: escrow refund under coin lock, jackpot confirm+idempotency, Firebase stats singleton',
+    date: 'Aug 4, 2026 - 02:45',
+    highlight: true,
+    items: [
+      { priority: 'P0', text: 'P0 — refundUserEscrows re-checks userHasActiveArcadeSession under coin lock (logout/delete no longer strip concurrent join stake).' },
+      { priority: 'P0', text: 'P0 — logoutUser revokes session token before leaveAll/residual refund (closes multi-tab join race window).' },
+      { priority: 'P1', text: 'P1 — Jackpot: confirm only after durable credit; ledger idempotent on pendingId/matchId; missing user leaves pending for recovery.' },
+      { priority: 'P1', text: 'P1 — Jackpot pending stores userId; boot recovery prefers userId over username rename.' },
+      { priority: 'P1', text: 'P1 — useFirebaseStats module singleton (Header+Stats no longer double-count hits/online).' },
+      { priority: 'P1', text: 'P1 — Admin GET soft401: images/persona/visitors/referrals/events/achievements/changelog/avatars; xml presets soft401.' },
+      { priority: 'P2', text: 'P2 — Soft /me guest boot skips leaveAll; meme Firebase write .catch().' },
+      { priority: 'P9', text: 'P9 — Version 3.54.1 residual after 3.54.0 25-round audit.' },
+    ],
+  },
+  {
     version: '3.54.0',
     title: '25-round full system audit (Server+Client P0–P9): afterUsersWrite jackpot, RPS/TTT unnest, soft401 admin reads',
     date: 'Aug 4, 2026 - 02:15',

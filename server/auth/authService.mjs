@@ -312,30 +312,20 @@ function arcadeCleanupError(cleanup) {
 /** Refund persisted escrows when arcade RAM is clear but rows remain (orphan sweep / cleanup ok). */
 export async function refundOrphanEscrowsAfterCleanup(userId, cleanup) {
   if (!userId) return;
-  const { userHasActiveArcadeSession } = await import('../gamesService.mjs');
-  const stillActive = await userHasActiveArcadeSession(userId).catch(() => true);
-  if (stillActive) {
-    if (!cleanup?.ok) {
-      console.warn('[auth] skipped escrow refund — arcade RAM state still active', {
-        userId,
-        errors: cleanup?.errors ?? [],
-      });
-    }
-    return;
-  }
+  // Always go through refundUserEscrows — it re-checks userHasActiveArcadeSession
+  // UNDER the coin lock (fixes TOCTOU vs concurrent join after unlocked stillActive peek).
   const db = await loadUsersDb();
   const user = db.users.find((u) => u.id === userId);
   const hasEscrows = (user?.gameEscrows?.length ?? 0) > 0;
-  if (hasEscrows || !cleanup?.ok) {
-    console.warn('[auth] refunding orphan escrows after arcade cleanup', {
-      userId,
-      hasEscrows,
-      cleanupOk: cleanup?.ok ?? true,
-    });
-    await refundUserEscrows(userId).catch((e) => {
-      console.warn('[auth] escrow refund after cleanup failed', userId, e);
-    });
-  }
+  if (!hasEscrows && cleanup?.ok) return;
+  console.warn('[auth] refunding orphan escrows after arcade cleanup', {
+    userId,
+    hasEscrows,
+    cleanupOk: cleanup?.ok ?? true,
+  });
+  await refundUserEscrows(userId).catch((e) => {
+    console.warn('[auth] escrow refund after cleanup failed', userId, e);
+  });
 }
 
 /** Expired session still in DB — release arcade state so escrow is not held until queue sweep. */
@@ -379,22 +369,21 @@ export async function logoutUser(token) {
   const session = sessionsDb.sessions.find((s) => s.token === token);
   const userId = session?.userId;
 
+  // Drop session token first so concurrent tabs cannot joinQueue mid residual refund
+  await withSessionsWrite(async () => {
+    const fresh = await loadSessionsDb();
+    fresh.sessions = fresh.sessions.filter((s) => s.token !== token);
+    await saveSessionsDb(fresh);
+  });
+
   if (userId) {
-    const { leaveAllGameQueues, userHasActiveArcadeSession } = await import('../gamesService.mjs');
+    const { leaveAllGameQueues } = await import('../gamesService.mjs');
     const cleanup = await leaveAllGameQueues(userId);
+    // refundUserEscrows re-checks live arcade under coin lock (no unlocked TOCTOU)
     await refundOrphanEscrowsAfterCleanup(userId, cleanup);
-    // Only residual-refund when no live queue/playing match (avoids double-pay with settle)
-    const stillLive = await userHasActiveArcadeSession(userId).catch(() => true);
-    if (!stillLive) {
-      await refundUserEscrows(userId).catch((e) => {
-        console.warn('[auth] logout residual escrow refund failed', userId, e);
-      });
-    } else {
-      console.warn('[auth] logout skipped residual escrow refund — live arcade session', {
-        userId,
-        cleanupOk: cleanup?.ok,
-      });
-    }
+    await refundUserEscrows(userId).catch((e) => {
+      console.warn('[auth] logout residual escrow refund failed', userId, e);
+    });
     await withUsersWrite(async () => {
       const db = await loadUsersDb();
       const user = db.users.find((u) => u.id === userId);
@@ -404,12 +393,6 @@ export async function logoutUser(token) {
       }
     });
   }
-
-  await withSessionsWrite(async () => {
-    const fresh = await loadSessionsDb();
-    fresh.sessions = fresh.sessions.filter((s) => s.token !== token);
-    await saveSessionsDb(fresh);
-  });
 }
 
 export async function revokeUserSessions(userId, { keepToken = null } = {}) {

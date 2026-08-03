@@ -154,6 +154,8 @@ export async function payoutJackpot(winner, meta = {}) {
       id: crypto.randomBytes(6).toString('hex'),
       amount,
       winner: String(winner ?? '').slice(0, 48),
+      // Prefer userId for boot recovery (username may be renamed)
+      userId: meta.userId ? String(meta.userId).slice(0, 32) : null,
       matchId: meta.matchId ? String(meta.matchId).slice(0, 32) : null,
       gameId: meta.gameId ? String(meta.gameId).slice(0, 32) : null,
       at: Date.now(),

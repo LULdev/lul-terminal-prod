@@ -556,32 +556,59 @@ export async function settleMatch({
     let jackpotAmount = 0;
     if (deferredJackpot) {
       try {
-        const jp = await payoutJackpot(deferredJackpot.username, { matchId: m.id, gameId });
+        const jp = await payoutJackpot(deferredJackpot.username, {
+          matchId: m.id,
+          gameId,
+          userId: deferredJackpot.userId,
+        });
         jackpotAmount = jackpotPayoutAmount(jp);
+        const pendingId = jackpotPayoutPendingId(jp);
         if (jackpotAmount > 0) {
+          let credited = false;
           await runCoinTransaction(async () => {
             const db = await loadUsersDb();
             const u = getUser(db, deferredJackpot.userId);
             if (!u) return;
+            const ledger = Array.isArray(u.coinLedger) ? u.coinLedger : [];
+            const already = ledger.some((e) => {
+              if (e.kind !== 'jackpot') return false;
+              if (Number(e.amount) !== jackpotAmount) return false;
+              if (pendingId && e.meta?.pendingId === pendingId) return true;
+              if (m.id && e.meta?.matchId === m.id) return true;
+              return false;
+            });
+            if (already) {
+              credited = true;
+              return;
+            }
             logJackpotCredit(u, {
               gameId,
               chatLabel,
               matchId: m.id,
               bet: m.bet,
               amount: jackpotAmount,
-              pendingId: jackpotPayoutPendingId(jp),
+              pendingId,
             });
             u.gameJackpotsWon = (Number(u.gameJackpotsWon) || 0) + 1;
             u.updatedAt = Date.now();
             await saveUsersDb(db);
+            credited = true;
           });
-          await confirmJackpotPayout().catch((err) => {
-            console.error('[games] confirmJackpotPayout failed (user already credited)', err);
-          });
-          jackpotHit = true;
-          m.jackpotHit = true;
-          m.jackpotAmount = jackpotAmount;
-          postBotArcadeJackpot({ username: deferredJackpot.username, amount: jackpotAmount }).catch(() => {});
+          if (credited) {
+            await confirmJackpotPayout().catch((err) => {
+              console.error('[games] confirmJackpotPayout failed (user already credited)', err);
+            });
+            jackpotHit = true;
+            m.jackpotHit = true;
+            m.jackpotAmount = jackpotAmount;
+            postBotArcadeJackpot({ username: deferredJackpot.username, amount: jackpotAmount }).catch(() => {});
+          } else {
+            console.error('[games] jackpot credit skipped — pending left for recovery', {
+              userId: deferredJackpot.userId,
+              amount: jackpotAmount,
+              pendingId,
+            });
+          }
         }
       } catch (e) {
         console.error('[games] deferred jackpot failed', e);

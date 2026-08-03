@@ -194,7 +194,7 @@ export async function fetchAdminImages(opts?: {
   if (opts?.q) params.set('q', opts.q);
   if (opts?.sort) params.set('sort', opts.sort);
   const qs = params.toString();
-  return adminFetch(`/images${qs ? `?${qs}` : ''}`);
+  return adminFetchRead(`/images${qs ? `?${qs}` : ''}`);
 }
 
 export async function adminDeleteImage(id: string): Promise<{ ok: boolean }> {
@@ -227,7 +227,7 @@ export type PersonaStats = {
 };
 
 export async function fetchPersonaStats(): Promise<PersonaStats> {
-  return adminFetch('/persona/stats');
+  return adminFetchRead('/persona/stats');
 }
 
 export type PersonaEntry = {
@@ -251,7 +251,7 @@ export async function fetchPersonaEntries(opts?: {
   if (opts?.country) params.set('country', opts.country);
   if (opts?.q) params.set('q', opts.q);
   const qs = params.toString();
-  return adminFetch(`/persona/entries${qs ? `?${qs}` : ''}`);
+  return adminFetchRead(`/persona/entries${qs ? `?${qs}` : ''}`);
 }
 
 export type VisitorProfileRow = {
@@ -293,7 +293,7 @@ export async function fetchAdminVisitors(opts?: {
   if (opts?.limit) params.set('limit', String(opts.limit));
   if (opts?.q) params.set('q', opts.q);
   const qs = params.toString();
-  return adminFetch(`/visitors${qs ? `?${qs}` : ''}`);
+  return adminFetchRead(`/visitors${qs ? `?${qs}` : ''}`);
 }
 
 export type ReferralLeader = {
@@ -327,7 +327,7 @@ export type ReferralsAdminData = {
 };
 
 export async function fetchAdminReferrals(limit = 50): Promise<ReferralsAdminData> {
-  return adminFetch(`/referrals?limit=${limit}`);
+  return adminFetchRead(`/referrals?limit=${limit}`);
 }
 
 export type EventsOpsData = {
@@ -339,7 +339,7 @@ export type EventsOpsData = {
 };
 
 export async function fetchAdminEvents(): Promise<EventsOpsData> {
-  return adminFetch('/events');
+  return adminFetchRead('/events');
 }
 
 export async function adminPurgeEvents(keep = 2000): Promise<{ before: number; after: number; removed: number }> {
@@ -386,7 +386,7 @@ export type AchievementsAdminData = {
 };
 
 export async function fetchAdminAchievements(): Promise<AchievementsAdminData> {
-  return adminFetch('/achievements');
+  return adminFetchRead('/achievements');
 }
 
 export type ScraperPoolData = {
@@ -430,7 +430,7 @@ export type ChangelogConsoleData = {
 };
 
 export async function fetchAdminChangelog(): Promise<ChangelogConsoleData> {
-  return adminFetch('/changelog');
+  return adminFetchRead('/changelog');
 }
 
 export type AvatarsAdminData = {
@@ -440,7 +440,7 @@ export type AvatarsAdminData = {
 };
 
 export async function fetchAdminAvatars(): Promise<AvatarsAdminData> {
-  return adminFetch('/avatars');
+  return adminFetchRead('/avatars');
 }
 
 export type StorageMapData = {

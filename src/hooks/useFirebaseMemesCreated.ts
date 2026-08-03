@@ -24,7 +24,7 @@ export function useFirebaseMemesCreated() {
   }, []);
 
   const recordMemeCreated = useCallback(() => {
-    runTransaction(memesCreatedRef, (current) => (current ?? 0) + 1);
+    runTransaction(memesCreatedRef, (current) => (current ?? 0) + 1).catch(() => {});
   }, []);
 
   return { memesCreated, recordMemeCreated };

@@ -164,15 +164,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setAccountsSubmitted(data.stats?.accountsSubmitted ?? 0);
         resetSessionInvalidation();
       } else {
-        // Soft /me with no user — epoch-gate leave so re-login is not kicked mid-flight
-        const epochAtClear = bumpSessionEpoch();
-        void (async () => {
-          if (getSessionEpoch() !== epochAtClear) return;
-          try {
-            const m = await import('../lib/arcadeCleanup');
-            await m.leaveAllArcadeQueuesBestEffort();
-          } catch { /* best-effort */ }
-        })();
+        // Soft /me with no user — only leave queues if we had a local session
+        // (guest boot must not spam DELETE all game queues)
+        const hadLocalUser = Boolean(userRef.current);
+        if (hadLocalUser) {
+          const epochAtClear = bumpSessionEpoch();
+          void (async () => {
+            if (getSessionEpoch() !== epochAtClear) return;
+            try {
+              const m = await import('../lib/arcadeCleanup');
+              await m.leaveAllArcadeQueuesBestEffort();
+            } catch { /* best-effort */ }
+          })();
+        }
         clearLocalSession();
       }
     } catch (e) {
