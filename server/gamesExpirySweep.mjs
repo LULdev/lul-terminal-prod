@@ -45,6 +45,12 @@ export function startMatchExpirySweep(intervalMs = 60_000) {
     sweepAllExpiredMatches().catch((e) => {
       console.error('[games] expiry sweep failed:', e instanceof Error ? e.message : e);
     });
+    // Live jackpot pending recovery so stuck pending does not freeze jackpots until restart
+    import('./gamesBoot.mjs')
+      .then((m) => m.recoverJackpotPendingLive?.())
+      .catch((e) => {
+        console.error('[games] live jackpot recovery failed:', e instanceof Error ? e.message : e);
+      });
   };
   tick();
   sweepTimer = setInterval(tick, intervalMs);

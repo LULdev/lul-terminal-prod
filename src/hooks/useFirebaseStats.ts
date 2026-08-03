@@ -81,7 +81,12 @@ function ensureFirebaseStatsBootstrap() {
   const connectedRef = ref(db, '.info/connected');
   bootstrapUnsubs.push(
     onValue(connectedRef, (snap) => {
-      if (snap.val() !== true || onlineCounted) return;
+      if (snap.val() !== true) {
+        // Allow re-increment after disconnect (onDisconnect already decremented)
+        onlineCounted = false;
+        return;
+      }
+      if (onlineCounted) return;
       onlineCounted = true;
       runTransaction(onlineRef, (current) => (current ?? 0) + 1).catch(() => {});
       onDisconnect(onlineRef).set(increment(-1)).catch(() => {});

@@ -133,16 +133,38 @@ export async function addToJackpot(amount) {
  * Drain jackpot. Returns { amount, pendingId } so callers can stamp ledger.meta.pendingId
  * for exact boot-recovery matching. amount=0 / pendingId=null on miss or deferred.
  */
+/** Max age of an unconfirmed jackpot pending before live payouts restore the pool in-process. */
+const JACKPOT_PENDING_STALE_MS = 5 * 60 * 1000;
+
 export async function payoutJackpot(winner, meta = {}) {
   return withGamesAuxWrite(async () => {
     // Never overwrite an unconfirmed pending payout (would lose the prior winner's amount)
     const existingPending = await readJackpotPending();
     if (existingPending && Number(existingPending.amount) > 0) {
-      console.warn('[games] jackpot payout deferred — prior pending still open', {
-        pendingWinner: existingPending.winner,
-        pendingAmount: existingPending.amount,
-      });
-      return { amount: 0, pendingId: null };
+      // Already credited on a prior crash — just clear so jackpots can resume
+      if (existingPending.userCredited === true) {
+        try { await fs.unlink(JACKPOT_PENDING_FILE); } catch { /* */ }
+      } else if (Date.now() - (Number(existingPending.at) || 0) > JACKPOT_PENDING_STALE_MS) {
+        // Stuck pending freezes ALL future jackpots — restore pool in-process (boot recovery also runs)
+        const amount = Math.floor(Number(existingPending.amount) || 0);
+        const db = await readJackpotFromDisk();
+        db.pool = Math.max(0, Number(db.pool) || 0) + amount;
+        db.totalPaidOut = Math.max(0, (Number(db.totalPaidOut) || 0) - amount);
+        db.hits = Math.max(0, (Number(db.hits) || 0) - 1);
+        await saveJackpot(db);
+        try { await fs.unlink(JACKPOT_PENDING_FILE); } catch { /* */ }
+        console.warn('[games] restored stale jackpot pending to pool (live)', {
+          amount,
+          winner: existingPending.winner,
+          ageMs: Date.now() - (Number(existingPending.at) || 0),
+        });
+      } else {
+        console.warn('[games] jackpot payout deferred — prior pending still open', {
+          pendingWinner: existingPending.winner,
+          pendingAmount: existingPending.amount,
+        });
+        return { amount: 0, pendingId: null };
+      }
     }
     const db = await readJackpotFromDisk();
     const amount = Math.max(0, Math.floor(Number(db.pool) || 0));
@@ -248,6 +270,7 @@ export async function recoverJackpotPendingOnBoot(settle) {
       outcome = await settle({
         amount,
         winner: pending.winner,
+        userId: pending.userId ?? null,
         matchId: pending.matchId,
         gameId: pending.gameId,
         at: pending.at,

@@ -66,6 +66,11 @@ async function settlePendingJackpotOnBoot(pending) {
   });
 }
 
+/** Live recovery (sweep) — same settle rules as boot, including pending.userId. */
+export async function recoverJackpotPendingLive() {
+  return recoverJackpotPendingOnBoot(settlePendingJackpotOnBoot);
+}
+
 /**
  * Refund persisted escrows once, recover incomplete jackpot payouts, start sweep.
  * Safe to call multiple times — single-flight.

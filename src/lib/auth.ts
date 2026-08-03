@@ -161,7 +161,8 @@ export type ReferralInfo = {
 };
 
 export async function fetchReferralInfo(): Promise<ReferralInfo> {
-  return api<ReferralInfo>('/referral/me');
+  // soft401: dashboard/invite poll must not wipe global session
+  return api<ReferralInfo>('/referral/me', undefined, { soft401: true });
 }
 
 export async function register(input: {
@@ -230,24 +231,25 @@ export type SyncAchievementsOpts = {
 };
 
 export async function syncAchievements(opts: SyncAchievementsOpts = {}) {
+  // soft401: best-effort after paste/upload/game — primary action already succeeded
   return api<AuthUnlockResponse>('/achievements/sync', {
     method: 'POST',
     body: JSON.stringify(opts),
-  });
+  }, { soft401: true });
 }
 
 export async function recordAchievementEvent(event: 'claw_victim', proof: string) {
   return api<AuthUnlockResponse>('/achievements/event', {
     method: 'POST',
     body: JSON.stringify({ event, proof }),
-  });
+  }, { soft401: true });
 }
 
 export async function recordTerminalCommand(command: string, proof: string) {
   return api<AuthUnlockResponse>('/achievements/terminal-command', {
     method: 'POST',
     body: JSON.stringify({ command, proof }),
-  });
+  }, { soft401: true });
 }
 
 export async function deleteAccount(password: string) {
@@ -263,7 +265,12 @@ export async function adminListUsers(opts: { search?: string; role?: UserRole | 
   if (opts.role) params.set('role', opts.role);
   if (opts.active) params.set('active', opts.active);
   const q = params.toString();
-  return api<{ users: AuthUser[]; total: number }>(`/admin/users${q ? `?${q}` : ''}`);
+  // soft401: admin list/search must not wipe session on flaky 401
+  return api<{ users: AuthUser[]; total: number }>(
+    `/admin/users${q ? `?${q}` : ''}`,
+    undefined,
+    { soft401: true },
+  );
 }
 
 export async function adminCreateUser(input: Record<string, unknown>) {

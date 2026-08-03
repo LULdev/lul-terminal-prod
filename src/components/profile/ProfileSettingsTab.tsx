@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import {
   Eye,
   Gamepad2,
@@ -75,6 +75,7 @@ export function ProfileSettingsTab(props: Props) {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deletePassword, setDeletePassword] = useState('');
   const [deleteBusy, setDeleteBusy] = useState(false);
+  const deleteBusyRef = useRef(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const c = props.customization;
   const setC = (patch: Partial<ProfileCustomization>) => props.onCustomization({ ...c, ...patch });
@@ -347,6 +348,8 @@ export function ProfileSettingsTab(props: Props) {
                 type="button"
                 disabled={deleteBusy || !deletePassword}
                 onClick={async () => {
+                  if (deleteBusyRef.current) return;
+                  deleteBusyRef.current = true;
                   setDeleteBusy(true);
                   setDeleteError(null);
                   try {
@@ -354,6 +357,7 @@ export function ProfileSettingsTab(props: Props) {
                   } catch (e) {
                     setDeleteError(e instanceof Error ? e.message : 'Account deletion failed');
                   } finally {
+                    deleteBusyRef.current = false;
                     setDeleteBusy(false);
                   }
                 }}

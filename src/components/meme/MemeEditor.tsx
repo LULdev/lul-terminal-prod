@@ -311,8 +311,11 @@ export function MemeEditor({ template, onBack, onMemeCreated }: Props) {
     if (announcedTemplateRef.current === template.id) return;
     // Lock before async work so double download/copy cannot double-upload
     announcedTemplateRef.current = template.id;
-    onMemeCreated?.();
-    if (!isLoggedIn) return;
+    if (!isLoggedIn) {
+      // Guest: count once on local export (no upload retry path that would double-fire)
+      onMemeCreated?.();
+      return;
+    }
     try {
       const blob = await getPngBlob();
       if (!blob) {
@@ -327,8 +330,10 @@ export function MemeEditor({ template, onBack, onMemeCreated }: Props) {
         memeImageId: meta.id,
         templateId: template.id,
       });
+      // Firebase count only after successful host write (retry no longer double-increments)
+      onMemeCreated?.();
     } catch {
-      /* shoutbox announce is best-effort — allow retry on failure */
+      /* upload/notify failed — allow retry; Firebase not counted yet */
       announcedTemplateRef.current = null;
     }
   }, [getPngBlob, isLoggedIn, onMemeCreated, template.id, template.name]);

@@ -155,7 +155,9 @@ export function RouletteArena({
       return;
     }
     const spin = Number(reveal.spin);
-    const idx = WHEEL_ORDER.indexOf(spin);
+    if (!Number.isFinite(spin) || !WHEEL_ORDER.includes(spin as typeof WHEEL_ORDER[number])) return;
+    const idx = WHEEL_ORDER.indexOf(spin as typeof WHEEL_ORDER[number]);
+    if (idx < 0) return;
     const slice = 360 / WHEEL_ORDER.length;
     // Extra spins + land selected pocket under the top pointer
     const target = 360 * 5 + (360 - idx * slice);

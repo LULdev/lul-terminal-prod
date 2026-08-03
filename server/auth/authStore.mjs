@@ -93,7 +93,9 @@ export function withUsersWrite(task) {
   usersWriteChain = lockedWork.then(() => undefined, () => undefined);
 
   return lockedWork.then(async () => {
-    const hooks = Array.isArray(ctx.afterUnlock) ? ctx.afterUnlock.splice(0) : [];
+    // Only run afterUnlock when the write task succeeded (avoid jackpot after failed settle)
+    const hooks = !taskError && Array.isArray(ctx.afterUnlock) ? ctx.afterUnlock.splice(0) : [];
+    if (taskError && Array.isArray(ctx.afterUnlock)) ctx.afterUnlock.length = 0;
     for (const fn of hooks) {
       try {
         await fn();

@@ -39,10 +39,12 @@ export function LulCoinDisplay({
   className?: string;
 }) {
   const s = SIZE_STYLES[size];
+  const n = Number(amount);
+  const safe = Number.isFinite(n) ? n : 0;
   return (
     <div
       className={`lul-coin-badge lul-coin-badge--${size} inline-flex items-center ${s.wrap} rounded-2xl ${className}`}
-      title={`${amount.toLocaleString('en-US')} LULcoins`}
+      title={`${safe.toLocaleString('en-US')} LULcoins`}
     >
       <span className="lul-coin-icon-ring">
         <Coins size={s.icon} />
@@ -50,7 +52,7 @@ export function LulCoinDisplay({
       <div className="flex flex-col leading-none relative z-[1]">
         <span className={`lul-coin-label ${s.label}`}>LULcoins</span>
         <span className={`lul-coin-amount lul-coin-amount--balance ${s.value}`}>
-          {amount.toLocaleString('en-US')}
+          {safe.toLocaleString('en-US')}
         </span>
       </div>
     </div>

@@ -40,7 +40,9 @@ export function LulCoinAmount({
   showIcon?: boolean;
   className?: string;
 }) {
-  const formatted = amount.toLocaleString('en-US');
+  const n = Number(amount);
+  const safe = Number.isFinite(n) ? n : 0;
+  const formatted = safe.toLocaleString('en-US');
   const prefixText = prefix ?? AUTO_PREFIX[variant] ?? '';
   const suffixText = suffix === false ? '' : suffix ? ` ${suffix}` : '';
 
@@ -71,10 +73,11 @@ export function LulCoinChip({
   icon?: React.ReactNode;
   className?: string;
 }) {
-  const text = label ?? (amount != null
+  const safeAmt = amount != null && Number.isFinite(Number(amount)) ? Number(amount) : null;
+  const text = label ?? (safeAmt != null
     ? variant === 'bet'
-      ? `${amount.toLocaleString('en-US')} LUL`
-      : amount.toLocaleString('en-US')
+      ? `${safeAmt.toLocaleString('en-US')} LUL`
+      : safeAmt.toLocaleString('en-US')
     : '');
   return (
     <span className={`lul-coin-chip lul-coin-chip--${variant} ${className}`}>

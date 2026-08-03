@@ -23,6 +23,21 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '3.55.1',
+    title: 'Residual audit: jackpot recovery userId+stale, soft401 side-effects, Firebase/meme/coins',
+    date: 'Aug 4, 2026 - 03:50',
+    highlight: true,
+    items: [
+      { priority: 'P1', text: 'P1 — Jackpot boot/live recovery passes pending.userId; stale pending restores pool so jackpots are not frozen forever.' },
+      { priority: 'P1', text: 'P1 — Live jackpot recovery on expiry sweep interval (no restart required).' },
+      { priority: 'P1', text: 'P1 — soft401: referral/me, admin user list, achievement sync/event/terminal-command (no session wipe on side-effects).' },
+      { priority: 'P1', text: 'P1 — Meme Firebase count only after successful upload (retry no double-count); guests count once.' },
+      { priority: 'P1', text: 'P1 — Firebase online re-increments after reconnect (onlineCounted reset on disconnect).' },
+      { priority: 'P2', text: 'P2 — afterUsersWrite hooks only run when write task succeeded; profile delete busyRef; coin UI NaN-safe; roulette spin guards.' },
+      { priority: 'P9', text: 'P9 — Version 3.55.1 residual after 3.55.0 full audit.' },
+    ],
+  },
+  {
     version: '3.55.0',
     title: 'Full Server+Client audit: forfeit/queue escrow, finalize one-shot, admin double-submit',
     date: 'Aug 4, 2026 - 03:30',
