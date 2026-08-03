@@ -80,8 +80,12 @@ async function writeStats(stats) {
 
 let imageWriteChain = Promise.resolve();
 
+/** Process-local chain + cross-process lock (multi-worker meta/stats RMW). */
 function withImageWrite(task) {
-  const run = imageWriteChain.then(() => task());
+  const run = imageWriteChain.then(async () => {
+    const { withCrossProcessLock } = await import('./fileLock.mjs');
+    return withCrossProcessLock('image-host', () => task(), { maxWaitMs: 8000 });
+  });
   imageWriteChain = run.then(() => undefined, () => undefined);
   return run;
 }

@@ -41,6 +41,8 @@ import {
   DAILY_BONUS_COOLDOWN_MS,
   confirmJackpotPayout,
   JACKPOT_CHANCE,
+  jackpotPayoutAmount,
+  jackpotPayoutPendingId,
   MATCH_TIMEOUT_MS,
   MAX_BET,
   MIN_BET,
@@ -418,10 +420,14 @@ async function finalizeMatch(m) {
       }
 
       if (Math.random() < JACKPOT_CHANCE) {
-        jackpotAmount = await payoutJackpot(winner.username, { matchId: m.id, gameId: 'rps' });
+        const jp = await payoutJackpot(winner.username, { matchId: m.id, gameId: 'rps' });
+        jackpotAmount = jackpotPayoutAmount(jp);
         if (jackpotAmount > 0) {
           jackpotHit = true;
-          creditCoins(winner, jackpotAmount, logJackpotCredit, ledgerCtx);
+          creditCoins(winner, jackpotAmount, logJackpotCredit, {
+            ...ledgerCtx,
+            pendingId: jackpotPayoutPendingId(jp),
+          });
           winner.gameJackpotsWon = (Number(winner.gameJackpotsWon) || 0) + 1;
           postBotRpsJackpot({ username: winner.username, amount: jackpotAmount }).catch(() => {});
         }

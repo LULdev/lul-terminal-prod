@@ -78,6 +78,7 @@ export function PasteViewer({ id, embedded = false }: Props) {
   const [error, setError] = useState('');
   const [password, setPassword] = useState('');
   const [unlocking, setUnlocking] = useState(false);
+  const unlockingRef = useRef(false);
   const [viewsReady, setViewsReady] = useState(false);
 
   const [search, setSearch] = useState('');
@@ -219,7 +220,8 @@ export function PasteViewer({ id, embedded = false }: Props) {
 
   const onUnlock = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (unlocking) return;
+    if (unlockingRef.current) return;
+    unlockingRef.current = true;
     setUnlocking(true);
     setError('');
     try {
@@ -242,6 +244,7 @@ export function PasteViewer({ id, embedded = false }: Props) {
         setError(/not found/i.test(msg) ? 'Wrong password or paste not found' : msg);
       }
     } finally {
+      unlockingRef.current = false;
       if (mountedRef.current) setUnlocking(false);
     }
   };

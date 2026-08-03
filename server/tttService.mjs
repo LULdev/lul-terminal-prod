@@ -40,6 +40,8 @@ import {
   appendMatchHistory,
   confirmJackpotPayout,
   JACKPOT_CHANCE,
+  jackpotPayoutAmount,
+  jackpotPayoutPendingId,
   MATCH_TIMEOUT_MS,
   MAX_BET,
   MIN_BET,
@@ -385,10 +387,14 @@ async function finalizeMatch(m, boardState) {
       }
 
       if (Math.random() < JACKPOT_CHANCE) {
-        jackpotAmount = await payoutJackpot(winner.username, { matchId: m.id, gameId: 'ttt' });
+        const jp = await payoutJackpot(winner.username, { matchId: m.id, gameId: 'ttt' });
+        jackpotAmount = jackpotPayoutAmount(jp);
         if (jackpotAmount > 0) {
           jackpotHit = true;
-          creditCoins(winner, jackpotAmount, logJackpotCredit, ledgerCtx);
+          creditCoins(winner, jackpotAmount, logJackpotCredit, {
+            ...ledgerCtx,
+            pendingId: jackpotPayoutPendingId(jp),
+          });
           winner.gameJackpotsWon = (Number(winner.gameJackpotsWon) || 0) + 1;
           postBotArcadeJackpot({ username: winner.username, amount: jackpotAmount }).catch(() => {});
         }

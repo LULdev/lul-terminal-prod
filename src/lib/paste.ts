@@ -162,14 +162,17 @@ export async function fetchPublicPastes(limit = 30): Promise<PasteMeta[]> {
 }
 
 export async function fetchMyPastes(sort: PasteSort = 'newest'): Promise<PasteMeta[]> {
-  const res = await sessionFetch(`${API}/my?sort=${sort}`);
+  // soft401: gallery poll must not global-logout on flaky 401
+  const res = await sessionFetch(`${API}/my?sort=${sort}`, undefined, { soft401: true });
+  if (res.status === 401) throw new Error('Sign in required');
   if (!res.ok) throw new Error(await parseError(res));
   const data = await res.json();
   return data.pastes ?? [];
 }
 
 export async function fetchMyPasteStats(): Promise<MyPasteStats> {
-  const res = await sessionFetch(`${API}/my/stats`);
+  const res = await sessionFetch(`${API}/my/stats`, undefined, { soft401: true });
+  if (res.status === 401) throw new Error('Sign in required');
   if (!res.ok) throw new Error(await parseError(res));
   return res.json();
 }

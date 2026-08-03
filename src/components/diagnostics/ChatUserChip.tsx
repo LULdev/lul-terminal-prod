@@ -86,6 +86,7 @@ export function ChatUserChip({
   const { isLoggedIn, isAdmin, openAuth, refresh } = useAuth();
   const [menu, setMenu] = useState<ContextMenuState | null>(null);
   const [acting, setActing] = useState(false);
+  const actingRef = useRef(false);
   const chipRef = useRef<HTMLButtonElement>(null);
   const mountedRef = useRef(true);
 
@@ -120,7 +121,8 @@ export function ChatUserChip({
   }, [requireLogin, user.username]);
 
   const pingAndSend = useCallback(async () => {
-    if (!requireLogin()) return;
+    if (!requireLogin() || actingRef.current) return;
+    actingRef.current = true;
     setActing(true);
     try {
       const result = await sendShoutboxCommand(`/ping ${user.username}`);
@@ -132,6 +134,7 @@ export function ChatUserChip({
         terminalAppend(`❌ Ping failed: ${result.error}`, 'warn');
       }
     } finally {
+      actingRef.current = false;
       if (mountedRef.current) setActing(false);
     }
   }, [requireLogin, user.username, refresh, openAuth]);
@@ -140,7 +143,8 @@ export function ChatUserChip({
     action: 'ban' | 'unban' | 'mute' | 'unmute',
     minutes?: number,
   ) => {
-    if (!isAdmin) return;
+    if (!isAdmin || actingRef.current) return;
+    actingRef.current = true;
     setActing(true);
     try {
       if (modViaApi) {
@@ -166,6 +170,7 @@ export function ChatUserChip({
       }
       terminalAppend(`❌ Mod action failed: ${e instanceof Error ? e.message : 'error'}`, 'warn');
     } finally {
+      actingRef.current = false;
       if (mountedRef.current) setActing(false);
     }
   }, [isAdmin, modViaApi, user.username, refresh, openAuth]);
@@ -173,7 +178,8 @@ export function ChatUserChip({
   const closeMenu = useCallback(() => setMenu(null), []);
 
   const deleteMessage = useCallback(async () => {
-    if (!isAdmin || !messageId) return;
+    if (!isAdmin || !messageId || actingRef.current) return;
+    actingRef.current = true;
     setActing(true);
     try {
       await adminDeleteShoutboxMessage(messageId);
@@ -186,6 +192,7 @@ export function ChatUserChip({
       }
       terminalAppend(`❌ Delete failed: ${e instanceof Error ? e.message : 'error'}`, 'warn');
     } finally {
+      actingRef.current = false;
       if (mountedRef.current) setActing(false);
     }
   }, [isAdmin, messageId, onMessageDeleted, refresh, openAuth]);

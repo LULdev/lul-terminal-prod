@@ -67,6 +67,7 @@ export function MyImageGallery({ refreshKey = 0, onSelectImage }: MyImageGallery
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [detail, setDetail] = useState<HostedImageMeta | null>(null);
   const [busy, setBusy] = useState(false);
+  const busyRef = useRef(false);
   const loadGenRef = useRef(0);
   const mountedRef = useRef(true);
 
@@ -138,7 +139,9 @@ export function MyImageGallery({ refreshKey = 0, onSelectImage }: MyImageGallery
   };
 
   const handleDelete = async (id: string) => {
+    if (busyRef.current) return;
     if (!confirm('Really delete image? Link will stop working.')) return;
+    busyRef.current = true;
     setBusy(true);
     try {
       await deleteHostedImage(id);
@@ -149,13 +152,15 @@ export function MyImageGallery({ refreshKey = 0, onSelectImage }: MyImageGallery
     } catch (e) {
       alert(e instanceof Error ? e.message : 'Delete failed');
     } finally {
+      busyRef.current = false;
       setBusy(false);
     }
   };
 
   const handleBulkDelete = async () => {
-    if (!selected.size) return;
+    if (busyRef.current || !selected.size) return;
     if (!confirm(`Delete ${selected.size} images?`)) return;
+    busyRef.current = true;
     setBusy(true);
     try {
       await Promise.all([...selected].map((id) => deleteHostedImage(id)));
@@ -165,6 +170,7 @@ export function MyImageGallery({ refreshKey = 0, onSelectImage }: MyImageGallery
     } catch (e) {
       alert(e instanceof Error ? e.message : 'Bulk delete failed');
     } finally {
+      busyRef.current = false;
       setBusy(false);
     }
   };

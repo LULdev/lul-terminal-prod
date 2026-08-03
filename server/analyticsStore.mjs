@@ -68,7 +68,10 @@ async function writeJson(file, data) {
 let analyticsWriteChain = Promise.resolve();
 
 export function withAnalyticsWrite(task) {
-  const run = analyticsWriteChain.then(() => task());
+  const run = analyticsWriteChain.then(async () => {
+    const { withCrossProcessLock } = await import('./fileLock.mjs');
+    return withCrossProcessLock('analytics', () => task(), { maxWaitMs: 8000 });
+  });
   analyticsWriteChain = run.then(() => undefined, () => undefined);
   return run;
 }

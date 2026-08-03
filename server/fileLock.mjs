@@ -4,6 +4,7 @@
  *
  * Cross-process file lock via exclusive create (wx). Safe for PM2/cluster on one host.
  * Owner token prevents stale reclaim from unlinking a newer holder's lock.
+ * Reclaim only when mtime is stale AND holder PID is dead (or token unreadable).
  */
 
 import crypto from 'crypto';
@@ -21,6 +22,18 @@ function lockFilePath(key) {
 
 /** Stale lock reclaim threshold (crashed holder). */
 const STALE_LOCK_MS = 20_000;
+
+/** True if OS reports the process exists (signal 0). */
+function isPidAlive(pid) {
+  const n = Number(pid);
+  if (!Number.isFinite(n) || n <= 0) return false;
+  try {
+    process.kill(n, 0);
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 /**
  * Run task while holding an exclusive cross-process lock for key.
@@ -41,15 +54,35 @@ export async function withCrossProcessLock(key, task, { maxWaitMs = 4000 } = {})
       handle = await fs.open(lockPath, 'wx');
       break;
     } catch {
-      // Reclaim only when mtime is stale AND content token is readable as dead
       try {
         const st = await fs.stat(lockPath);
         if (Date.now() - st.mtimeMs > STALE_LOCK_MS) {
-          // Race-safe reclaim: only unlink if we re-read stale mtime after a short wait
-          await new Promise((r) => setTimeout(r, 5 + Math.floor(Math.random() * 15)));
-          const st2 = await fs.stat(lockPath).catch(() => null);
-          if (st2 && Date.now() - st2.mtimeMs > STALE_LOCK_MS) {
-            await fs.unlink(lockPath).catch(() => {});
+          let holderAlive = false;
+          try {
+            const raw = await fs.readFile(lockPath, 'utf8');
+            const parsed = JSON.parse(raw);
+            // Live PID must not be reclaimed even if mtime lagged (heartbeat glitch)
+            if (parsed?.pid && isPidAlive(parsed.pid)) {
+              holderAlive = true;
+            }
+          } catch {
+            // unreadable token — allow reclaim after second stale check
+          }
+          if (!holderAlive) {
+            await new Promise((r) => setTimeout(r, 5 + Math.floor(Math.random() * 15)));
+            const st2 = await fs.stat(lockPath).catch(() => null);
+            if (st2 && Date.now() - st2.mtimeMs > STALE_LOCK_MS) {
+              // Re-check PID after wait
+              let stillAlive = false;
+              try {
+                const raw2 = await fs.readFile(lockPath, 'utf8');
+                const p2 = JSON.parse(raw2);
+                if (p2?.pid && isPidAlive(p2.pid)) stillAlive = true;
+              } catch { /* unreadable */ }
+              if (!stillAlive) {
+                await fs.unlink(lockPath).catch(() => {});
+              }
+            }
           }
           continue;
         }
@@ -60,19 +93,16 @@ export async function withCrossProcessLock(key, task, { maxWaitMs = 4000 } = {})
 
   if (!handle) throw new Error('File lock timeout');
 
-  // Heartbeat: refresh mtime so long holders are not reclaimed as "stale"
   let heartbeat = null;
   try {
     await handle.writeFile(JSON.stringify({ pid: process.pid, token, at: Date.now() }), 'utf8').catch(() => {});
     heartbeat = setInterval(() => {
-      // Re-write token + touch mtime so reclaim sees live ownership
       fs.writeFile(lockPath, JSON.stringify({ pid: process.pid, token, at: Date.now() }), 'utf8').catch(() => {});
     }, Math.max(2000, Math.floor(STALE_LOCK_MS / 3)));
     if (typeof heartbeat.unref === 'function') heartbeat.unref();
     return await task();
   } finally {
     if (heartbeat) clearInterval(heartbeat);
-    // Only unlink if we still own the lock (token match) — never delete a reclaimer's lock
     try {
       const raw = await fs.readFile(lockPath, 'utf8');
       const parsed = JSON.parse(raw);

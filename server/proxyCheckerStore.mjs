@@ -27,7 +27,10 @@ const EMPTY_RESULTS = { checked: [], summary: null, checkedAt: null };
 let checkerWriteChain = Promise.resolve();
 
 export function withProxyCheckerWrite(task) {
-  const run = checkerWriteChain.then(() => task());
+  const run = checkerWriteChain.then(async () => {
+    const { withCrossProcessLock } = await import('./fileLock.mjs');
+    return withCrossProcessLock('proxy-checker', () => task(), { maxWaitMs: 10_000 });
+  });
   checkerWriteChain = run.then(() => undefined, () => undefined);
   return run;
 }

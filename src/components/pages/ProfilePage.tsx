@@ -549,8 +549,9 @@ export function ProfilePage({ routeUsername, profileTabReadyTick = 0, onNavigate
                   await authApi.deleteAccount(password);
                   const ok = await logout();
                   if (!ok) {
-                    const { invalidateSession } = await import('../../lib/sessionEvents');
-                    invalidateSession();
+                    const { getSessionEpoch, invalidateSession } = await import('../../lib/sessionEvents');
+                    // Epoch-gated so a concurrent re-login cannot be wiped
+                    invalidateSession({ epoch: getSessionEpoch() });
                   }
                 }}
               />

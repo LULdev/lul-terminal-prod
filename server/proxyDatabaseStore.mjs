@@ -35,7 +35,10 @@ async function fileExists(file) {
 }
 
 export function withProxyDbWrite(task) {
-  const run = proxyDbWriteChain.then(() => task());
+  const run = proxyDbWriteChain.then(async () => {
+    const { withCrossProcessLock } = await import('./fileLock.mjs');
+    return withCrossProcessLock('proxy-database', () => task(), { maxWaitMs: 10_000 });
+  });
   proxyDbWriteChain = run.then(() => undefined, () => undefined);
   return run;
 }

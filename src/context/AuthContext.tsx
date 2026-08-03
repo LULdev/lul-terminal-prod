@@ -12,7 +12,12 @@ import { clearStoredReferralCode } from '../lib/referral';
 import { clearAchievementProofs } from '../lib/achievementProof';
 import { closeChatAudioContext } from '../lib/chat';
 import { clearViewDedupSessionKeys } from '../lib/viewDedup';
-import { bumpSessionEpoch, onSessionInvalidated, resetSessionInvalidation } from '../lib/sessionEvents';
+import {
+  bumpSessionEpoch,
+  getSessionEpoch,
+  onSessionInvalidated,
+  resetSessionInvalidation,
+} from '../lib/sessionEvents';
 import type { TabId } from '../config/menuItems';
 
 type AuthMode = 'login' | 'register' | null;
@@ -206,12 +211,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     return onSessionInvalidated(() => {
       refreshGenRef.current += 1;
+      // invalidateSession already bumped epoch — abort async leave/logout if user re-logins
+      const epochAtInvalidation = getSessionEpoch();
       // Leave queues BEFORE logout so the cookie is still valid (order matches explicit logout)
       void (async () => {
+        if (getSessionEpoch() !== epochAtInvalidation) return;
         try {
           const m = await import('../lib/arcadeCleanup');
           await m.leaveAllArcadeQueuesBestEffort();
         } catch { /* best-effort */ }
+        if (getSessionEpoch() !== epochAtInvalidation) return;
         try {
           await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
         } catch { /* best-effort */ }

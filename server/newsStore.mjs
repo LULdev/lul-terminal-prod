@@ -126,7 +126,10 @@ async function writeDb(db) {
 let newsWriteChain = Promise.resolve();
 
 function withNewsWrite(task) {
-  const run = newsWriteChain.then(() => task());
+  const run = newsWriteChain.then(async () => {
+    const { withCrossProcessLock } = await import('./fileLock.mjs');
+    return withCrossProcessLock('news-feed', () => task(), { maxWaitMs: 8000 });
+  });
   newsWriteChain = run.then(() => undefined, () => undefined);
   return run;
 }

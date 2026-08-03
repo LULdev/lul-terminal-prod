@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Check, Copy, Gift, Link2, LogIn, Share2, UserPlus, Users } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import * as authApi from '../../lib/auth';
@@ -18,16 +18,30 @@ export function InviteFriendsPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [copied, setCopied] = useState<'link' | 'code' | null>(null);
+  const mountedRef = useRef(true);
+  const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const loadGenRef = useRef(0);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      if (copyTimerRef.current != null) clearTimeout(copyTimerRef.current);
+    };
+  }, []);
 
   const loadReferral = useCallback(async () => {
+    const gen = ++loadGenRef.current;
     setLoading(true);
     setError('');
     try {
       const info = await authApi.fetchReferralInfo();
+      if (gen !== loadGenRef.current || !mountedRef.current) return;
       setInviteUrl(info.inviteUrl || buildClientInviteUrl(info.referralCode));
       setReferralCode(info.referralCode);
       setReferralsCount(info.referralsCount);
     } catch (e) {
+      if (gen !== loadGenRef.current || !mountedRef.current) return;
       const code = user?.referralCode ?? '';
       if (code) {
         setReferralCode(code);
@@ -37,21 +51,26 @@ export function InviteFriendsPage() {
         setError(e instanceof Error ? e.message : 'Invite data unavailable');
       }
     } finally {
-      setLoading(false);
+      if (gen === loadGenRef.current && mountedRef.current) setLoading(false);
     }
   }, [user?.referralCode, user?.referralsCount]);
 
   useEffect(() => {
-    if (isLoggedIn) loadReferral();
+    if (isLoggedIn) void loadReferral();
   }, [isLoggedIn, loadReferral]);
 
   const copyText = async (text: string, kind: 'link' | 'code') => {
     try {
       await navigator.clipboard.writeText(text);
+      if (!mountedRef.current) return;
       setCopied(kind);
-      setTimeout(() => setCopied(null), 2000);
+      if (copyTimerRef.current != null) clearTimeout(copyTimerRef.current);
+      copyTimerRef.current = setTimeout(() => {
+        if (mountedRef.current) setCopied(null);
+        copyTimerRef.current = null;
+      }, 2000);
     } catch {
-      setError('Copy failed — select text manually');
+      if (mountedRef.current) setError('Copy failed — select text manually');
     }
   };
 

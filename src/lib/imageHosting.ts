@@ -302,14 +302,17 @@ export function pollImageMeta(
 
 export async function fetchMyGallery(sort: GallerySort = 'newest'): Promise<MyGalleryResponse> {
   const q = new URLSearchParams({ sort });
-  const res = await sessionFetch(`${API}/my?${q}`);
+  // soft401: poll must not wipe global session on flaky/stale 401
+  const res = await sessionFetch(`${API}/my?${q}`, undefined, { soft401: true });
+  if (res.status === 401) throw new Error('Sign in required');
   if (res.status === 429) throw new Error('Too many requests — gallery will retry shortly');
   if (!res.ok) throw new Error('Gallery unavailable');
   return res.json() as Promise<MyGalleryResponse>;
 }
 
 export async function fetchMyGalleryStats(): Promise<MyGalleryStats> {
-  const res = await sessionFetch(`${API}/my/stats`);
+  const res = await sessionFetch(`${API}/my/stats`, undefined, { soft401: true });
+  if (res.status === 401) throw new Error('Sign in required');
   if (res.status === 429) throw new Error('Too many requests — gallery will retry shortly');
   if (!res.ok) throw new Error('Gallery stats unavailable');
   return res.json() as Promise<MyGalleryStats>;

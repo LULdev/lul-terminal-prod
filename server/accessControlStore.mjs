@@ -111,7 +111,10 @@ export async function loadAccessControl() {
 let accessControlWriteChain = Promise.resolve();
 
 function withAccessControlWrite(task) {
-  const run = accessControlWriteChain.then(() => task());
+  const run = accessControlWriteChain.then(async () => {
+    const { withCrossProcessLock } = await import('./fileLock.mjs');
+    return withCrossProcessLock('access-control', () => task(), { maxWaitMs: 6000 });
+  });
   accessControlWriteChain = run.then(() => undefined, () => undefined);
   return run;
 }

@@ -62,6 +62,7 @@ export function MyPasteGallery({ refreshKey = 0, onDeleted, onFork }: Props) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [deleting, setDeleting] = useState<string | null>(null);
+  const deletingRef = useRef(false);
   const [search, setSearch] = useState('');
   const [sort, setSort] = useState<PasteSort>('newest');
   const [visFilter, setVisFilter] = useState<string>('all');
@@ -122,8 +123,9 @@ export function MyPasteGallery({ refreshKey = 0, onDeleted, onFork }: Props) {
   }, [pastes, search, visFilter, pinnedOnly]);
 
   const onDelete = async (id: string) => {
-    if (deleting) return;
+    if (deletingRef.current) return;
     if (!confirm('Delete this paste permanently?')) return;
+    deletingRef.current = true;
     setDeleting(id);
     try {
       await deletePaste(id);
@@ -133,6 +135,7 @@ export function MyPasteGallery({ refreshKey = 0, onDeleted, onFork }: Props) {
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Delete failed');
     } finally {
+      deletingRef.current = false;
       setDeleting(null);
     }
   };

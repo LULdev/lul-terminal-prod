@@ -114,7 +114,10 @@ async function saveEmotesDb(db) {
 let emotesWriteChain = Promise.resolve();
 
 export function withEmotesWrite(task) {
-  const run = emotesWriteChain.then(() => task());
+  const run = emotesWriteChain.then(async () => {
+    const { withCrossProcessLock } = await import('./fileLock.mjs');
+    return withCrossProcessLock('chat-emotes', () => task(), { maxWaitMs: 8000 });
+  });
   emotesWriteChain = run.then(() => undefined, () => undefined);
   return run;
 }

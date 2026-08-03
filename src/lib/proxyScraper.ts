@@ -241,7 +241,8 @@ export async function pollJob(
     const tick = async () => {
       if (document.hidden || options?.signal?.aborted) return;
       try {
-        const res = await sessionFetch(`${API}/jobs/${jobId}`);
+        // soft401: mid-job poll must not wipe global session
+        const res = await sessionFetch(`${API}/jobs/${jobId}`, undefined, { soft401: true });
         if (!res.ok) {
           if (res.status === 401 || res.status === 403) throw new Error('Admin session required');
           throw new Error('Job not found');

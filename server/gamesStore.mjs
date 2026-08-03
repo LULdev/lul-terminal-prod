@@ -129,6 +129,10 @@ export async function addToJackpot(amount) {
  * so a crash between drain and user-balance save can recover on boot
  * (re-credit winner if needed, never lose the amount silently).
  */
+/**
+ * Drain jackpot. Returns { amount, pendingId } so callers can stamp ledger.meta.pendingId
+ * for exact boot-recovery matching. amount=0 / pendingId=null on miss or deferred.
+ */
 export async function payoutJackpot(winner, meta = {}) {
   return withGamesAuxWrite(async () => {
     // Never overwrite an unconfirmed pending payout (would lose the prior winner's amount)
@@ -138,13 +142,13 @@ export async function payoutJackpot(winner, meta = {}) {
         pendingWinner: existingPending.winner,
         pendingAmount: existingPending.amount,
       });
-      return 0;
+      return { amount: 0, pendingId: null };
     }
     const db = await readJackpotFromDisk();
     const amount = Math.max(0, Math.floor(Number(db.pool) || 0));
     // Empty pool is a miss — do not bump hits / lastWinner
     if (amount <= 0) {
-      return 0;
+      return { amount: 0, pendingId: null };
     }
     const pending = {
       id: crypto.randomBytes(6).toString('hex'),
@@ -153,7 +157,6 @@ export async function payoutJackpot(winner, meta = {}) {
       matchId: meta.matchId ? String(meta.matchId).slice(0, 32) : null,
       gameId: meta.gameId ? String(meta.gameId).slice(0, 32) : null,
       at: Date.now(),
-      // user credit is applied by caller under coin lock; cleared after saveUsersDb
       userCredited: false,
     };
     await atomicWriteJson(JACKPOT_PENDING_FILE, pending);
@@ -163,8 +166,20 @@ export async function payoutJackpot(winner, meta = {}) {
     db.lastWinner = winner;
     db.lastWonAt = Date.now();
     await saveJackpot(db);
-    return amount;
+    return { amount, pendingId: pending.id };
   });
+}
+
+/** Normalize payoutJackpot result (object or legacy number). */
+export function jackpotPayoutAmount(result) {
+  if (result == null) return 0;
+  if (typeof result === 'number') return Math.max(0, Math.floor(result) || 0);
+  return Math.max(0, Math.floor(Number(result.amount) || 0));
+}
+
+export function jackpotPayoutPendingId(result) {
+  if (result == null || typeof result === 'number') return null;
+  return result.pendingId ? String(result.pendingId) : null;
 }
 
 /** Call after user coins for the jackpot were durably saved. */

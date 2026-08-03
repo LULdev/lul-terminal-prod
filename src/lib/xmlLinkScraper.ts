@@ -253,7 +253,9 @@ export async function pollCrawlJob(
     const tick = async () => {
       if (document.hidden || options?.signal?.aborted) return;
       try {
-        const res = await sessionFetch(`/api/xml-scraper/jobs/${jobId}`);
+        // soft401: mid-job poll must not wipe global session
+        const res = await sessionFetch(`/api/xml-scraper/jobs/${jobId}`, undefined, { soft401: true });
+        if (res.status === 401 || res.status === 403) throw new Error('Admin session required');
         if (!res.ok) throw new Error('Job not found');
         const job = (await res.json()) as CrawlJob;
         onUpdate(job);

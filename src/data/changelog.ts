@@ -23,6 +23,25 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '3.51.0',
+    title: '25-round full system audit (Server+Client P0–P9): locks, jackpot id, soft401 polls, double-submit',
+    date: 'Aug 3, 2026 - 23:55',
+    highlight: true,
+    items: [
+      { priority: 'P0', text: 'P0 — Session invalidation async leave/logout aborts if sessionEpoch advances (re-login no longer wiped by in-flight logout).' },
+      { priority: 'P0', text: 'P0 — Jackpot payout returns {amount,pendingId}; settle/RPS/TTT stamp ledger.meta.pendingId for exact boot recovery.' },
+      { priority: 'P1', text: 'P1 — Gallery + paste-my + proxy/xml job polls use soft401 (no global logout mid-poll).' },
+      { priority: 'P1', text: 'P1 — releaseAnyGameEscrow refuses multi-game cross-steal; preferGameId on expire refund path.' },
+      { priority: 'P1', text: 'P1 — File lock reclaim only if mtime stale AND holder PID dead (no dual-writer on stalled heartbeat).' },
+      { priority: 'P2', text: 'P2 — Cross-process locks: image-host, chat-lobby, news, analytics, access-control, leaderboard, emotes, proxy-db/scraper/checker.' },
+      { priority: 'P2', text: 'P2 — safeFetch response body capped (SAFE_FETCH_MAX_BYTES default 10MB) against OOM DoS.' },
+      { priority: 'P2', text: 'P2 — ChatUserChip mod/ping/delete actingRef; UserBar logoutRef; Paste unlock/delete refs; image gallery busyRef.' },
+      { priority: 'P3', text: 'P3 — VaultPasswordReveal mounted + copy timer cleanup; InviteFriends gen/mounted guards; usePasteStats no double mount fetch.' },
+      { priority: 'P3', text: 'P3 — Profile account-delete force invalidate is epoch-gated.' },
+      { priority: 'P9', text: 'P9 — Version 3.51.0; every fix documented in this changelog entry.' },
+    ],
+  },
+  {
     version: '3.50.0',
     title: '10-round full audit R1–R10: session epoch, jackpot, burn-paste, multi-worker, client races',
     date: 'Aug 3, 2026 - 23:30',

@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import { BarChart3, Home, LogIn, LogOut, Settings, Shield, Sparkles, Trophy, UserPlus } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { LOGOUT_ARCADE_BLOCKED } from '../../lib/authMessages';
@@ -53,6 +53,7 @@ export function UserBar({ onNavigate }: UserBarProps) {
   const { user, isLoggedIn, isAdmin, openAuth, logout, loading } = useAuth();
   const [logoutError, setLogoutError] = useState('');
   const [busyLogout, setBusyLogout] = useState(false);
+  const logoutRef = useRef(false);
 
   const hallOfFame = useMemo(() => {
     const earned = user?.achievements ?? [];
@@ -135,12 +136,15 @@ export function UserBar({ onNavigate }: UserBarProps) {
   };
 
   const handleLogout = async () => {
+    if (logoutRef.current) return;
+    logoutRef.current = true;
     setLogoutError('');
     setBusyLogout(true);
     try {
       const ok = await logout();
       if (!ok) setLogoutError(LOGOUT_ARCADE_BLOCKED);
     } finally {
+      logoutRef.current = false;
       setBusyLogout(false);
     }
   };

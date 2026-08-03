@@ -28,6 +28,8 @@ import {
   MAX_BET,
   MIN_BET,
   confirmJackpotPayout,
+  jackpotPayoutAmount,
+  jackpotPayoutPendingId,
   payoutJackpot,
   STARTING_LULCOINS,
   STREAK_BONUS_CAP,
@@ -103,7 +105,7 @@ function refundBetOnExpire(user, { gameId, chatLabel, matchId, bet, amount }, { 
   const base = { gameId, chatLabel, matchId, bet, amount: amt };
   const released =
     releaseGameEscrow(user, { gameId, amount: amt }) ||
-    releaseAnyGameEscrow(user, amt);
+    releaseAnyGameEscrow(user, amt, { preferGameId: gameId });
   if (released) {
     logMatchExpireRefund(user, base);
     return;
@@ -446,10 +448,15 @@ export async function settleMatch({
       }
       // Same jackpot spice as PvP wins (only count when pool actually pays)
       if (Math.random() < JACKPOT_CHANCE) {
-        jackpotAmount = await payoutJackpot(p1.username, { matchId: m.id, gameId });
+        const jp = await payoutJackpot(p1.username, { matchId: m.id, gameId });
+        jackpotAmount = jackpotPayoutAmount(jp);
         if (jackpotAmount > 0) {
           jackpotHit = true;
-          logJackpotCredit(p1, { ...ledgerCtx, amount: jackpotAmount });
+          logJackpotCredit(p1, {
+            ...ledgerCtx,
+            amount: jackpotAmount,
+            pendingId: jackpotPayoutPendingId(jp),
+          });
           p1.gameJackpotsWon = (Number(p1.gameJackpotsWon) || 0) + 1;
           postBotArcadeJackpot({ username: p1.username, amount: jackpotAmount }).catch(() => {});
         }
@@ -483,10 +490,15 @@ export async function settleMatch({
         winner.gameTotalWon = (Number(winner.gameTotalWon) || 0) + streakBonus;
       }
       if (Math.random() < JACKPOT_CHANCE) {
-        jackpotAmount = await payoutJackpot(winner.username, { matchId: m.id, gameId });
+        const jp = await payoutJackpot(winner.username, { matchId: m.id, gameId });
+        jackpotAmount = jackpotPayoutAmount(jp);
         if (jackpotAmount > 0) {
           jackpotHit = true;
-          logJackpotCredit(winner, { ...ledgerCtx, amount: jackpotAmount });
+          logJackpotCredit(winner, {
+            ...ledgerCtx,
+            amount: jackpotAmount,
+            pendingId: jackpotPayoutPendingId(jp),
+          });
           winner.gameJackpotsWon = (Number(winner.gameJackpotsWon) || 0) + 1;
           postBotArcadeJackpot({ username: winner.username, amount: jackpotAmount }).catch(() => {});
         }

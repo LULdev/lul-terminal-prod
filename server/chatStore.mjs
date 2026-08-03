@@ -55,9 +55,12 @@ export async function loadLobbyDb() {
 
 let lobbyWriteChain = Promise.resolve();
 
-/** Serialize lobby read-modify-write to avoid concurrent POST races. */
+/** Serialize lobby RMW + cross-process lock (multi-worker). */
 export function withLobbyWrite(task) {
-  const run = lobbyWriteChain.then(() => task());
+  const run = lobbyWriteChain.then(async () => {
+    const { withCrossProcessLock } = await import('./fileLock.mjs');
+    return withCrossProcessLock('chat-lobby', () => task(), { maxWaitMs: 8000 });
+  });
   lobbyWriteChain = run.then(() => undefined, () => undefined);
   return run;
 }

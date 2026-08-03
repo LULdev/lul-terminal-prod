@@ -34,7 +34,10 @@ const EMPTY_CUSTOM = { proxies: [], updatedAt: null };
 let scraperWriteChain = Promise.resolve();
 
 export function withProxyScraperWrite(task) {
-  const run = scraperWriteChain.then(() => task());
+  const run = scraperWriteChain.then(async () => {
+    const { withCrossProcessLock } = await import('./fileLock.mjs');
+    return withCrossProcessLock('proxy-scraper', () => task(), { maxWaitMs: 10_000 });
+  });
   scraperWriteChain = run.then(() => undefined, () => undefined);
   return run;
 }

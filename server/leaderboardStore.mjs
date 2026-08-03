@@ -15,7 +15,10 @@ export const SYNC_INTERVAL_MS = 5 * 60 * 1000;
 let syncWriteChain = Promise.resolve();
 
 export function withLeaderboardWrite(task) {
-  const run = syncWriteChain.then(() => task());
+  const run = syncWriteChain.then(async () => {
+    const { withCrossProcessLock } = await import('./fileLock.mjs');
+    return withCrossProcessLock('leaderboard-sync', () => task(), { maxWaitMs: 8000 });
+  });
   syncWriteChain = run.then(() => undefined, () => undefined);
   return run;
 }

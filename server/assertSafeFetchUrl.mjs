@@ -189,7 +189,17 @@ function pinnedRequest(parsed, address, family, { method, headers, body, signal,
       },
       (res) => {
         const chunks = [];
-        res.on('data', (c) => chunks.push(c));
+        let total = 0;
+        const maxBytes = Number(process.env.SAFE_FETCH_MAX_BYTES) || 10 * 1024 * 1024;
+        res.on('data', (c) => {
+          total += c.length;
+          if (total > maxBytes) {
+            req.destroy(new Error('Response too large'));
+            reject(new Error('Response too large'));
+            return;
+          }
+          chunks.push(c);
+        });
         res.on('end', () => {
           const buf = Buffer.concat(chunks);
           // Minimal Response-like object compatible with callers expecting fetch Response

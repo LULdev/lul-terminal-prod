@@ -82,14 +82,30 @@ export function oldestGameEscrowAmount(user, gameId) {
   return Math.floor(Number(rows[0].amount) || 0);
 }
 
-/** Fallback when gameId mismatches but escrow row exists (expire/sweep recovery). */
-export function releaseAnyGameEscrow(user, amount) {
+/**
+ * Fallback when gameId mismatches but escrow row exists (expire/sweep recovery).
+ * @param {{ preferGameId?: string }} [opts] — try this game first; refuse multi-game cross-steal.
+ */
+export function releaseAnyGameEscrow(user, amount, opts = {}) {
   if (!user?.gameEscrows?.length) return false;
   const amt = Math.floor(Number(amount) || 0);
   if (amt <= 0) return false;
+  const prefer = opts.preferGameId ?? opts.gameId ?? null;
+  if (prefer && releaseGameEscrow(user, { gameId: prefer, amount: amt })) {
+    return true;
+  }
+  // Refuse cross-game when multiple gameIds present (would steal another stake)
+  const gameIds = new Set(user.gameEscrows.map((e) => e.gameId ?? 'arcade'));
+  if (gameIds.size > 1) {
+    console.warn('[games] releaseAnyGameEscrow refused — multi-game escrows present', {
+      games: [...gameIds],
+      amount: amt,
+    });
+    return false;
+  }
   const candidates = user.gameEscrows
     .map((e, i) => ({ e, i }))
-    .filter(({ e }) => e.amount >= amt);
+    .filter(({ e }) => Math.floor(Number(e.amount) || 0) >= amt);
   if (!candidates.length) return false;
   candidates.sort((a, b) => (a.e.at ?? 0) - (b.e.at ?? 0));
   return releaseEscrowAt(user, candidates[0].i, amt);

@@ -30,8 +30,7 @@ export function usePasteStats() {
     } catch { /* ignore */ }
   }, []);
 
-  useEffect(() => { void load(); }, [load]);
-
+  // Poll hook runs immediately when visible — avoid double mount fetch
   useVisibilityAwarePoll(load, 8000);
 
   return { pastesCreated, pasteViewsTotal, activePastes };

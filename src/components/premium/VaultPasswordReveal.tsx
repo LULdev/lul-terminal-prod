@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
 import { revealVaultPassword } from '../../lib/premiumAccounts';
 
@@ -21,6 +21,16 @@ export function VaultPasswordReveal({ accountId, hasPassword = true, initialPass
   const [error, setError] = useState('');
   const [copied, setCopied] = useState(false);
   const loadingRef = useRef(false);
+  const mountedRef = useRef(true);
+  const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      if (copyTimerRef.current != null) clearTimeout(copyTimerRef.current);
+    };
+  }, []);
 
   const reveal = useCallback(async () => {
     if (loadingRef.current) return;
@@ -34,13 +44,14 @@ export function VaultPasswordReveal({ accountId, hasPassword = true, initialPass
     setError('');
     try {
       const pw = await revealVaultPassword(accountId);
+      if (!mountedRef.current) return;
       setPassword(pw);
       setRevealed(true);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Reveal failed');
+      if (mountedRef.current) setError(e instanceof Error ? e.message : 'Reveal failed');
     } finally {
       loadingRef.current = false;
-      setLoading(false);
+      if (mountedRef.current) setLoading(false);
     }
   }, [accountId, hasPassword, password, revealed]);
 
@@ -51,8 +62,13 @@ export function VaultPasswordReveal({ accountId, hasPassword = true, initialPass
     }
     try {
       await navigator.clipboard.writeText(password);
+      if (!mountedRef.current) return;
       setCopied(true);
-      setTimeout(() => setCopied(false), 1800);
+      if (copyTimerRef.current != null) clearTimeout(copyTimerRef.current);
+      copyTimerRef.current = setTimeout(() => {
+        if (mountedRef.current) setCopied(false);
+        copyTimerRef.current = null;
+      }, 1800);
     } catch { /* ignore */ }
   };
 
