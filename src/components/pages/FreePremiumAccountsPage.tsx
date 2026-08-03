@@ -274,7 +274,7 @@ const PremiumAccountCard: React.FC<{
   }, [account.id]);
 
   const submitReport = async () => {
-    if (!canReport || isOwnSubmission) return;
+    if (!canReport || isOwnSubmission || reporting) return;
     setReporting(true);
     setReportError('');
     setReportMsg('');

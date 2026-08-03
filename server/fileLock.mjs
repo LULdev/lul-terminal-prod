@@ -53,11 +53,17 @@ export async function withCrossProcessLock(key, task, { maxWaitMs = 4000 } = {})
 
   if (!handle) throw new Error('File lock timeout');
 
+  // Heartbeat: refresh mtime so long holders are not reclaimed as "stale"
+  let heartbeat = null;
   try {
-    // Stamp lock content for operators
     await handle.writeFile(JSON.stringify({ pid: process.pid, at: Date.now() }), 'utf8').catch(() => {});
+    heartbeat = setInterval(() => {
+      fs.utimes(lockPath, new Date(), new Date()).catch(() => {});
+    }, Math.max(2000, Math.floor(STALE_LOCK_MS / 3)));
+    if (typeof heartbeat.unref === 'function') heartbeat.unref();
     return await task();
   } finally {
+    if (heartbeat) clearInterval(heartbeat);
     await handle.close().catch(() => {});
     await fs.unlink(lockPath).catch(() => {});
   }

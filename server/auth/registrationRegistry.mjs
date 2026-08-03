@@ -64,7 +64,10 @@ export async function loadRegistrationRegistry() {
 let registryWriteChain = Promise.resolve();
 
 export function withRegistryWrite(task) {
-  const run = registryWriteChain.then(() => task());
+  const run = registryWriteChain.then(async () => {
+    const { withCrossProcessLock } = await import('../fileLock.mjs');
+    return withCrossProcessLock('registration-registry', () => task(), { maxWaitMs: 8000 });
+  });
   registryWriteChain = run.then(() => undefined, () => undefined);
   return run;
 }

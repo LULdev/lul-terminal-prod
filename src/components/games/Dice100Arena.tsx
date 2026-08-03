@@ -241,11 +241,11 @@ export function Dice100Arena({
               type="button"
               className="dice100-cancel"
               onClick={() => {
+                // Let the auto-submit effect fire once — do not call onMove here (double-submit risk)
                 submittedForMatchRef.current = null;
                 submitAttemptsRef.current = 0;
                 setSubmitFails(0);
                 setRetryToken((n) => n + 1);
-                onMove(pendingMoveRef.current);
               }}
             >
               Retry roll

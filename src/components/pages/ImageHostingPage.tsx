@@ -85,10 +85,13 @@ export function ImageHostingPage() {
     setPreview(null);
   }, [preview]);
 
+  const uploadingRef = useRef(false);
   const startUpload = useCallback(async (file: File) => {
-    if (phase === 'uploading') return;
+    if (uploadingRef.current || phase === 'uploading') return;
+    uploadingRef.current = true;
     const validation = await validateImageFileAsync(file);
     if (validation) {
+      uploadingRef.current = false;
       setError(validation);
       setPhase('error');
       return;
@@ -121,6 +124,8 @@ export function ImageHostingPage() {
         : msg;
       setError(friendly);
       setPhase('error');
+    } finally {
+      uploadingRef.current = false;
     }
   }, [phase, preview, isLoggedIn, syncAchievements, refresh]);
 

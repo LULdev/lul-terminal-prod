@@ -377,8 +377,7 @@ export function GamesPage() {
     gameId?: GameId;
     applySlice?: boolean;
   }) => {
-    setActing(false);
-    actingRef.current = false;
+    // Keep actingRef locked until force-poll finishes so a second join/move cannot race
     try {
       await pollState({ force: true, gameId: opts?.gameId, applySlice: opts?.applySlice });
       // Always drain deferred loads (even when applySlice was false for authoritative joins)
@@ -392,8 +391,9 @@ export function GamesPage() {
         });
       }
     } finally {
-      // Guarantee spinner is never left on after an action finishes
+      actingRef.current = false;
       if (mountedRef.current) {
+        setActing(false);
         setLoading(false);
       }
     }

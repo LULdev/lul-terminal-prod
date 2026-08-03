@@ -129,8 +129,8 @@ function refundBetOnExpire(user, { gameId, chatLabel, matchId, bet, amount }, { 
     });
     return;
   }
-  // forceCredit: escrow was already released (e.g. partial settle) — must credit coins
-  // without escrow rows. Only used from known recovery paths, never for random expire.
+  // forceCredit: only when caller documented that this user's escrow was already stripped
+  // (partial settle / forfeit). Never mint on bare forceAbandon with no escrow trail.
   if (forceCredit) {
     logMatchExpireRefund(user, base);
     console.warn('[games] expire refund force-credited (escrow already released)', {
@@ -374,18 +374,23 @@ export async function settleMatch({
   if (!releaseGameEscrow(p1, { gameId, amount: bet })) {
     m.expiresAt = 0;
     m._finalizeAttempted = true; // skip dual-finalize loop
+    // No stake released — refund path must NOT mint (forceAbandon without forceIds)
     await expireMatchWithRefund(m, activeMatches, { gameId, chatLabel, forceAbandon: true });
     return { match: publicMatch(m) };
   }
+  // Track released stakes so force-credit only applies where escrow was stripped
+  m._releasedStakeByUserId = m._releasedStakeByUserId ?? {};
+  m._releasedStakeByUserId[m.player1.userId] = bet;
   if (m.mode === 'pvp' && p2) {
     if (!releaseGameEscrow(p2, { gameId, amount: bet })) {
-      // P1 escrow already stripped — force-credit P1 on refund path
+      // P1 escrow already stripped — force-credit P1 only
       m._expireCreditUserIds = new Set([m.player1.userId]);
       m.expiresAt = 0;
       m._finalizeAttempted = true;
       await expireMatchWithRefund(m, activeMatches, { gameId, chatLabel, forceAbandon: true });
       return { match: publicMatch(m) };
     }
+    m._releasedStakeByUserId[m.player2.userId] = bet;
   }
 
   if (m.mode === 'bot') {
@@ -1062,12 +1067,15 @@ export async function expireMatchWithRefund(m, activeMatches, expireMeta) {
   m.status = 'done';
   m.doneAt = Date.now();
   m.result = { outcome: 'expired', winner: 'draw' };
+  const releasedMap = m._releasedStakeByUserId ?? {};
   if (p1) {
-    refundBetOnExpire(p1, base, { forceCredit: forceAbandon || forceIds?.has(m.player1.userId) });
+    const forceP1 = Boolean(forceIds?.has(m.player1.userId) || releasedMap[m.player1.userId]);
+    refundBetOnExpire(p1, base, { forceCredit: forceP1 });
     p1.updatedAt = Date.now();
   }
   if (p2) {
-    refundBetOnExpire(p2, base, { forceCredit: forceAbandon || forceIds?.has(m.player2.userId) });
+    const forceP2 = Boolean(forceIds?.has(m.player2.userId) || releasedMap[m.player2.userId]);
+    refundBetOnExpire(p2, base, { forceCredit: forceP2 });
     p2.updatedAt = Date.now();
   }
   await saveUsersDb(db);

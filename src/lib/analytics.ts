@@ -3,9 +3,17 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { sessionJson } from './sessionFetch';
+import { sessionFetch, sessionJson } from './sessionFetch';
 
 const API = '/api/analytics';
+
+async function softJson<T>(path: string): Promise<T> {
+  const res = await sessionFetch(path, undefined, { soft401: true });
+  const data = await res.json().catch(() => ({}));
+  if (res.status === 401) throw new Error('Sign in required');
+  if (!res.ok) throw new Error((data as { error?: string }).error ?? `HTTP ${res.status}`);
+  return data as T;
+}
 
 export type AnalyticsEventType =
   | 'session_start'
@@ -226,12 +234,13 @@ export async function trackEvent(
 }
 
 export async function fetchMyActivity(): Promise<UserActivitySummary> {
-  return sessionJson<UserActivitySummary>(`${API}/me`);
+  // Soft 401 — dashboard poll must not wipe session
+  return softJson<UserActivitySummary>(`${API}/me`);
 }
 
 export async function fetchActiveTodayUsers(limit = 48): Promise<ActiveTodayResponse> {
   const q = new URLSearchParams({ limit: String(limit) });
-  return sessionJson<ActiveTodayResponse>(`${API}/active-today?${q}`);
+  return softJson<ActiveTodayResponse>(`${API}/active-today?${q}`);
 }
 
 export async function fetchAdminOverview(): Promise<AdminOverview> {

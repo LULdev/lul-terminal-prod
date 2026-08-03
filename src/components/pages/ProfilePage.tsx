@@ -142,7 +142,11 @@ export function ProfilePage({ routeUsername, profileTabReadyTick = 0, onNavigate
       setPublicLoading(true);
       setPublicError('');
     }
-    void authApi.recordProfileView(routeUsername)
+    const loadPromise = authApi.recordProfileView(routeUsername);
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      window.setTimeout(() => reject(new Error('Profile load timed out')), 15_000);
+    });
+    void Promise.race([loadPromise, timeoutPromise])
       .then(({ user: profile }) => {
         if (cancelled) return;
         if (isOwnProfile) {
@@ -281,6 +285,7 @@ export function ProfilePage({ routeUsername, profileTabReadyTick = 0, onNavigate
   };
 
   const uploadAvatar = async (file: File) => {
+    if (avatarUploading || saving) return;
     setAvatarUploading(true);
     setError('');
     try {

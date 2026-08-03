@@ -8,15 +8,20 @@ import crypto from 'crypto';
 const ALGO = 'aes-256-gcm';
 const PREFIX = 'enc:v1:';
 
+let cachedVaultKey = null;
+
 function vaultKey() {
+  if (cachedVaultKey) return cachedVaultKey;
   const secret = process.env.PREMIUM_VAULT_KEY;
   if (!secret) {
     if (process.env.NODE_ENV === 'production') {
       throw new Error('PREMIUM_VAULT_KEY must be set in production');
     }
-    return crypto.scryptSync('lul-terminal-dev-vault-key-change-me', 'lul-premium-vault', 32);
+    cachedVaultKey = crypto.scryptSync('lul-terminal-dev-vault-key-change-me', 'lul-premium-vault', 32);
+    return cachedVaultKey;
   }
-  return crypto.scryptSync(secret, 'lul-premium-vault', 32);
+  cachedVaultKey = crypto.scryptSync(secret, 'lul-premium-vault', 32);
+  return cachedVaultKey;
 }
 
 export function encryptPassword(plain) {

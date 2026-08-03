@@ -122,6 +122,7 @@ export function MyPasteGallery({ refreshKey = 0, onDeleted, onFork }: Props) {
   }, [pastes, search, visFilter, pinnedOnly]);
 
   const onDelete = async (id: string) => {
+    if (deleting) return;
     if (!confirm('Delete this paste permanently?')) return;
     setDeleting(id);
     try {
@@ -144,12 +145,17 @@ export function MyPasteGallery({ refreshKey = 0, onDeleted, onFork }: Props) {
     } catch { /* ignore */ }
   };
 
+  const forkingRef = useRef(false);
   const handleFork = async (p: PasteMeta) => {
+    if (forkingRef.current || deleting) return;
+    forkingRef.current = true;
     try {
       const fork = await forkPaste(p.id);
       onFork?.(fork);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Fork failed');
+    } finally {
+      forkingRef.current = false;
     }
   };
 

@@ -336,7 +336,6 @@ export function RouletteArena({
                 submitAttemptsRef.current = 0;
                 setSubmitFails(0);
                 setRetryToken((n) => n + 1);
-                onMove(pendingMoveRef.current);
               }}
             >
               Retry spin

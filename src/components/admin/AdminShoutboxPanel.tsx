@@ -183,6 +183,7 @@ export function AdminShoutboxPanel() {
   const flash = (msg: string) => setSuccess(msg);
 
   const handleDelete = async (msg: ShoutboxMessage) => {
+    if (acting || broadcasting) return;
     if (!confirm(`Delete message from @${msg.username}?`)) return;
     setActing(msg.id);
     try {
@@ -198,6 +199,7 @@ export function AdminShoutboxPanel() {
   };
 
   const handleBulkDelete = async () => {
+    if (acting || broadcasting) return;
     const ids = [...selected];
     if (!ids.length) return;
     if (!confirm(`Delete ${ids.length} selected message(s)?`)) return;
@@ -215,6 +217,7 @@ export function AdminShoutboxPanel() {
   };
 
   const handleClear = async () => {
+    if (acting || broadcasting) return;
     if (!confirm('Clear the entire shoutbox lobby? A system notice will be posted.')) return;
     setActing('clear');
     try {
@@ -230,6 +233,7 @@ export function AdminShoutboxPanel() {
   };
 
   const handleBroadcast = async () => {
+    if (acting || broadcasting) return;
     const text = broadcast.trim();
     if (!text) return;
     setBroadcasting(true);
