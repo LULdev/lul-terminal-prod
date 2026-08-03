@@ -203,7 +203,7 @@ export function CoinEarningsFeed({ compact = false, refreshKey = 0, className = 
                   </p>
                 </div>
                 <span className={`lul-coin-amount lul-coin-amount--md text-right shrink-0 ${style.amount}`}>
-                  +{entry.amount.toLocaleString('en-US')}
+                  +{(Number.isFinite(Number(entry.amount)) ? Number(entry.amount) : 0).toLocaleString('en-US')}
                 </span>
               </article>
             );

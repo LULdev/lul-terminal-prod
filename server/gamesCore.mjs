@@ -98,6 +98,37 @@ function stripEscrowRows(user, amt, { gameId = null } = {}) {
   return amt - remaining;
 }
 
+/**
+ * Release queue bet escrow or recover stuck rows. Never throw — always allows queue removal.
+ * @returns {number} amount credited back (0 if no trail)
+ */
+export function releaseOrRecoverQueueBet(user, gameId, chatLabel, bet) {
+  const amt = Math.floor(Number(bet) || 0);
+  if (!user || amt <= 0) return 0;
+  const released = releaseGameEscrow(user, { gameId, amount: amt })
+    || releaseAnyGameEscrow(user, amt, { preferGameId: gameId });
+  if (released) {
+    logQueueRefund(user, { gameId, chatLabel, bet: amt, amount: amt });
+    return amt;
+  }
+  const stripped = stripEscrowRows(user, amt, { gameId });
+  if (stripped > 0) {
+    logQueueRefund(user, { gameId, chatLabel, bet: amt, amount: stripped });
+    console.warn('[games] queue leave recovered via stripEscrowRows', {
+      userId: user.id,
+      gameId,
+      amount: stripped,
+    });
+    return stripped;
+  }
+  console.warn('[games] queue leave no escrow trail — removing entry without credit', {
+    userId: user.id,
+    gameId,
+    bet: amt,
+  });
+  return 0;
+}
+
 function refundBetOnExpire(user, { gameId, chatLabel, matchId, bet, amount }, { forceCredit = false } = {}) {
   if (!user) return;
   const amt = Math.floor(Number(amount) || 0);
@@ -722,17 +753,7 @@ async function leaveQueueEntry(mm, db, user, userId, entry, expireMeta) {
   const idx = mm.queue.findIndex((q) => q.userId === userId);
   if (idx < 0) return;
   if (user && entry?.bet && expireMeta) {
-    const released = releaseGameEscrow(user, { gameId: expireMeta.gameId, amount: entry.bet })
-      || releaseAnyGameEscrow(user, entry.bet, { preferGameId: expireMeta.gameId });
-    if (!released) {
-      throw new Error('Escrow mismatch — leave queue and re-join');
-    }
-    logQueueRefund(user, {
-      gameId: expireMeta.gameId,
-      chatLabel: expireMeta.chatLabel,
-      bet: entry.bet,
-      amount: entry.bet,
-    });
+    releaseOrRecoverQueueBet(user, expireMeta.gameId, expireMeta.chatLabel, entry.bet);
     user.updatedAt = Date.now();
   }
   mm.queue.splice(idx, 1);
@@ -761,7 +782,16 @@ export async function forceExpireMatchesForUser(activeMatches, userId, expireMet
       && (m.player1?.userId === userId || m.player2?.userId === userId),
   );
   for (const m of mine) {
-    await expireMatchWithRefund(m, activeMatches, { ...expireMeta, forceAbandon: true });
+    // PvP: leaver forfeits (opponent takes pot). Bot/solo: refund via forceAbandon.
+    if (m.mode === 'pvp') {
+      await expireMatchWithRefund(m, activeMatches, {
+        ...expireMeta,
+        forceAbandon: false,
+        leaverForfeitUserId: userId,
+      });
+    } else {
+      await expireMatchWithRefund(m, activeMatches, { ...expireMeta, forceAbandon: true });
+    }
   }
 }
 
@@ -906,17 +936,8 @@ async function joinMatchQueueInner({
       return { waiting: true, bet: queued.bet, roomCode: queued.roomCode ?? undefined };
     }
     if (queued.bet !== amount && expireMeta) {
-      const released = releaseGameEscrow(user, { gameId: expireMeta.gameId, amount: queued.bet })
-        || releaseAnyGameEscrow(user, queued.bet, { preferGameId: expireMeta.gameId });
-      if (!released) {
-        throw new Error('Escrow mismatch — leave queue and re-join');
-      }
-      logQueueRefund(user, {
-        gameId: expireMeta.gameId,
-        chatLabel: expireMeta.chatLabel,
-        bet: queued.bet,
-        amount: queued.bet,
-      });
+      // Recover stuck escrow so re-bet never permanently pins the user in queue
+      releaseOrRecoverQueueBet(user, expireMeta.gameId, expireMeta.chatLabel, queued.bet);
       deductCoins(user, amount, escrow);
     }
     queued.bet = amount;
@@ -1036,13 +1057,7 @@ export async function leaveMatchQueue(mm, userId, { gameId = 'arcade', chatLabel
     if (idx < 0) break;
     const entry = mm.queue[idx];
     if (user && entry?.bet) {
-      const released = releaseGameEscrow(user, { gameId, amount: entry.bet })
-        || releaseAnyGameEscrow(user, entry.bet, { preferGameId: gameId });
-      if (!released) {
-        throw new Error('Escrow mismatch — cannot leave queue');
-      }
-      logQueueRefund(user, { gameId, chatLabel, bet: entry.bet, amount: entry.bet });
-      refunded += entry.bet;
+      refunded += releaseOrRecoverQueueBet(user, gameId, chatLabel, entry.bet);
       user.updatedAt = Date.now();
     }
     mm.queue.splice(idx, 1);
@@ -1099,7 +1114,16 @@ export async function expireMatchWithRefund(m, activeMatches, expireMeta) {
   }
 
   const forceAbandon = Boolean(expireMeta?.forceAbandon);
-  const forfeitWinner = !forceAbandon ? resolveTimeoutForfeit(m) : null;
+  // Logout/leave: leaver loses PvP (opponent pot) instead of dual refund escape
+  let forfeitWinner = null;
+  if (!forceAbandon) {
+    const leaverId = expireMeta?.leaverForfeitUserId;
+    if (leaverId && m.mode === 'pvp') {
+      if (m.player1?.userId === leaverId) forfeitWinner = 'p2';
+      else if (m.player2?.userId === leaverId) forfeitWinner = 'p1';
+    }
+    if (!forfeitWinner) forfeitWinner = resolveTimeoutForfeit(m);
+  }
   const db = await loadUsersDb();
   const bet = m.bet;
   const base = { gameId, chatLabel, matchId: m.id, bet, amount: bet };

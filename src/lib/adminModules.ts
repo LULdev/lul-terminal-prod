@@ -347,7 +347,7 @@ export async function adminPurgeEvents(keep = 2000): Promise<{ before: number; a
 }
 
 export async function adminExportEvents(): Promise<unknown> {
-  return adminFetch('/events/export');
+  return adminFetchRead('/events/export');
 }
 
 export type OnlineRadarData = {

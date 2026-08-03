@@ -267,7 +267,8 @@ export async function fetchAdminUserDetail(userId: string): Promise<UserActivity
 }
 
 export async function exportAdminAnalytics() {
-  return sessionJson(`${API}/admin/export`);
+  // soft401: export is a read dump — flaky 401 must not wipe session
+  return sessionJson(`${API}/admin/export`, undefined, { soft401: true });
 }
 
 export async function purgeAnalyticsEvents(keep = 2000) {

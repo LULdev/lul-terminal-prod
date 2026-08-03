@@ -70,12 +70,18 @@ export function AdminPageVisibilityPanel() {
   const [uiDraft, setUiDraft] = useState<SiteUiConfig>({ ...DEFAULT_SITE_UI });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const savingRef = useRef(false);
   const saveGenRef = useRef(0);
+  const msgTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [msg, setMsg] = useState('');
   const [err, setErr] = useState('');
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<'all' | 'public' | 'members'>('all');
   const { mountedRef, loadGenRef } = useMountedLoad();
+
+  useEffect(() => () => {
+    if (msgTimerRef.current) clearTimeout(msgTimerRef.current);
+  }, []);
 
   const load = useCallback(async () => {
     const gen = ++loadGenRef.current;
@@ -138,6 +144,8 @@ export function AdminPageVisibilityPanel() {
   };
 
   const save = async () => {
+    if (savingRef.current) return;
+    savingRef.current = true;
     const gen = ++saveGenRef.current;
     setSaving(true);
     setErr('');
@@ -153,17 +161,23 @@ export function AdminPageVisibilityPanel() {
       await refreshGlobal();
       if (gen !== saveGenRef.current) return;
       setMsg('Saved — layout & visibility apply site-wide (reload within ~60s for other tabs).');
-      setTimeout(() => setMsg(''), 5000);
+      if (msgTimerRef.current) clearTimeout(msgTimerRef.current);
+      msgTimerRef.current = setTimeout(() => {
+        if (mountedRef.current) setMsg('');
+      }, 5000);
     } catch (e) {
       if (gen !== saveGenRef.current) return;
       setErr(e instanceof Error ? e.message : 'Save failed');
     } finally {
+      savingRef.current = false;
       if (gen === saveGenRef.current) setSaving(false);
     }
   };
 
   const reset = async () => {
+    if (savingRef.current) return;
     if (!confirm('Reset all visibility settings to defaults?')) return;
+    savingRef.current = true;
     const gen = ++saveGenRef.current;
     setSaving(true);
     setErr('');
@@ -178,11 +192,15 @@ export function AdminPageVisibilityPanel() {
       await refreshGlobal();
       if (gen !== saveGenRef.current) return;
       setMsg('Defaults restored.');
-      setTimeout(() => setMsg(''), 4000);
+      if (msgTimerRef.current) clearTimeout(msgTimerRef.current);
+      msgTimerRef.current = setTimeout(() => {
+        if (mountedRef.current) setMsg('');
+      }, 4000);
     } catch (e) {
       if (gen !== saveGenRef.current) return;
       setErr(e instanceof Error ? e.message : 'Reset failed');
     } finally {
+      savingRef.current = false;
       if (gen === saveGenRef.current) setSaving(false);
     }
   };

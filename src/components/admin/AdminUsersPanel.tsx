@@ -190,24 +190,33 @@ export function AdminUsersPanel() {
     }
   };
 
+  const actingUserRef = useRef(false);
   const toggleActive = async (u: AuthUser) => {
+    if (actingUserRef.current) return;
+    actingUserRef.current = true;
     setError('');
     try {
       await authApi.adminUpdateUser(u.id, { active: u.active === false });
       await load();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Update failed');
+    } finally {
+      actingUserRef.current = false;
     }
   };
 
   const deleteUser = async (u: AuthUser) => {
+    if (actingUserRef.current) return;
     if (!confirm(`Really delete user "${u.displayName}"?`)) return;
+    actingUserRef.current = true;
     setError('');
     try {
       await authApi.adminDeleteUser(u.id);
       await load();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Delete failed');
+    } finally {
+      actingUserRef.current = false;
     }
   };
 

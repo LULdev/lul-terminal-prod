@@ -21,8 +21,10 @@ import {
   forceExpireMatchesForUser,
   getMatchWithExpiry,
   isRoomConsumed,
+  leaveMatchQueue,
   queueStatusForUser,
   refundJoinEscrow,
+  releaseOrRecoverQueueBet,
   resolveActiveMatchForSlice,
   tombstoneRoom,
   sweepExpiredMatchesForUser,
@@ -77,12 +79,7 @@ async function leaveQueueEntry(db, user, userId, entry) {
   const idx = queue.findIndex((q) => q.userId === userId);
   if (idx < 0) return;
   if (user && entry?.bet) {
-    const released = releaseGameEscrow(user, { gameId: 'rps', amount: entry.bet })
-      || releaseAnyGameEscrow(user, entry.bet, { preferGameId: 'rps' });
-    if (!released) {
-      throw new Error('Escrow mismatch — leave queue and re-join');
-    }
-    logQueueRefund(user, { gameId: 'rps', chatLabel: 'RPS', bet: entry.bet, amount: entry.bet });
+    releaseOrRecoverQueueBet(user, 'rps', 'RPS', entry.bet);
     user.updatedAt = Date.now();
   }
   queue.splice(idx, 1);
@@ -696,12 +693,7 @@ async function joinQueueInner(userId, { bet, mode = 'pvp', botDifficulty = 'norm
       return { waiting: true, bet: queued.bet, roomCode: queued.roomCode ?? undefined };
     }
     if (queued.bet !== amount) {
-      const released = releaseGameEscrow(user, { gameId: 'rps', amount: queued.bet })
-        || releaseAnyGameEscrow(user, queued.bet, { preferGameId: 'rps' });
-      if (!released) {
-        throw new Error('Escrow mismatch — leave queue and re-join');
-      }
-      logQueueRefund(user, { gameId: 'rps', chatLabel: 'RPS', bet: queued.bet, amount: queued.bet });
+      releaseOrRecoverQueueBet(user, 'rps', 'RPS', queued.bet);
       deductCoins(user, amount);
     }
     queued.bet = amount;
@@ -860,32 +852,8 @@ async function createPvpMatch(joinerId, hostId, bet, seriesType = 'single') {
 }
 
 export async function leaveRpsQueue(userId) {
-  return runCoinTransaction(async () => {
-    const db = await loadUsersDb();
-    const user = getUser(db, userId);
-    let refunded = 0;
-    while (true) {
-      const idx = queue.findIndex((q) => q.userId === userId);
-      if (idx < 0) break;
-      const entry = queue[idx];
-      if (user && entry?.bet) {
-        const released = releaseGameEscrow(user, { gameId: 'rps', amount: entry.bet })
-          || releaseAnyGameEscrow(user, entry.bet, { preferGameId: 'rps' });
-        if (!released) {
-          throw new Error('Escrow mismatch — cannot leave queue');
-        }
-        logQueueRefund(user, { gameId: 'rps', chatLabel: 'RPS', bet: entry.bet, amount: entry.bet });
-        refunded += entry.bet;
-        user.updatedAt = Date.now();
-      }
-      queue.splice(idx, 1);
-    }
-    for (const [code, room] of rooms.entries()) {
-      if (room.hostId === userId) rooms.delete(code);
-    }
-    if (user && refunded > 0) await saveUsersDb(db);
-    return { ok: true };
-  });
+  // Shared leave recovers stuck escrow without throwing (no permanent queue pin)
+  return leaveMatchQueue({ queue, rooms }, userId, { gameId: 'rps', chatLabel: 'RPS' });
 }
 
 export const leaveQueue = leaveRpsQueue;

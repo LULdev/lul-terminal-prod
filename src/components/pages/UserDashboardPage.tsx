@@ -81,6 +81,7 @@ export function UserDashboardPage({ onNavigate }: UserDashboardPageProps) {
   const [inviteUrl, setInviteUrl] = useState('');
   const [activity, setActivity] = useState<{ pageVisits: number; commandsRun: number; shoutboxSent: number } | null>(null);
   const { mountedRef, loadGenRef } = useMountedLoad();
+  const msgTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (user) setEmail(user.email);
@@ -150,7 +151,10 @@ export function UserDashboardPage({ onNavigate }: UserDashboardPageProps) {
       setPassword('');
       setCurrentPassword('');
       setMsg(password ? 'Email & password updated' : 'Email updated');
-      setTimeout(() => setMsg(''), 4000);
+      if (msgTimerRef.current) clearTimeout(msgTimerRef.current);
+      msgTimerRef.current = setTimeout(() => {
+        if (mountedRef.current) setMsg('');
+      }, 4000);
     } catch (e) {
       setErr(e instanceof Error ? e.message : 'Failed to save');
     } finally {
@@ -158,6 +162,10 @@ export function UserDashboardPage({ onNavigate }: UserDashboardPageProps) {
       setSaving(false);
     }
   };
+
+  useEffect(() => () => {
+    if (msgTimerRef.current) clearTimeout(msgTimerRef.current);
+  }, []);
 
   const nav = (tab: TabId, opts?: { profileUsername?: string }) => onNavigate?.(tab, opts);
 

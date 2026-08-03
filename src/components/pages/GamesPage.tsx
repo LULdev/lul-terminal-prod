@@ -171,7 +171,7 @@ function LeaderMini({
 }
 
 export function GamesPage() {
-  const { user, isLoggedIn, loading: authLoading, syncAchievements, refresh } = useAuth();
+  const { user, isLoggedIn, loading: authLoading, syncAchievements, refresh, patchUser } = useAuth();
   const [selectedGame, setSelectedGame] = useState<GameId>('rps');
   const catalog = GAME_CATALOG_MAP[selectedGame];
   const [state, setState] = useState<GamesState | null>(null);
@@ -342,6 +342,10 @@ export function GamesPage() {
       }
       lastAppliedStateSeqRef.current = fetchSeq;
       setState(s);
+      if (s.myCoins != null && Number.isFinite(Number(s.myCoins))) {
+        const c = Math.floor(Number(s.myCoins));
+        patchUser((u) => (u ? { ...u, lulCoins: c } : u));
+      }
       const activeId = selectedGameRef.current;
       if (opts?.applySlice !== false) {
         const slice = s.games?.[activeId] ?? s[activeId as 'rps' | 'ttt'];
@@ -357,7 +361,7 @@ export function GamesPage() {
         setLoading(false);
       }
     }
-  }, [applySliceState]);
+  }, [applySliceState, patchUser]);
 
   const pollState = useCallback(async (opts?: {
     force?: boolean;
@@ -375,6 +379,10 @@ export function GamesPage() {
       if (!mountedRef.current) return null;
       lastAppliedStateSeqRef.current = fetchSeq;
       setState(s);
+      if (s.myCoins != null && Number.isFinite(Number(s.myCoins))) {
+        const c = Math.floor(Number(s.myCoins));
+        patchUser((u) => (u ? { ...u, lulCoins: c } : u));
+      }
       if (opts?.applySlice !== false) {
         const game = opts?.gameId ?? selectedGameRef.current;
         const slice = s.games?.[game] ?? s[game as 'rps' | 'ttt'];
@@ -388,7 +396,7 @@ export function GamesPage() {
       }
       return null;
     }
-  }, [applySliceState]);
+  }, [applySliceState, patchUser]);
 
   const endActionAndSync = useCallback(async (opts?: {
     gameId?: GameId;
@@ -1130,10 +1138,11 @@ export function GamesPage() {
               // Authoritative balance from claim response (don't wait for deferred load)
               // Bump stateFetchSeq so a stale background poll cannot overwrite coins
               lastAppliedStateSeqRef.current = ++stateFetchSeqRef.current;
+              const c = Math.floor(Number(coins) || 0);
               setState((prev) => (prev
                 ? {
                     ...prev,
-                    myCoins: coins,
+                    myCoins: c,
                     dailyBonus: prev.dailyBonus
                       ? {
                           ...prev.dailyBonus,
@@ -1143,6 +1152,8 @@ export function GamesPage() {
                       : prev.dailyBonus,
                   }
                 : prev));
+              // Sync UserBar immediately (don't wait for /me)
+              patchUser((u) => (u ? { ...u, lulCoins: c } : u));
               void refresh();
               void load();
               setCoinFeedTick((t) => t + 1);

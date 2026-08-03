@@ -23,6 +23,20 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '3.56.0',
+    title: 'Full Server+Client audit (all priorities): queue recover, logout forfeit, coins sync',
+    date: 'Aug 4, 2026 - 04:20',
+    highlight: true,
+    items: [
+      { priority: 'P0', text: 'P0 — Queue leave/re-bet: releaseOrRecoverQueueBet never throws; stuck escrow strips + queue always clears (Core/RPS/TTT).' },
+      { priority: 'P1', text: 'P1 — Logout/force-expire PvP: leaver forfeits (opponent pot) instead of dual-refund escape.' },
+      { priority: 'P1', text: 'P1 — GamesPage load/poll/claim patches user.lulCoins so UserBar matches arcade myCoins.' },
+      { priority: 'P2', text: 'P2 — Admin users toggle/delete actingRef; page-visibility save busyRef + mounted msg timers; dashboard security toast cleanup.' },
+      { priority: 'P2', text: 'P2 — Analytics export soft401; events export soft401; coin feed amount NaN-safe.' },
+      { priority: 'P9', text: 'P9 — Version 3.56.0; every fix listed (full website module pass).' },
+    ],
+  },
+  {
     version: '3.55.1',
     title: 'Residual audit: jackpot recovery userId+stale, soft401 side-effects, Firebase/meme/coins',
     date: 'Aug 4, 2026 - 03:50',
