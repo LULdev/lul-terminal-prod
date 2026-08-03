@@ -217,6 +217,10 @@ export async function loginUser({ email, password, remember }) {
     const freshDb = await loadUsersDb();
     const freshUser = freshDb.users.find((u) => u.id === user.id);
     if (!freshUser) throw new Error('User not found');
+    // Re-check after scrypt — admin may have deactivated during verify
+    if (!isEffectivelyActive(freshUser) || freshUser.role === 'bot') {
+      throw new Error('Invalid login credentials');
+    }
     const isFirstLogin = freshUser.lastLoginAt == null;
     const newUnlocks = isFirstLogin ? grantFirstLogin(freshUser) : [];
 
@@ -349,13 +353,21 @@ export async function logoutUser(token) {
   const userId = session?.userId;
 
   if (userId) {
-    const { leaveAllGameQueues } = await import('../gamesService.mjs');
+    const { leaveAllGameQueues, userHasActiveArcadeSession } = await import('../gamesService.mjs');
     const cleanup = await leaveAllGameQueues(userId);
     await refundOrphanEscrowsAfterCleanup(userId, cleanup);
-    // Always try residual escrow refund after cleanup (done matches no longer block)
-    await refundUserEscrows(userId).catch((e) => {
-      console.warn('[auth] logout residual escrow refund failed', userId, e);
-    });
+    // Only residual-refund when no live queue/playing match (avoids double-pay with settle)
+    const stillLive = await userHasActiveArcadeSession(userId).catch(() => true);
+    if (!stillLive) {
+      await refundUserEscrows(userId).catch((e) => {
+        console.warn('[auth] logout residual escrow refund failed', userId, e);
+      });
+    } else {
+      console.warn('[auth] logout skipped residual escrow refund — live arcade session', {
+        userId,
+        cleanupOk: cleanup?.ok,
+      });
+    }
     await withUsersWrite(async () => {
       const db = await loadUsersDb();
       const user = db.users.find((u) => u.id === userId);
@@ -873,6 +885,11 @@ export async function deleteOwnAccount(userId, password) {
     }
     const cleanup = await leaveAllGameQueues(userId);
     await refundOrphanEscrowsAfterCleanup(userId, cleanup);
+    const { userHasActiveArcadeSession } = await import('../gamesService.mjs');
+    const stillLive = await userHasActiveArcadeSession(userId).catch(() => true);
+    if (stillLive) {
+      throw new Error('Finish your active arcade match before deleting your account');
+    }
     await refundUserEscrows(userId).catch((e) => {
       console.warn('[auth] final escrow refund before delete failed', userId, e);
     });

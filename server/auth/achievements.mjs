@@ -338,24 +338,26 @@ export function normalizeSocialLinks(raw) {
     .filter((l) => l.platform && l.url);
 }
 
-const EPHEMERAL_ACTIVITY_FLAGS = new Set([
-  'achProofNonce',
-  'achProofExp',
-  'achProofTab',
-  'lastMemeBotAt',
-  'lastChatActionAt',
-  'lastAchievementEventAt',
-  'lastTerminalCommandAt',
-]);
+/**
+ * Runtime cooldowns / proofs live in activity.flags and MUST survive normalize/load.
+ * Do not strip lastChatActionAt, achProof*, etc. here (that killed shoutbox cooldown
+ * and achievement proofs on every user load).
+ */
 const MAX_PROFILE_VISIT_FLAGS = 256;
 const MAX_ACTIVITY_FLAG_KEYS = 512;
+/** Daily counters older than this many day-keys are pruned (keep recent only). */
+const DAILY_FLAG_KEEP_DAYS = 14;
 
 function pruneActivityFlags(flags) {
   if (!flags || typeof flags !== 'object') return {};
   const out = { ...flags };
-  for (const key of EPHEMERAL_ACTIVITY_FLAGS) delete out[key];
+  // Prune old daily claw/terminal counters (real prefixes: claw_victim_YYYY-MM-DD, terminal_cmds_…)
+  const dayCutoff = Date.now() - DAILY_FLAG_KEEP_DAYS * 86_400_000;
   for (const key of Object.keys(out)) {
-    if (key.startsWith('claw_daily_') || key.startsWith('terminal_cmd_daily_')) delete out[key];
+    const m = key.match(/^(?:claw_victim_|terminal_cmds_|claw_daily_|terminal_cmd_daily_)(\d{4}-\d{2}-\d{2})$/);
+    if (!m) continue;
+    const t = Date.parse(`${m[1]}T00:00:00Z`);
+    if (Number.isFinite(t) && t < dayCutoff) delete out[key];
   }
   const profileKeys = Object.keys(out).filter((k) => k.startsWith('profile_visit_'));
   if (profileKeys.length > MAX_PROFILE_VISIT_FLAGS) {
@@ -364,6 +366,16 @@ function pruneActivityFlags(flags) {
       delete out[profileKeys[i]];
     }
   }
+  // Prefer keeping runtime cooldowns/proofs when capping total flag keys
+  const protectedKeys = new Set([
+    'achProofNonce',
+    'achProofExp',
+    'achProofTab',
+    'lastMemeBotAt',
+    'lastChatActionAt',
+    'lastAchievementEventAt',
+    'lastTerminalCommandAt',
+  ]);
   const isDedupFlag = (key) =>
     key.startsWith('profile_visit_')
     || key.startsWith('paste_meta_view_')
@@ -371,7 +383,7 @@ function pruneActivityFlags(flags) {
     || key.startsWith('page_view_')
     || key.startsWith('post_view_')
     || key.startsWith('paste_view_');
-  const keys = Object.keys(out).filter((k) => !isDedupFlag(k));
+  const keys = Object.keys(out).filter((k) => !isDedupFlag(k) && !protectedKeys.has(k));
   if (keys.length > MAX_ACTIVITY_FLAG_KEYS) {
     keys.sort();
     for (let i = 0; i < keys.length - MAX_ACTIVITY_FLAG_KEYS; i += 1) {

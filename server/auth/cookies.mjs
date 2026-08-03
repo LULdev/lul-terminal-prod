@@ -20,7 +20,13 @@ export function parseCookies(req) {
     if (idx < 0) continue;
     const key = part.slice(0, idx).trim();
     const val = part.slice(idx + 1).trim();
-    if (key) out[key] = decodeURIComponent(val);
+    if (!key) continue;
+    try {
+      out[key] = decodeURIComponent(val);
+    } catch {
+      // Malformed % sequences must not crash attachAuth on every request
+      out[key] = val;
+    }
   }
   return out;
 }
@@ -62,7 +68,8 @@ export function setRegistrationLockCookie(res, token) {
     ...cookieBaseParts(),
     `Max-Age=${REG_LOCK_MAX_AGE_SEC}`,
   ].join('; ');
-  const hintParts = ['Path=/', 'HttpOnly', 'SameSite=Lax', `Max-Age=${REG_LOCK_MAX_AGE_SEC}`];
+  // Readable companion (not HttpOnly) for client-side multi-account hint recovery
+  const hintParts = ['Path=/', 'SameSite=Lax', `Max-Age=${REG_LOCK_MAX_AGE_SEC}`];
   if (useSecureCookies()) hintParts.push('Secure');
   const hint = [`${REG_HINT_COOKIE}=${encoded}`, ...hintParts].join('; ');
   res.setHeader('Set-Cookie', [lock, hint]);
