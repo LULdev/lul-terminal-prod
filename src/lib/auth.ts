@@ -16,7 +16,7 @@ export type AuthUnlockResponse = {
   stats?: { accountsSubmitted: number };
 };
 
-import { invalidateSession } from './sessionEvents';
+import { bumpSessionEpoch, getSessionEpoch, invalidateSession } from './sessionEvents';
 import { validateImageFileMagic } from './imageMime';
 import { parseRetryAfterMs } from './retryAfter';
 
@@ -27,6 +27,7 @@ const API = '/api/auth';
 type ApiOpts = { soft401?: boolean };
 
 async function api<T>(path: string, init?: RequestInit, opts?: ApiOpts): Promise<T> {
+  const epochAtStart = getSessionEpoch();
   const res = await fetch(`${API}${path}`, {
     credentials: 'include',
     ...init,
@@ -37,7 +38,7 @@ async function api<T>(path: string, init?: RequestInit, opts?: ApiOpts): Promise
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
-    if (res.status === 401 && !opts?.soft401) invalidateSession();
+    if (res.status === 401 && !opts?.soft401) invalidateSession({ epoch: epochAtStart });
     if (res.status === 429) {
       const waitSec = Math.ceil(parseRetryAfterMs(res.headers.get('Retry-After'), 60_000) / 1000);
       const err = new Error(
@@ -53,6 +54,8 @@ async function api<T>(path: string, init?: RequestInit, opts?: ApiOpts): Promise
   }
   return data as T;
 }
+
+export { bumpSessionEpoch };
 
 export async function fetchMe(): Promise<{
   user: AuthUser | null;

@@ -239,8 +239,13 @@ export function GamesPage() {
     setMatch(m);
   }, []);
 
-  const applySliceState = useCallback((slice: ReturnType<typeof getGameSlice>, seqBefore?: number) => {
-    if (actingRef.current) return;
+  const applySliceState = useCallback((
+    slice: ReturnType<typeof getGameSlice>,
+    seqBefore?: number,
+    opts?: { force?: boolean },
+  ) => {
+    // force: endActionAndSync poll must apply match while actingRef still locks spam
+    if (actingRef.current && !opts?.force) return;
     if (seqBefore != null && matchSeqRef.current !== seqBefore) return;
     const queued = Boolean(slice?.inQueue);
     let serverMatch = slice?.activeMatch ?? null;
@@ -348,27 +353,34 @@ export function GamesPage() {
     }
   }, [applySliceState]);
 
+  const pollGenRef = useRef(0);
+
   const pollState = useCallback(async (opts?: {
     force?: boolean;
     gameId?: GameId;
     applySlice?: boolean;
   }): Promise<GamesState | null> => {
     if (!opts?.force && actingRef.current) return null;
+    const gen = ++pollGenRef.current;
     const seqBefore = matchSeqRef.current;
     try {
       const s = await fetchGamesState();
+      // Drop stale responses (overlapping polls / force after background)
+      if (gen !== pollGenRef.current) return null;
       if (!opts?.force && (actingRef.current || matchSeqRef.current !== seqBefore)) return null;
       if (!mountedRef.current) return null;
       setState(s);
       if (opts?.applySlice !== false) {
         const game = opts?.gameId ?? selectedGameRef.current;
         const slice = s.games?.[game] ?? s[game as 'rps' | 'ttt'];
-        applySliceState(slice, seqBefore);
+        applySliceState(slice, seqBefore, { force: Boolean(opts?.force) });
       }
       setPollError('');
       return s;
     } catch (e) {
-      if (mountedRef.current) setPollError(e instanceof Error ? e.message : 'Sync lost — retry');
+      if (gen === pollGenRef.current && mountedRef.current) {
+        setPollError(e instanceof Error ? e.message : 'Sync lost — retry');
+      }
       return null;
     }
   }, [applySliceState]);
@@ -380,7 +392,8 @@ export function GamesPage() {
     // Keep actingRef locked until force-poll finishes so a second join/move cannot race
     try {
       await pollState({ force: true, gameId: opts?.gameId, applySlice: opts?.applySlice });
-      // Always drain deferred loads (even when applySlice was false for authoritative joins)
+      // Unlock acting before drain so load() is not re-deferred forever
+      actingRef.current = false;
       if (pendingLoadRef.current) {
         pendingLoadRef.current = false;
         const gid = pendingLoadGameIdRef.current ?? opts?.gameId ?? selectedGameRef.current;
@@ -1109,6 +1122,16 @@ export function GamesPage() {
             bonus={state.dailyBonus}
             onClaimed={(coins, amount) => {
               setMsg(`Daily reload +${amount} LULcoins`);
+              // Authoritative balance from claim response (don't wait for deferred load)
+              setState((prev) => (prev
+                ? {
+                    ...prev,
+                    myCoins: coins,
+                    dailyBonus: prev.dailyBonus
+                      ? { ...prev.dailyBonus, canClaim: false, remainingMs: prev.dailyBonus.cooldownMs }
+                      : prev.dailyBonus,
+                  }
+                : prev));
               void refresh();
               void load();
               setCoinFeedTick((t) => t + 1);

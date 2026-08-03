@@ -238,6 +238,7 @@ async function countPasteViewDeduped(req, pasteId, { consumeBurn = false } = {})
   const isOwner = Boolean(
     viewerId && earlyMeta.userId && String(earlyMeta.userId) === String(viewerId),
   );
+  const mustBurn = Boolean(consumeBurn && earlyMeta.burnAfterRead);
 
   let firstTime = true;
   try {
@@ -248,10 +249,25 @@ async function countPasteViewDeduped(req, pasteId, { consumeBurn = false } = {})
   }
 
   if (!firstTime) {
-    // Already counted — still load content when burn path needs it
-    let content = null;
-    if (consumeBurn && earlyMeta.burnAfterRead) {
-      content = await getContent(pasteId);
+    // Deduped view count — but burn-after-read MUST still consume on content delivery.
+    // Never hand out burn content without destroying the paste.
+    if (mustBurn) {
+      try {
+        const result = await recordView(pasteId, { consumeBurn: true });
+        if (!result) return null;
+        return {
+          views: result.meta.views ?? earlyMeta.views ?? 0,
+          burned: result.burned,
+          deduped: true,
+          selfView: isOwner,
+          meta: result.meta,
+          content: result.content,
+        };
+      } catch (err) {
+        console.warn('[paste] burn consume failed on deduped read', err);
+        // Fail closed: no content without a successful burn
+        return null;
+      }
     }
     return {
       views: earlyMeta.views ?? 0,
@@ -259,13 +275,13 @@ async function countPasteViewDeduped(req, pasteId, { consumeBurn = false } = {})
       deduped: true,
       selfView: isOwner,
       meta: earlyMeta,
-      content,
+      content: null,
     };
   }
 
   try {
     const result = await recordView(pasteId, {
-      consumeBurn: Boolean(consumeBurn && earlyMeta.burnAfterRead),
+      consumeBurn: mustBurn,
     });
     if (!result) return null;
     return {
@@ -278,6 +294,8 @@ async function countPasteViewDeduped(req, pasteId, { consumeBurn = false } = {})
     };
   } catch (err) {
     console.warn('[paste] recordView failed after claim', err);
+    // Burn path: never leak content if destroy/record failed
+    if (mustBurn) return null;
     return {
       views: earlyMeta.views ?? 0,
       burned: false,
@@ -491,8 +509,20 @@ export async function handlePasteRequest(req, res) {
         res.end(access.requiresLogin ? 'Sign in required' : 'Not found');
         return;
       }
-      const viewResult = await countPasteViewDeduped(req, meta.id, { consumeBurn: false });
-      const content = viewResult?.content ?? await getContent(meta.id);
+      // Burn-after-read must apply on raw too (no perpetual bypass via rawUrl)
+      const viewResult = await countPasteViewDeduped(req, meta.id, {
+        consumeBurn: Boolean(meta.burnAfterRead),
+      });
+      if (!viewResult) {
+        res.statusCode = 404;
+        res.end('Not found');
+        return;
+      }
+      // Prefer atomic content from recordView; never fall back to getContent for burn pastes
+      let content = viewResult.content;
+      if (content == null && !meta.burnAfterRead) {
+        content = await getContent(meta.id);
+      }
       if (!content) {
         res.statusCode = 404;
         res.end('Not found');
@@ -584,7 +614,26 @@ export async function handlePasteRequest(req, res) {
           return sendJson(res, 404, { error: 'Paste not found' });
         }
       }
-      const body = await readJsonBody(req, 4 * 1024);
+      // Protected pastes: require password or owner (no existence/rating oracle)
+      let rateBody = null;
+      if (meta.visibility === 'protected') {
+        const isOwner = Boolean(user?.id && meta.userId && String(meta.userId) === String(user.id));
+        if (!isOwner) {
+          try {
+            rateBody = await readJsonBody(req, 4 * 1024);
+          } catch {
+            rateBody = {};
+          }
+          const access = await resolvePasteAccess(req, meta, rateBody.password ?? '');
+          if (!access.allowed) {
+            return sendJson(res, access.requiresLogin ? 401 : 403, {
+              error: access.requiresLogin ? 'Sign in required' : 'Password required',
+              requiresPassword: true,
+            });
+          }
+        }
+      }
+      const body = rateBody ?? await readJsonBody(req, 4 * 1024);
       const stars = Number(body.stars);
       if (!Number.isFinite(stars) || stars < 1 || stars > 5) {
         return sendJson(res, 400, { error: 'Rating must be between 1 and 5' });

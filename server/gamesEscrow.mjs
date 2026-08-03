@@ -38,12 +38,38 @@ export function releaseGameEscrow(user, { gameId, amount }) {
   const amt = Math.floor(Number(amount) || 0);
   if (amt <= 0) return false;
   const gid = gameId ?? 'arcade';
-  const candidates = user.gameEscrows
+  // Prefer a single row that covers the full amount (FIFO among them)
+  const full = user.gameEscrows
     .map((e, i) => ({ e, i }))
-    .filter(({ e }) => e.gameId === gid && e.amount >= amt);
-  if (!candidates.length) return false;
-  candidates.sort((a, b) => (a.e.at ?? 0) - (b.e.at ?? 0));
-  return releaseEscrowAt(user, candidates[0].i, amt);
+    .filter(({ e }) => e.gameId === gid && Math.floor(Number(e.amount) || 0) >= amt);
+  if (full.length) {
+    full.sort((a, b) => (a.e.at ?? 0) - (b.e.at ?? 0));
+    return releaseEscrowAt(user, full[0].i, amt);
+  }
+  // Fragmented rows: FIFO consume across same-game rows until amt is covered
+  const sameGame = user.gameEscrows
+    .map((e, i) => ({ e, i }))
+    .filter(({ e }) => e.gameId === gid);
+  if (!sameGame.length) return false;
+  sameGame.sort((a, b) => (a.e.at ?? 0) - (b.e.at ?? 0));
+  const total = sameGame.reduce((s, { e }) => s + Math.floor(Number(e.amount) || 0), 0);
+  if (total < amt) return false;
+  let remaining = amt;
+  // Release highest indices first so earlier indices stay valid
+  const consume = [];
+  for (const row of sameGame) {
+    if (remaining <= 0) break;
+    const rowAmt = Math.floor(Number(row.e.amount) || 0);
+    const take = Math.min(rowAmt, remaining);
+    consume.push({ i: row.i, take });
+    remaining -= take;
+  }
+  if (remaining > 0) return false;
+  consume.sort((a, b) => b.i - a.i);
+  for (const { i, take } of consume) {
+    releaseEscrowAt(user, i, take);
+  }
+  return true;
 }
 
 /** Oldest escrow row amount for a game (queue sweep orphan recovery). */

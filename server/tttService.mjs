@@ -64,8 +64,10 @@ const TTT_EXPIRE_META = { gameId: 'ttt', chatLabel: 'Tic-Tac-Toe' };
 async function refundHostQueueEscrow(db, user, amount) {
   if (!user || !amount) return;
   const hostBet = amount;
-  if (!releaseGameEscrow(user, { gameId: 'ttt', amount: hostBet })) {
-    if (!releaseAnyGameEscrow(user, hostBet)) return;
+  const released = releaseGameEscrow(user, { gameId: 'ttt', amount: hostBet })
+    || releaseAnyGameEscrow(user, hostBet);
+  if (!released) {
+    throw new Error('Escrow mismatch — host refund failed');
   }
   logQueueRefund(user, { gameId: 'ttt', chatLabel: 'Tic-Tac-Toe', bet: hostBet, amount: hostBet });
   user.updatedAt = Date.now();
@@ -125,7 +127,11 @@ function deductCoins(user, amount) {
 function creditCoins(user, amount, ledgerFn, ledgerArgs) {
   if (ledgerFn && ledgerArgs) {
     if (ledgerFn === logQueueRefund) {
-      if (!releaseGameEscrow(user, { gameId: ledgerArgs.gameId ?? 'ttt', amount })) return;
+      const released = releaseGameEscrow(user, { gameId: ledgerArgs.gameId ?? 'ttt', amount })
+        || releaseAnyGameEscrow(user, amount);
+      if (!released) {
+        throw new Error('Escrow mismatch — queue refund failed');
+      }
     }
     ledgerFn(user, { ...ledgerArgs, amount });
     return;

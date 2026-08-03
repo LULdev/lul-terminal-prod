@@ -14,13 +14,21 @@ const CATEGORIES = ['streaming', 'vpn', 'software', 'gaming', 'porn', 'other'];
 const PLANS = ['Free', 'Premium', 'WorkingButFree'];
 const STATUSES = ['working', 'working_free', 'offline', 'expired', 'unchecked'];
 
-/** Strip password from API payloads — use reveal endpoint on demand. */
+/** Strip password + internal vault flags from API payloads — use reveal endpoint on demand. */
 export function toClientAccount(account) {
   if (!account || typeof account !== 'object') return account;
-  const { password, ...rest } = account;
+  const {
+    password,
+    _vaultSealed,
+    _decryptFailed,
+    ...rest
+  } = account;
+  const hasPlain = Boolean(String(password ?? '').trim());
+  const hasSealed = Boolean(_vaultSealed);
   return {
     ...rest,
-    hasPassword: Boolean(String(password ?? '').trim()),
+    hasPassword: hasPlain || hasSealed,
+    decryptFailed: Boolean(_decryptFailed),
   };
 }
 
@@ -35,6 +43,9 @@ export async function revealAccountPassword(id, { isAdmin = false } = {}) {
   // Same visibility gate as list/export — block unchecked for non-admins
   const visible = visibleAccountsForViewer([row], isAdmin);
   if (!visible.length) throw new Error('Account not found');
+  if (row._decryptFailed) {
+    throw new Error('Password unavailable (vault decrypt failed — re-save this account)');
+  }
   return { password: String(row.password ?? '') };
 }
 
@@ -61,7 +72,10 @@ export async function exportAccountsText({ category, status, search, isAdmin = f
   if (workingOnly) {
     list = list.filter((a) => isWorkingStatus(a.status));
   }
-  return list.map((a) => `${a.service}\t${a.email}\t${a.password}`).join('\n');
+  return list
+    .filter((a) => !a._decryptFailed)
+    .map((a) => `${a.service}\t${a.email}\t${a.password}`)
+    .join('\n');
 }
 
 function isWorkingStatus(status) {

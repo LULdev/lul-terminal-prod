@@ -32,6 +32,19 @@ export function DailyBonusCard({
   const [claimedLocal, setClaimedLocal] = useState(false);
   const [pulse, setPulse] = useState(false);
   const claimingRef = useRef(false);
+  const pulseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const mountedRef = useRef(true);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      if (pulseTimerRef.current != null) {
+        clearTimeout(pulseTimerRef.current);
+        pulseTimerRef.current = null;
+      }
+    };
+  }, []);
 
   useEffect(() => {
     setRemainingMs(bonus.remainingMs);
@@ -59,16 +72,23 @@ export function DailyBonusCard({
     setClaiming(true);
     try {
       const res = await claimDailyBonus();
+      if (!mountedRef.current) return;
       setClaimedLocal(true);
       setPulse(true);
-      setTimeout(() => setPulse(false), 1200);
+      if (pulseTimerRef.current != null) clearTimeout(pulseTimerRef.current);
+      pulseTimerRef.current = setTimeout(() => {
+        if (mountedRef.current) setPulse(false);
+        pulseTimerRef.current = null;
+      }, 1200);
       setRemainingMs(res.remainingMs ?? bonus.cooldownMs);
       onClaimed?.(res.coins, res.bonus);
     } catch (e) {
-      onError?.(e instanceof Error ? e.message : 'Bonus unavailable');
+      if (mountedRef.current) {
+        onError?.(e instanceof Error ? e.message : 'Bonus unavailable');
+      }
     } finally {
       claimingRef.current = false;
-      setClaiming(false);
+      if (mountedRef.current) setClaiming(false);
     }
   }, [bonus.cooldownMs, canClaim, onClaimed, onError]);
 

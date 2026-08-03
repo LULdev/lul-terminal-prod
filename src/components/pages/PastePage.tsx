@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Archive, Download, LayoutGrid, Link2, Lock, PenLine, Sparkles, TrendingUp } from 'lucide-react';
 import {
   PASTE_EXPIRY_OPTIONS,
@@ -108,6 +108,7 @@ export function PastePage() {
   const [expiry, setExpiry] = useState<PasteExpiry>('1w');
   const [burnAfterRead, setBurnAfterRead] = useState(false);
   const [saving, setSaving] = useState(false);
+  const savingRef = useRef(false);
   const [error, setError] = useState('');
   const [result, setResult] = useState<PasteRecord | null>(null);
   const [liveViews, setLiveViews] = useState(0);
@@ -166,7 +167,7 @@ export function PastePage() {
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (saving) return;
+    if (savingRef.current) return;
     if (!content.trim()) {
       setError('Paste content cannot be empty');
       return;
@@ -176,6 +177,7 @@ export function PastePage() {
       return;
     }
 
+    savingRef.current = true;
     setSaving(true);
     setError('');
     try {
@@ -196,6 +198,7 @@ export function PastePage() {
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not save paste');
     } finally {
+      savingRef.current = false;
       setSaving(false);
     }
   };

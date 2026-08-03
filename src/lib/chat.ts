@@ -12,6 +12,17 @@ const API = '/api/chat';
 
 let chatAudioCtx: AudioContext | null = null;
 
+/** Invalidate only when /me confirms no user (HTTP 401 or explicit null). Network/5xx keep session. */
+async function invalidateSessionIfMeConfirmsLogout(): Promise<void> {
+  try {
+    const me = await fetchMe();
+    if (!me.user) invalidateSession();
+  } catch (e) {
+    const status = (e as { status?: number })?.status;
+    if (status === 401) invalidateSession();
+  }
+}
+
 export type ChatSegment =
   | { type: 'text'; text: string; style?: string }
   | { type: 'user'; username: string; href: string; label: string }
@@ -101,13 +112,11 @@ export async function fetchLobbyMessages(opts: { since?: number; limit?: number 
       headers: { 'Content-Type': 'application/json' },
     });
     if (guestRes.ok) {
-      const me = await fetchMe().catch(() => ({ user: null }));
-      if (!me.user) invalidateSession();
+      await invalidateSessionIfMeConfirmsLogout();
       return guestRes.json() as Promise<LobbyMessagesResponse>;
     }
-    // Only wipe global session when /me also confirms no user
-    const me = await fetchMe().catch(() => ({ user: null }));
-    if (!me.user) invalidateSession();
+    // Only wipe global session when /me also confirms no user (not network blips)
+    await invalidateSessionIfMeConfirmsLogout();
     throw new ChatAuthRequiredError();
   }
   if (res.status === 403) {
@@ -141,8 +150,7 @@ export async function sendLobbyMessage(text: string): Promise<SendLobbyMessageRe
     body: JSON.stringify({ text: body }),
   });
   if (res.status === 401) {
-    const me = await fetchMe().catch(() => ({ user: null }));
-    if (!me.user) invalidateSession();
+    await invalidateSessionIfMeConfirmsLogout();
     throw new ChatAuthRequiredError();
   }
   if (res.status === 429) {

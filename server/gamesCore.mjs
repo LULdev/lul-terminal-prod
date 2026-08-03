@@ -605,8 +605,11 @@ export async function refundJoinEscrow(db, user, amount, expireMeta) {
 async function refundHostQueueEscrow(db, user, amount, expireMeta) {
   if (!user || !amount || !expireMeta) return;
   const hostBet = amount;
-  if (!releaseGameEscrow(user, { gameId: expireMeta.gameId, amount: hostBet })) {
-    if (!releaseAnyGameEscrow(user, hostBet)) return;
+  const released = releaseGameEscrow(user, { gameId: expireMeta.gameId, amount: hostBet })
+    || releaseAnyGameEscrow(user, hostBet);
+  if (!released) {
+    // Never silent-drop host after queue removal — match joiner path
+    throw new Error('Escrow mismatch — host refund failed');
   }
   logQueueRefund(user, {
     gameId: expireMeta.gameId,

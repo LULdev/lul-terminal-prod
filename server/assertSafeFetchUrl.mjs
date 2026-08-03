@@ -17,18 +17,21 @@ const BLOCKED_HOSTS = new Set([
 
 function isPrivateIp(ip) {
   if (net.isIPv4(ip)) {
-    const [a, b] = ip.split('.').map(Number);
+    const parts = ip.split('.').map(Number);
+    const [a, b] = parts;
     if (a === 10 || a === 127 || a === 0) return true;
-    if (a === 169 && b === 254) return true;
+    if (a === 169 && b === 254) return true; // link-local
     if (a === 172 && b >= 16 && b <= 31) return true;
     if (a === 192 && b === 168) return true;
     if (a === 100 && b >= 64 && b <= 127) return true; // CGNAT 100.64.0.0/10
+    if (a === 198 && (b === 18 || b === 19)) return true; // benchmarking 198.18.0.0/15
+    if (a >= 224) return true; // multicast + reserved
   }
   if (net.isIPv6(ip)) {
-    const lower = ip.toLowerCase();
-    if (lower === '::1' || lower.startsWith('fe80:') || lower.startsWith('fc') || lower.startsWith('fd')) {
-      return true;
-    }
+    const lower = ip.toLowerCase().replace(/^\[|\]$/g, '');
+    if (lower === '::' || lower === '::1') return true;
+    if (lower.startsWith('fe80:') || lower.startsWith('fc') || lower.startsWith('fd')) return true;
+    if (lower.startsWith('ff')) return true; // multicast
     if (lower.startsWith('::ffff:')) return isPrivateIp(lower.slice(7));
   }
   return false;

@@ -32,8 +32,14 @@ export type ChatEmotesResponse = {
 export async function fetchChatEmotes(): Promise<ChatEmotesResponse> {
   const res = await fetch(API, { credentials: 'include' });
   if (res.status === 401) {
-    const me = await fetchMe().catch(() => ({ user: null }));
-    if (!me.user) invalidateSession();
+    // Only wipe session when /me confirms logout — network/5xx must not force logout
+    try {
+      const me = await fetchMe();
+      if (!me.user) invalidateSession();
+    } catch (e) {
+      const status = (e as { status?: number })?.status;
+      if (status === 401) invalidateSession();
+    }
     throw new ChatEmotesAuthError();
   }
   if (!res.ok) throw new Error('Emotes unavailable');

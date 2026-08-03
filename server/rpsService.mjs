@@ -60,8 +60,10 @@ const activeMatches = new Map();
 async function refundHostQueueEscrow(db, user, amount) {
   if (!user || !amount) return;
   const hostBet = amount;
-  if (!releaseGameEscrow(user, { gameId: 'rps', amount: hostBet })) {
-    if (!releaseAnyGameEscrow(user, hostBet)) return;
+  const released = releaseGameEscrow(user, { gameId: 'rps', amount: hostBet })
+    || releaseAnyGameEscrow(user, hostBet);
+  if (!released) {
+    throw new Error('Escrow mismatch — host refund failed');
   }
   logQueueRefund(user, { gameId: 'rps', chatLabel: 'RPS', bet: hostBet, amount: hostBet });
   user.updatedAt = Date.now();
@@ -132,7 +134,11 @@ function deductCoins(user, amount) {
 function creditCoins(user, amount, ledgerFn, ledgerArgs) {
   if (ledgerFn && ledgerArgs) {
     if (ledgerFn === logQueueRefund) {
-      if (!releaseGameEscrow(user, { gameId: ledgerArgs.gameId ?? 'rps', amount })) return;
+      const released = releaseGameEscrow(user, { gameId: ledgerArgs.gameId ?? 'rps', amount })
+        || releaseAnyGameEscrow(user, amount);
+      if (!released) {
+        throw new Error('Escrow mismatch — queue refund failed');
+      }
     }
     ledgerFn(user, { ...ledgerArgs, amount });
     return;

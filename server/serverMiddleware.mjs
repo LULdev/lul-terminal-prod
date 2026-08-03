@@ -23,14 +23,12 @@ import { createXmlLinkScraperMiddleware } from './xmlLinkScraperApi.mjs';
 import { createAdminMiddleware } from './adminApi.mjs';
 import { createStatusMiddleware } from './statusApi.mjs';
 import { createGamesMiddleware } from './gamesApi.mjs';
-import { refundAllEscrowsOnBoot } from './gamesEscrow.mjs';
-import { startMatchExpirySweep } from './gamesExpirySweep.mjs';
+import { ensureGamesBootstrapped, isGamesBootReady } from './gamesBoot.mjs';
 import { startRegistrationChallengePurge } from './auth/registrationChallenge.mjs';
 import { startLeaderboardSyncScheduler } from './leaderboardService.mjs';
 import { startProxyDatabaseScheduler } from './proxyDatabaseScheduler.mjs';
 
 let schedulerStarted = false;
-let gamesBootstrapped = false;
 
 export function createServerMiddleware() {
   if (!schedulerStarted) {
@@ -38,18 +36,8 @@ export function createServerMiddleware() {
     startProxyDatabaseScheduler();
     startLeaderboardSyncScheduler();
     startRegistrationChallengePurge();
-  }
-  if (!gamesBootstrapped) {
-    gamesBootstrapped = true;
-    void (async () => {
-      try {
-        const n = await refundAllEscrowsOnBoot();
-        if (n > 0) console.log(`[games] Refunded ${n} escrow(s) after restart`);
-      } catch (e) {
-        console.error('[games] Boot escrow refund failed', e);
-      }
-      startMatchExpirySweep();
-    })();
+    // Kick boot (awaited in start.mjs before listen; vite may race so also gate games)
+    void ensureGamesBootstrapped();
   }
 
   const imageHost = createImageHostMiddleware();
@@ -132,6 +120,16 @@ export function createServerMiddleware() {
       return;
     }
     if (pathname.startsWith('/api/games')) {
+      // Vite/dev can hit games before boot await; block until escrow refund finishes
+      if (!isGamesBootReady()) {
+        void ensureGamesBootstrapped().then(() => games(req, res, next)).catch((err) => {
+          console.error('[games] boot gate failed', err);
+          res.statusCode = 503;
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify({ error: 'Arcade starting up — retry shortly' }));
+        });
+        return;
+      }
       games(req, res, next);
       return;
     }

@@ -12,7 +12,7 @@ import { clearStoredReferralCode } from '../lib/referral';
 import { clearAchievementProofs } from '../lib/achievementProof';
 import { closeChatAudioContext } from '../lib/chat';
 import { clearViewDedupSessionKeys } from '../lib/viewDedup';
-import { onSessionInvalidated, resetSessionInvalidation } from '../lib/sessionEvents';
+import { bumpSessionEpoch, onSessionInvalidated, resetSessionInvalidation } from '../lib/sessionEvents';
 import type { TabId } from '../config/menuItems';
 
 type AuthMode = 'login' | 'register' | null;
@@ -204,9 +204,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     return onSessionInvalidated(() => {
       refreshGenRef.current += 1;
-      // Best-effort: clear HttpOnly cookie so credentialed polls stop 401-looping
-      void fetch('/api/auth/logout', { method: 'POST', credentials: 'include' }).catch(() => {});
-      void import('../lib/arcadeCleanup').then((m) => m.leaveAllArcadeQueuesBestEffort());
+      // Leave queues BEFORE logout so the cookie is still valid (order matches explicit logout)
+      void (async () => {
+        try {
+          const m = await import('../lib/arcadeCleanup');
+          await m.leaveAllArcadeQueuesBestEffort();
+        } catch { /* best-effort */ }
+        try {
+          await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+        } catch { /* best-effort */ }
+      })();
       clearLocalSession();
       setAuthModal(null);
     });
@@ -216,8 +223,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     refreshGenRef.current += 1;
     const loginGen = refreshGenRef.current;
     const data = await authApi.login(email, password, remember);
+    // New session cookie is live — advance epoch so stale 401s cannot wipe this login
+    bumpSessionEpoch();
+    resetSessionInvalidation();
     if (loginGen !== refreshGenRef.current) {
-      // Cookie may already be set — reconcile or surface interruption
+      // Cookie set but UI gen advanced — reconcile via /me so we don't orphan cookie-only state
+      void refresh();
       throw new Error('Sign-in interrupted — please try again');
     }
     setUser(data.user);
@@ -228,7 +239,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     handleUnlocks(data.newUnlocks ?? [], data.unlockRewards);
     setAuthModal(null);
     clearViewDedupSessionKeys();
-    resetSessionInvalidation();
     setAuthSuccessTick((t) => t + 1);
     try {
       const me = await authApi.fetchMe();
@@ -241,7 +251,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch {
       /* keep login response user */
     }
-  }, [handleUnlocks]);
+  }, [handleUnlocks, refresh]);
 
   const register = useCallback(async (input: {
     email: string;
@@ -279,6 +289,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = useCallback(async () => {
     refreshGenRef.current += 1;
+    bumpSessionEpoch();
     // Leave arcade queues while cookie is still valid
     try {
       const { leaveAllArcadeQueuesBestEffort } = await import('../lib/arcadeCleanup');

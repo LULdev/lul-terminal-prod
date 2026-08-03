@@ -18,6 +18,10 @@ async function main() {
   // Self-configure data dirs, secrets, and admin account before serving traffic.
   await bootstrapApplication();
 
+  // Refund RAM-lost arcade escrows BEFORE listen so join cannot race boot refund
+  const { ensureGamesBootstrapped } = await import('./gamesBoot.mjs');
+  await ensureGamesBootstrapped();
+
   const app = express();
   if (isTrustProxyEnabled()) {
     app.set('trust proxy', 1);

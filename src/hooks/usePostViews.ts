@@ -26,13 +26,12 @@ export function usePostViews(type: PostViewType, opts?: { enabled?: boolean }) {
         clearTimeout(flushTimerRef.current);
         flushTimerRef.current = null;
       }
+      // Merge pending into ref only — never setState after unmount
       const batch = pendingRef.current;
       pendingRef.current = {};
       const keys = Object.keys(batch);
       if (!keys.length) return;
-      const merged = { ...viewsRef.current, ...batch };
-      viewsRef.current = merged;
-      setViews((prev) => ({ ...prev, ...batch }));
+      viewsRef.current = { ...viewsRef.current, ...batch };
     };
   }, []);
 

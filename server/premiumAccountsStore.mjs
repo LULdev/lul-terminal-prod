@@ -36,16 +36,36 @@ export async function ensureStore() {
 
 function hydrateAccount(account) {
   if (!account || typeof account !== 'object') return account;
-  return {
-    ...account,
-    password: decryptPassword(account.password),
-  };
+  const sealed = account.password;
+  try {
+    return {
+      ...account,
+      password: decryptPassword(sealed),
+      _vaultSealed: typeof sealed === 'string' && sealed.startsWith('enc:v1:') ? sealed : null,
+      _decryptFailed: false,
+    };
+  } catch (err) {
+    console.warn('[premium-vault] decrypt failed for account', account?.id ?? '?', err?.message ?? err);
+    // Keep original ciphertext so seal can re-write without wiping the DB
+    return {
+      ...account,
+      password: '',
+      _vaultSealed: typeof sealed === 'string' ? sealed : null,
+      _decryptFailed: true,
+    };
+  }
 }
 
 function sealAccount(account) {
   if (!account || typeof account !== 'object') return account;
+  const { _vaultSealed, _decryptFailed, ...rest } = account;
+  // Failed decrypt: preserve original sealed ciphertext (never re-encrypt garbage)
+  if (_decryptFailed && _vaultSealed) {
+    return { ...rest, password: _vaultSealed };
+  }
+  // Plaintext from hydrate or new submit — always encrypt (never trust client enc:v1:)
   return {
-    ...account,
+    ...rest,
     password: encryptPassword(account.password),
   };
 }
@@ -55,7 +75,22 @@ export async function loadAccountsDb() {
   try {
     const raw = await fs.readFile(DB_FILE, 'utf8');
     const data = JSON.parse(raw);
-    const accounts = Array.isArray(data.accounts) ? data.accounts.map(hydrateAccount) : [];
+    // Per-row hydrate: one poison password must not brick the whole vault
+    const accounts = Array.isArray(data.accounts)
+      ? data.accounts.map((a) => {
+          try {
+            return hydrateAccount(a);
+          } catch (err) {
+            console.warn('[premium-vault] hydrate skipped row', a?.id ?? '?', err?.message ?? err);
+            return {
+              ...a,
+              password: '',
+              _vaultSealed: typeof a?.password === 'string' ? a.password : null,
+              _decryptFailed: true,
+            };
+          }
+        })
+      : [];
     return {
       ...EMPTY_DB,
       ...data,

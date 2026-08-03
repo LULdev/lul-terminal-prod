@@ -189,11 +189,13 @@ function AdminReviewButtons({
   onDone: () => void;
 }) {
   const [acting, setActing] = useState(false);
+  const actingRef = useRef(false);
   const [err, setErr] = useState('');
 
   const act = async (action: 'approve' | 'approve_free' | 'reject') => {
-    if (acting) return;
+    if (actingRef.current) return;
     if (action === 'reject' && !confirm('Reject and delete account?')) return;
+    actingRef.current = true;
     setActing(true);
     setErr('');
     try {
@@ -204,6 +206,7 @@ function AdminReviewButtons({
     } catch (e) {
       setErr(e instanceof Error ? e.message : 'Action failed');
     } finally {
+      actingRef.current = false;
       setActing(false);
     }
   };
@@ -523,6 +526,7 @@ function QuickAddForm({ onAdded }: { onAdded: () => void }) {
   const [planType, setPlanType] = useState<PremiumAccountPlan>('Free');
   const [vip, setVip] = useState(false);
   const [saving, setSaving] = useState(false);
+  const savingRef = useRef(false);
   const [formError, setFormError] = useState('');
   const [submitSuccess, setSubmitSuccess] = useState('');
   const [showConfirm, setShowConfirm] = useState(false);
@@ -558,8 +562,9 @@ function QuickAddForm({ onAdded }: { onAdded: () => void }) {
   };
 
   const confirmSubmit = async () => {
-    if (saving) return;
+    if (savingRef.current) return;
     if (!validate()) return;
+    savingRef.current = true;
     setSaving(true);
     setFormError('');
     try {
@@ -580,6 +585,7 @@ function QuickAddForm({ onAdded }: { onAdded: () => void }) {
       setFormError(err instanceof Error ? err.message : 'Save failed');
       setShowConfirm(false);
     } finally {
+      savingRef.current = false;
       setSaving(false);
     }
   };

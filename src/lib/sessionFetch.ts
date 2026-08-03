@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { invalidateSession } from './sessionEvents';
+import { getSessionEpoch, invalidateSession } from './sessionEvents';
 
 export class SessionExpiredError extends Error {
   constructor() {
@@ -23,6 +23,8 @@ export async function sessionFetch(
   init?: RequestInit,
   opts?: SessionFetchOptions,
 ): Promise<Response> {
+  // Capture epoch at start so a late 401 after re-login cannot wipe the new session
+  const epochAtStart = getSessionEpoch();
   const headers = new Headers(init?.headers ?? {});
   const hasBody = init?.body != null && init.body !== '';
   const isFormData = typeof FormData !== 'undefined' && init?.body instanceof FormData;
@@ -36,7 +38,7 @@ export async function sessionFetch(
   });
   if (res.status === 401) {
     if (opts?.soft401) return res;
-    invalidateSession();
+    invalidateSession({ epoch: epochAtStart });
     throw new SessionExpiredError();
   }
   return res;

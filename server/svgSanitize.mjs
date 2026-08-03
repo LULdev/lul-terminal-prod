@@ -28,7 +28,9 @@ export function sanitizeSvgBuffer(buffer) {
   for (const re of DISALLOWED_PATTERNS) {
     text = text.replace(re, '');
   }
-  text = text.replace(/\son[a-z]+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, '');
+  // Event handlers with whitespace OR slash-delimited tags: <svg/onload=…>
+  text = text.replace(/[\s/]on[a-z]+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, ' ');
+  text = text.replace(/\bon[a-z]+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, '');
   text = text.replace(/\s(?:xlink:)?href\s*=\s*("|')[^"']*\1/gi, '');
   text = text.replace(/\s(?:xlink:)?href\s*=\s*[^\s>]+/gi, '');
   text = text.replace(/javascript:/gi, '');
@@ -37,7 +39,7 @@ export function sanitizeSvgBuffer(buffer) {
   text = text.replace(/@import/gi, '');
   text = text.replace(/<!\[CDATA\[[\s\S]*?\]\]>/gi, '');
 
-  if (/<script|foreignObject|javascript:|vbscript:|<iframe|<embed|<object|<style|<use\b/i.test(text)) {
+  if (/<script|foreignObject|javascript:|vbscript:|<iframe|<embed|<object|<style|<use\b|\bon[a-z]+\s*=/i.test(text)) {
     throw new Error('SVG contains disallowed content');
   }
   return Buffer.from(text, 'utf8');

@@ -24,14 +24,41 @@ function vaultKey() {
   return cachedVaultKey;
 }
 
+/**
+ * Encrypt vault plaintext. Always produces a new ciphertext.
+ * Never treat client-supplied `enc:v1:…` as already sealed (would poison hydrate).
+ * Use `reSealIfNeeded` only for internal already-sealed storage rows.
+ */
 export function encryptPassword(plain) {
   const text = String(plain ?? '');
-  if (!text || text.startsWith(PREFIX)) return text;
+  if (!text) return text;
   const iv = crypto.randomBytes(12);
   const cipher = crypto.createCipheriv(ALGO, vaultKey(), iv);
   const enc = Buffer.concat([cipher.update(text, 'utf8'), cipher.final()]);
   const tag = cipher.getAuthTag();
   return `${PREFIX}${iv.toString('base64url')}:${tag.toString('base64url')}:${enc.toString('base64url')}`;
+}
+
+/** Skip encrypt only when value is already a valid sealed payload (internal re-seal). */
+export function reSealIfNeeded(value) {
+  const s = String(value ?? '');
+  if (!s) return s;
+  if (s.startsWith(PREFIX) && isValidSealedPayload(s)) return s;
+  return encryptPassword(s);
+}
+
+function isValidSealedPayload(s) {
+  if (!s.startsWith(PREFIX)) return false;
+  const parts = s.slice(PREFIX.length).split(':');
+  if (parts.length !== 3) return false;
+  try {
+    Buffer.from(parts[0], 'base64url');
+    Buffer.from(parts[1], 'base64url');
+    Buffer.from(parts[2], 'base64url');
+    return parts[0].length > 0 && parts[1].length > 0 && parts[2].length > 0;
+  } catch {
+    return false;
+  }
 }
 
 export function decryptPassword(stored) {
