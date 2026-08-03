@@ -23,6 +23,21 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '3.52.0',
+    title: '25-round full system audit (Server+Client P0–P9): preferGameId, delete-account, auto-submit, soft401',
+    date: 'Aug 4, 2026 - 00:45',
+    highlight: true,
+    items: [
+      { priority: 'P0', text: 'P0 — deleteOwnAccount: leaveAllGameQueues/refund OUTSIDE withUsersWrite (no nested users→arcade→users under write).' },
+      { priority: 'P1', text: 'P1 — All releaseAnyGameEscrow call sites pass preferGameId (gamesCore/RPS/TTT queue/leave/host/join).' },
+      { priority: 'P1', text: 'P1 — Login: loginInFlightRef blocks visibility/online refresh mid-login (gen interrupt after cookie).' },
+      { priority: 'P2', text: 'P2 — Dice100/Roulette auto-submit autoSubmitLockRef (no double onMove before parent acting).' },
+      { priority: 'P2', text: 'P2 — UnifiedTerminalPanel bot delete actingRef; chatActivity meme notify soft401 (non-fatal).' },
+      { priority: 'P2', text: 'P2 — colon-db cross-process lock; page/post view record failures after claim return soft 200 (no 500).' },
+      { priority: 'P9', text: 'P9 — Version 3.52.0; every fix listed here and in release notes.' },
+    ],
+  },
+  {
     version: '3.51.1',
     title: 'Residual P0–P2: sessions↔users deadlock, expire-after-save, no cross-game strip, lock token write',
     date: 'Aug 4, 2026 - 00:15',

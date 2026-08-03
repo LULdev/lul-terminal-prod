@@ -38,9 +38,15 @@ export async function handlePageViewsRequest(req, res) {
       if (!(await claimIpView('page', ip, pageId))) {
         return sendJson(res, 200, { pageId, views: await getPageViews(pageId), deduped: true });
       }
-      const recorded = await recordPageView(pageId);
-      if (!recorded) return sendJson(res, 400, { error: 'Invalid page id' });
-      return sendJson(res, 200, { ...recorded, deduped: false });
+      try {
+        const recorded = await recordPageView(pageId);
+        if (!recorded) return sendJson(res, 400, { error: 'Invalid page id' });
+        return sendJson(res, 200, { ...recorded, deduped: false });
+      } catch (recErr) {
+        // Claim spent but write failed — still return current count (under-count preferred to 500)
+        console.warn('[page-views] record failed after claim', recErr);
+        return sendJson(res, 200, { pageId, views: await getPageViews(pageId), deduped: false, recordFailed: true });
+      }
     }
 
     const idMatch = pathname.match(/^\/api\/page-views\/([a-zA-Z0-9_-]{1,24})$/);

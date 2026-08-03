@@ -47,6 +47,7 @@ function BotBadgeWithDelete({
   const { isAdmin, openAuth, refresh } = useAuth();
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
   const [acting, setActing] = useState(false);
+  const actingRef = useRef(false);
 
   useEffect(() => {
     if (!menu) return;
@@ -72,7 +73,9 @@ function BotBadgeWithDelete({
 
   const deleteMsg = async () => {
     setMenu(null);
+    if (actingRef.current) return;
     if (!confirm('Delete this bot message?')) return;
+    actingRef.current = true;
     setActing(true);
     try {
       await adminDeleteShoutboxMessage(messageId);
@@ -85,6 +88,7 @@ function BotBadgeWithDelete({
         terminalAppend(`❌ Delete failed: ${err instanceof Error ? err.message : 'error'}`, 'warn');
       }
     } finally {
+      actingRef.current = false;
       setActing(false);
     }
   };

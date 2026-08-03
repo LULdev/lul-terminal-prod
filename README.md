@@ -1,6 +1,6 @@
 # LUL Terminal
 
-[![Version](https://img.shields.io/badge/version-3.51.1-blue)](./package.json)
+[![Version](https://img.shields.io/badge/version-3.52.0-blue)](./package.json)
 [![Node](https://img.shields.io/badge/node-%3E%3D18-green)](./package.json)
 [![License](https://img.shields.io/badge/license-Apache--2.0-orange)](./LICENSE)
 

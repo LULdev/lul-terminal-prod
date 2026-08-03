@@ -121,6 +121,7 @@ export function RouletteArena({
   const pendingMoveRef = useRef('');
   const submittedForMatchRef = useRef<string | null>(null);
   const submitAttemptsRef = useRef(0);
+  const autoSubmitLockRef = useRef(false);
   const [submitFails, setSubmitFails] = useState(0);
   const [retryToken, setRetryToken] = useState(0);
   const wheelBg = useMemo(() => wheelConic(), []);
@@ -177,10 +178,11 @@ export function RouletteArena({
     if (match.player1?.move || match.player1?.submitted) {
       submittedForMatchRef.current = match.id;
       submitAttemptsRef.current = 0;
+      autoSubmitLockRef.current = false;
       setSubmitFails(0);
       return;
     }
-    if (acting) return;
+    if (acting || autoSubmitLockRef.current) return;
     if (!pendingMoveRef.current) return;
     if (submittedForMatchRef.current === match.id && retryToken === 0) {
       if (submitAttemptsRef.current >= 3) {
@@ -190,11 +192,13 @@ export function RouletteArena({
       const t = window.setTimeout(() => {
         if (submittedForMatchRef.current === match.id && submitAttemptsRef.current < 3) {
           submittedForMatchRef.current = null;
+          autoSubmitLockRef.current = false;
           setRetryToken((n) => n + 1);
         }
       }, 800);
       return () => window.clearTimeout(t);
     }
+    autoSubmitLockRef.current = true;
     submittedForMatchRef.current = match.id;
     submitAttemptsRef.current += 1;
     setSubmitFails(submitAttemptsRef.current >= 3 ? submitAttemptsRef.current : 0);

@@ -78,6 +78,8 @@ export function Dice100Arena({
   const pendingMoveRef = useRef(encodeMove('over', 50));
   const submittedForMatchRef = useRef<string | null>(null);
   const submitAttemptsRef = useRef(0);
+  /** Sync lock so re-renders with acting=false cannot double-fire onMove before parent acting flips */
+  const autoSubmitLockRef = useRef(false);
   const [submitFails, setSubmitFails] = useState(0);
   const [retryToken, setRetryToken] = useState(0);
 
@@ -123,10 +125,11 @@ export function Dice100Arena({
     if (match.player1?.move || match.player1?.submitted) {
       submittedForMatchRef.current = match.id;
       submitAttemptsRef.current = 0;
+      autoSubmitLockRef.current = false;
       setSubmitFails(0);
       return;
     }
-    if (acting) return;
+    if (acting || autoSubmitLockRef.current) return;
     if (submittedForMatchRef.current === match.id && retryToken === 0) {
       if (submitAttemptsRef.current >= 3) {
         setSubmitFails(submitAttemptsRef.current);
@@ -135,11 +138,13 @@ export function Dice100Arena({
       const t = window.setTimeout(() => {
         if (submittedForMatchRef.current === match.id && submitAttemptsRef.current < 3) {
           submittedForMatchRef.current = null;
+          autoSubmitLockRef.current = false;
           setRetryToken((n) => n + 1);
         }
       }, 800);
       return () => window.clearTimeout(t);
     }
+    autoSubmitLockRef.current = true;
     submittedForMatchRef.current = match.id;
     submitAttemptsRef.current += 1;
     setSubmitFails(submitAttemptsRef.current >= 3 ? submitAttemptsRef.current : 0);

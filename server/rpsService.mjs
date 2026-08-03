@@ -64,7 +64,7 @@ async function refundHostQueueEscrow(db, user, amount) {
   if (!user || !amount) return;
   const hostBet = amount;
   const released = releaseGameEscrow(user, { gameId: 'rps', amount: hostBet })
-    || releaseAnyGameEscrow(user, hostBet);
+    || releaseAnyGameEscrow(user, hostBet, { preferGameId: 'rps' });
   if (!released) {
     throw new Error('Escrow mismatch — host refund failed');
   }
@@ -78,7 +78,7 @@ async function leaveQueueEntry(db, user, userId, entry) {
   if (idx < 0) return;
   if (user && entry?.bet) {
     const released = releaseGameEscrow(user, { gameId: 'rps', amount: entry.bet })
-      || releaseAnyGameEscrow(user, entry.bet);
+      || releaseAnyGameEscrow(user, entry.bet, { preferGameId: 'rps' });
     if (!released) {
       throw new Error('Escrow mismatch — leave queue and re-join');
     }
@@ -138,7 +138,7 @@ function creditCoins(user, amount, ledgerFn, ledgerArgs) {
   if (ledgerFn && ledgerArgs) {
     if (ledgerFn === logQueueRefund) {
       const released = releaseGameEscrow(user, { gameId: ledgerArgs.gameId ?? 'rps', amount })
-        || releaseAnyGameEscrow(user, amount);
+        || releaseAnyGameEscrow(user, amount, { preferGameId: ledgerArgs.gameId ?? 'rps' });
       if (!released) {
         throw new Error('Escrow mismatch — queue refund failed');
       }
@@ -616,7 +616,7 @@ async function joinQueueInner(userId, { bet, mode = 'pvp', botDifficulty = 'norm
     }
     if (queued.bet !== amount) {
       const released = releaseGameEscrow(user, { gameId: 'rps', amount: queued.bet })
-        || releaseAnyGameEscrow(user, queued.bet);
+        || releaseAnyGameEscrow(user, queued.bet, { preferGameId: 'rps' });
       if (!released) {
         throw new Error('Escrow mismatch — leave queue and re-join');
       }
@@ -787,7 +787,7 @@ export async function leaveRpsQueue(userId) {
       const entry = queue[idx];
       if (user && entry?.bet) {
         const released = releaseGameEscrow(user, { gameId: 'rps', amount: entry.bet })
-          || releaseAnyGameEscrow(user, entry.bet);
+          || releaseAnyGameEscrow(user, entry.bet, { preferGameId: 'rps' });
         if (!released) {
           throw new Error('Escrow mismatch — cannot leave queue');
         }

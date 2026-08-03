@@ -68,7 +68,7 @@ async function refundHostQueueEscrow(db, user, amount) {
   if (!user || !amount) return;
   const hostBet = amount;
   const released = releaseGameEscrow(user, { gameId: 'ttt', amount: hostBet })
-    || releaseAnyGameEscrow(user, hostBet);
+    || releaseAnyGameEscrow(user, hostBet, { preferGameId: 'ttt' });
   if (!released) {
     throw new Error('Escrow mismatch — host refund failed');
   }
@@ -82,7 +82,7 @@ async function leaveQueueEntry(db, user, userId, entry) {
   if (idx < 0) return;
   if (user && entry?.bet) {
     const released = releaseGameEscrow(user, { gameId: 'ttt', amount: entry.bet })
-      || releaseAnyGameEscrow(user, entry.bet);
+      || releaseAnyGameEscrow(user, entry.bet, { preferGameId: 'ttt' });
     if (!released) {
       throw new Error('Escrow mismatch — leave queue and re-join');
     }
@@ -131,7 +131,7 @@ function creditCoins(user, amount, ledgerFn, ledgerArgs) {
   if (ledgerFn && ledgerArgs) {
     if (ledgerFn === logQueueRefund) {
       const released = releaseGameEscrow(user, { gameId: ledgerArgs.gameId ?? 'ttt', amount })
-        || releaseAnyGameEscrow(user, amount);
+        || releaseAnyGameEscrow(user, amount, { preferGameId: ledgerArgs.gameId ?? 'ttt' });
       if (!released) {
         throw new Error('Escrow mismatch — queue refund failed');
       }
@@ -524,7 +524,7 @@ async function joinTttQueueInner(userId, { bet, mode = 'pvp', botDifficulty = 'n
     }
     if (queued.bet !== amount) {
       const released = releaseGameEscrow(user, { gameId: 'ttt', amount: queued.bet })
-        || releaseAnyGameEscrow(user, queued.bet);
+        || releaseAnyGameEscrow(user, queued.bet, { preferGameId: 'ttt' });
       if (!released) {
         throw new Error('Escrow mismatch — leave queue and re-join');
       }
@@ -690,7 +690,7 @@ export async function leaveTttQueue(userId) {
       const entry = queue[idx];
       if (user && entry?.bet) {
         const released = releaseGameEscrow(user, { gameId: 'ttt', amount: entry.bet })
-          || releaseAnyGameEscrow(user, entry.bet);
+          || releaseAnyGameEscrow(user, entry.bet, { preferGameId: 'ttt' });
         if (!released) {
           throw new Error('Escrow mismatch — cannot leave queue');
         }

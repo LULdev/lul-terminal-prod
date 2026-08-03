@@ -891,7 +891,7 @@ export async function incrementUserMemeCreated(userId, memeImageId = '') {
 }
 
 export async function deleteOwnAccount(userId, password) {
-  const { leaveAllGameQueues } = await import('../gamesService.mjs');
+  const { leaveAllGameQueues, userHasActiveArcadeSession } = await import('../gamesService.mjs');
   const { blockRegistrationSignalsForUser } = await import('./registrationRegistry.mjs');
 
   const db = await loadUsersDb();
@@ -902,6 +902,20 @@ export async function deleteOwnAccount(userId, password) {
   if (!(await verifyPassword(pwd, user.passwordHash))) {
     throw new Error('Invalid password');
   }
+  if (user.role === 'admin' && countActiveAdmins(db.users) <= 1) {
+    throw new Error('Last admin cannot be deleted');
+  }
+
+  // Arcade cleanup OUTSIDE users write (no users→sessions / coin nesting under write lock)
+  const cleanup = await leaveAllGameQueues(userId);
+  await refundOrphanEscrowsAfterCleanup(userId, cleanup);
+  const stillLive = await userHasActiveArcadeSession(userId).catch(() => true);
+  if (stillLive) {
+    throw new Error('Finish your active arcade match before deleting your account');
+  }
+  await refundUserEscrows(userId).catch((e) => {
+    console.warn('[auth] final escrow refund before delete failed', userId, e);
+  });
 
   await withUsersWrite(async () => {
     const freshDb = await loadUsersDb();
@@ -910,16 +924,6 @@ export async function deleteOwnAccount(userId, password) {
     if (freshUser.role === 'admin' && countActiveAdmins(freshDb.users) <= 1) {
       throw new Error('Last admin cannot be deleted');
     }
-    const cleanup = await leaveAllGameQueues(userId);
-    await refundOrphanEscrowsAfterCleanup(userId, cleanup);
-    const { userHasActiveArcadeSession } = await import('../gamesService.mjs');
-    const stillLive = await userHasActiveArcadeSession(userId).catch(() => true);
-    if (stillLive) {
-      throw new Error('Finish your active arcade match before deleting your account');
-    }
-    await refundUserEscrows(userId).catch((e) => {
-      console.warn('[auth] final escrow refund before delete failed', userId, e);
-    });
     await blockRegistrationSignalsForUser(freshUser);
     freshUser.registrationBlocked = true;
     freshDb.users = freshDb.users.filter((u) => u.id !== userId);

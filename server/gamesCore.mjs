@@ -237,7 +237,7 @@ export async function sweepStaleQueueEntries(mm, { gameId, chatLabel }, maxAgeMs
         let refundedOrphan = false;
         if (record && entry.bet) {
           const released = releaseGameEscrow(record, { gameId, amount: entry.bet })
-            || releaseAnyGameEscrow(record, entry.bet);
+            || releaseAnyGameEscrow(record, entry.bet, { preferGameId: gameId });
           if (released) {
             logQueueRefund(record, { gameId, chatLabel, bet: entry.bet, amount: entry.bet });
             record.updatedAt = Date.now();
@@ -266,7 +266,7 @@ export async function sweepStaleQueueEntries(mm, { gameId, chatLabel }, maxAgeMs
           continue;
         }
         const released = releaseGameEscrow(user, { gameId, amount: orphanAmt })
-          || releaseAnyGameEscrow(user, orphanAmt);
+          || releaseAnyGameEscrow(user, orphanAmt, { preferGameId: gameId });
         if (!released) continue;
         logQueueRefund(user, { gameId, chatLabel, bet: orphanAmt, amount: orphanAmt });
         user.updatedAt = Date.now();
@@ -280,7 +280,7 @@ export async function sweepStaleQueueEntries(mm, { gameId, chatLabel }, maxAgeMs
         continue;
       }
       const released = releaseGameEscrow(user, { gameId, amount: entry.bet })
-        || releaseAnyGameEscrow(user, entry.bet);
+        || releaseAnyGameEscrow(user, entry.bet, { preferGameId: gameId });
       if (!released) {
         entry._sweepFail = (Number(entry._sweepFail) || 0) + 1;
         if (entry._sweepFail < 5) continue;
@@ -603,7 +603,7 @@ export function queueStatusForUser(queue, userId) {
 export async function refundJoinEscrow(db, user, amount, expireMeta) {
   if (!user || !amount || !expireMeta) return;
   const released = releaseGameEscrow(user, { gameId: expireMeta.gameId, amount })
-    || releaseAnyGameEscrow(user, amount);
+    || releaseAnyGameEscrow(user, amount, { preferGameId: expireMeta.gameId });
   if (!released) {
     throw new Error('Escrow mismatch — refund failed');
   }
@@ -621,7 +621,7 @@ async function refundHostQueueEscrow(db, user, amount, expireMeta) {
   if (!user || !amount || !expireMeta) return;
   const hostBet = amount;
   const released = releaseGameEscrow(user, { gameId: expireMeta.gameId, amount: hostBet })
-    || releaseAnyGameEscrow(user, hostBet);
+    || releaseAnyGameEscrow(user, hostBet, { preferGameId: expireMeta.gameId });
   if (!released) {
     // Never silent-drop host after queue removal — match joiner path
     throw new Error('Escrow mismatch — host refund failed');
@@ -641,7 +641,7 @@ async function leaveQueueEntry(mm, db, user, userId, entry, expireMeta) {
   if (idx < 0) return;
   if (user && entry?.bet && expireMeta) {
     const released = releaseGameEscrow(user, { gameId: expireMeta.gameId, amount: entry.bet })
-      || releaseAnyGameEscrow(user, entry.bet);
+      || releaseAnyGameEscrow(user, entry.bet, { preferGameId: expireMeta.gameId });
     if (!released) {
       throw new Error('Escrow mismatch — leave queue and re-join');
     }
@@ -819,7 +819,7 @@ async function joinMatchQueueInner({
     }
     if (queued.bet !== amount && expireMeta) {
       const released = releaseGameEscrow(user, { gameId: expireMeta.gameId, amount: queued.bet })
-        || releaseAnyGameEscrow(user, queued.bet);
+        || releaseAnyGameEscrow(user, queued.bet, { preferGameId: expireMeta.gameId });
       if (!released) {
         throw new Error('Escrow mismatch — leave queue and re-join');
       }
@@ -947,7 +947,7 @@ export async function leaveMatchQueue(mm, userId, { gameId = 'arcade', chatLabel
     const entry = mm.queue[idx];
     if (user && entry?.bet) {
       const released = releaseGameEscrow(user, { gameId, amount: entry.bet })
-        || releaseAnyGameEscrow(user, entry.bet);
+        || releaseAnyGameEscrow(user, entry.bet, { preferGameId: gameId });
       if (!released) {
         throw new Error('Escrow mismatch — cannot leave queue');
       }

@@ -136,6 +136,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const refreshGenRef = useRef(0);
+  const loginInFlightRef = useRef(false);
   const userRef = useRef(user);
   userRef.current = user;
 
@@ -194,7 +195,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
     void boot();
     const retryAuth = () => {
-      if (mounted && userRef.current) void refresh();
+      // Skip visibility/online refresh during in-flight login (avoids gen interrupt after cookie set)
+      if (mounted && userRef.current && !loginInFlightRef.current) void refresh();
     };
     window.addEventListener('online', retryAuth);
     const onVisible = () => {
@@ -231,36 +233,41 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [clearLocalSession]);
 
   const login = useCallback(async (email: string, password: string, remember: boolean) => {
+    loginInFlightRef.current = true;
     refreshGenRef.current += 1;
     const loginGen = refreshGenRef.current;
-    const data = await authApi.login(email, password, remember);
-    // New session cookie is live — advance epoch so stale 401s cannot wipe this login
-    bumpSessionEpoch();
-    resetSessionInvalidation();
-    if (loginGen !== refreshGenRef.current) {
-      // Cookie set but UI gen advanced — reconcile via /me so we don't orphan cookie-only state
-      void refresh();
-      throw new Error('Sign-in interrupted — please try again');
-    }
-    setUser(data.user);
-    if (data.permissions) setPermissions(data.permissions);
-    if (data.stats?.accountsSubmitted != null) {
-      setAccountsSubmitted(data.stats.accountsSubmitted);
-    }
-    handleUnlocks(data.newUnlocks ?? [], data.unlockRewards);
-    setAuthModal(null);
-    clearViewDedupSessionKeys();
-    setAuthSuccessTick((t) => t + 1);
     try {
-      const me = await authApi.fetchMe();
-      if (loginGen !== refreshGenRef.current) return;
-      if (me.user) {
-        setUser(me.user);
-        setPermissions(me.permissions ?? defaultPermissions);
-        setAccountsSubmitted(me.stats?.accountsSubmitted ?? 0);
+      const data = await authApi.login(email, password, remember);
+      // New session cookie is live — advance epoch so stale 401s cannot wipe this login
+      bumpSessionEpoch();
+      resetSessionInvalidation();
+      if (loginGen !== refreshGenRef.current) {
+        // Cookie set but UI gen advanced — reconcile via /me so we don't orphan cookie-only state
+        void refresh();
+        throw new Error('Sign-in interrupted — please try again');
       }
-    } catch {
-      /* keep login response user */
+      setUser(data.user);
+      if (data.permissions) setPermissions(data.permissions);
+      if (data.stats?.accountsSubmitted != null) {
+        setAccountsSubmitted(data.stats.accountsSubmitted);
+      }
+      handleUnlocks(data.newUnlocks ?? [], data.unlockRewards);
+      setAuthModal(null);
+      clearViewDedupSessionKeys();
+      setAuthSuccessTick((t) => t + 1);
+      try {
+        const me = await authApi.fetchMe();
+        if (loginGen !== refreshGenRef.current) return;
+        if (me.user) {
+          setUser(me.user);
+          setPermissions(me.permissions ?? defaultPermissions);
+          setAccountsSubmitted(me.stats?.accountsSubmitted ?? 0);
+        }
+      } catch {
+        /* keep login response user */
+      }
+    } finally {
+      loginInFlightRef.current = false;
     }
   }, [handleUnlocks, refresh]);
 

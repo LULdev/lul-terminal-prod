@@ -66,9 +66,21 @@ export async function handlePostViewsRequest(req, res) {
         });
       }
 
-      const recorded = await recordPostView(type, id);
-      if (!recorded) return sendJson(res, 400, { error: 'Invalid id' });
-      return sendJson(res, 200, { ...recorded, deduped: false });
+      try {
+        const recorded = await recordPostView(type, id);
+        if (!recorded) return sendJson(res, 400, { error: 'Invalid id' });
+        return sendJson(res, 200, { ...recorded, deduped: false });
+      } catch (recErr) {
+        console.warn('[post-views] record failed after claim', recErr);
+        const all = await getAllPostViews();
+        return sendJson(res, 200, {
+          type: bucket,
+          id,
+          views: Math.max(0, Number(all[bucket]?.[id]) || 0),
+          deduped: false,
+          recordFailed: true,
+        });
+      }
     }
 
     return sendJson(res, 404, { error: 'Not found' });

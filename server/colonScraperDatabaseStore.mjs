@@ -23,7 +23,10 @@ let cache = null;
 let colonWriteChain = Promise.resolve();
 
 export function withColonDbWrite(task) {
-  const run = colonWriteChain.then(() => task());
+  const run = colonWriteChain.then(async () => {
+    const { withCrossProcessLock } = await import('./fileLock.mjs');
+    return withCrossProcessLock('colon-db', () => task(), { maxWaitMs: 10_000 });
+  });
   colonWriteChain = run.then(() => undefined, () => undefined);
   return run;
 }
