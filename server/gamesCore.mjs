@@ -122,6 +122,16 @@ function refundBetOnExpire(user, { gameId, chatLabel, matchId, bet, amount }, { 
       amount: strippedGame,
       partial: strippedGame < amt,
     });
+    // forceCredit + partial strip: mint remainder so full bet is restored
+    if (forceCredit && strippedGame < amt) {
+      const rest = amt - strippedGame;
+      logMatchExpireRefund(user, { ...base, amount: rest });
+      console.warn('[games] expire refund force-credited remainder after partial strip', {
+        userId: user.id,
+        gameId,
+        amount: rest,
+      });
+    }
     return;
   }
   // forceCredit: only when caller documented that this user's escrow was already stripped
@@ -229,8 +239,12 @@ export async function sweepStaleQueueEntries(mm, { gameId, chatLabel }, maxAgeMs
     let swept = 0;
     for (let i = mm.queue.length - 1; i >= 0; i -= 1) {
       const entry = mm.queue[i];
-      const lastSeen = Math.max(Number(entry?.at) || 0, Number(entry?.heartbeatAt) || 0);
-      if (!lastSeen || now - lastSeen < maxAgeMs) continue;
+      // Idle timeout on last heartbeat; hard cap on joinedAt so open tabs cannot pin escrow forever
+      const joinedAt = Number(entry?.joinedAt) || Number(entry?.at) || 0;
+      const lastSeen = Number(entry?.heartbeatAt) || joinedAt;
+      const idleStale = lastSeen > 0 && now - lastSeen >= maxAgeMs;
+      const hardStale = joinedAt > 0 && now - joinedAt >= maxAgeMs;
+      if (!idleStale && !hardStale) continue;
       const user = getUser(db, entry.userId);
       if (!user) {
         const record = db.users.find((u) => u.id === entry.userId);
@@ -640,9 +654,9 @@ export function userInActiveMatch(activeMatches, userId) {
 export function touchQueueHeartbeat(queue, userId) {
   const entry = queue.find((q) => q.userId === userId);
   if (entry) {
-    const now = Date.now();
-    entry.heartbeatAt = now;
-    entry.at = now;
+    // Only heartbeat — never rewrite joinedAt/`at` (hard queue lifetime depends on original join)
+    if (!entry.joinedAt) entry.joinedAt = Number(entry.at) || Date.now();
+    entry.heartbeatAt = Date.now();
   }
 }
 
@@ -758,7 +772,13 @@ export async function getMatchWithExpiry(activeMatches, matchId, userId, expireM
   if (m.mode === 'bot' && userId && m.player1.userId !== userId) return null;
   if (m.status !== 'done' && Date.now() > m.expiresAt) {
     if (m.player1?.move != null && m.player2?.move != null && expireMeta?.finalizeDualSubmit) {
-      await expireMeta.finalizeDualSubmit(m, activeMatches);
+      // One-shot — share flag with expireMatchWithRefund (avoid double finalize races)
+      if (!m._finalizeAttempted) {
+        m._finalizeAttempted = true;
+        await expireMeta.finalizeDualSubmit(m, activeMatches);
+      }
+      if (m.status === 'done') return publicMatch(activeMatches.get(matchId) ?? m);
+      await expireMatchWithRefund(m, activeMatches, expireMeta);
       return publicMatch(activeMatches.get(matchId) ?? m);
     }
     await expireMatchWithRefund(m, activeMatches, expireMeta);
@@ -938,7 +958,8 @@ async function joinMatchQueueInner({
       await saveUsersDb(db);
       room = { code, hostId: userId, bet: amount, createdAt: Date.now() };
       mm.rooms.set(code, room);
-      mm.queue.push({ userId, bet: amount, roomCode: code, at: Date.now() });
+      const nowQ = Date.now();
+      mm.queue.push({ userId, bet: amount, roomCode: code, at: nowQ, joinedAt: nowQ, heartbeatAt: nowQ });
       return { waiting: true, roomCode: code };
     }
     if (room.hostId === userId) throw new Error('Cannot join your own room');
@@ -1000,7 +1021,8 @@ async function joinMatchQueueInner({
     return { waiting: true, bet: q?.bet ?? amount, roomCode: q?.roomCode ?? undefined };
   }
 
-  mm.queue.push({ userId, bet: amount, at: Date.now() });
+  const nowQ = Date.now();
+  mm.queue.push({ userId, bet: amount, at: nowQ, joinedAt: nowQ, heartbeatAt: nowQ });
   return { waiting: true, bet: amount };
 }
 
@@ -1149,7 +1171,8 @@ export async function expireMatchWithRefund(m, activeMatches, expireMeta) {
         );
         return;
       }
-      // Partial release: force-credit anyone whose escrow was already stripped
+      // Partial release: force-credit anyone whose escrow was already stripped, then stop
+      // (must not fall through to dual refund — would double force-credit if flags overlap)
       console.warn('[games] forfeit settle aborted — escrow incomplete, refunding', {
         matchId: m.id,
         gameId,
@@ -1158,6 +1181,30 @@ export async function expireMatchWithRefund(m, activeMatches, expireMeta) {
       });
       if (wEscrow) refundBetOnExpire(winner, base, { forceCredit: true });
       if (lEscrow) refundBetOnExpire(loser, base, { forceCredit: true });
+      // Also refund the side that still held escrow (no force — real release)
+      if (!wEscrow && winner) refundBetOnExpire(winner, base, { forceCredit: false });
+      if (!lEscrow && loser) refundBetOnExpire(loser, base, { forceCredit: false });
+      await saveUsersDb(db);
+      m.status = 'done';
+      m.doneAt = Date.now();
+      m.result = { outcome: 'expired', winner: 'draw', forfeited: true, reason: 'partial_escrow' };
+      scheduleAfterUsersWrite(() =>
+        appendMatchHistory({
+          id: m.id,
+          game: gameId,
+          mode: m.mode,
+          bet,
+          at: Date.now(),
+          player1: m.player1.username,
+          player2: m.player2?.username ?? '—',
+          outcome: 'expired',
+          forfeited: true,
+          streakBonus: 0,
+          jackpotHit: false,
+          jackpotAmount: 0,
+        }).catch((e) => console.error('[games] partial forfeit history failed', e)),
+      );
+      return;
     }
   }
 

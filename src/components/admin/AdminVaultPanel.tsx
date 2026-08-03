@@ -437,12 +437,14 @@ export function AdminVaultPanel() {
     });
   };
 
+  const savingRef = useRef(false);
   const saveAccount = async () => {
-    if (!editor) return;
+    if (!editor || savingRef.current) return;
     if (!editor.service.trim() || !editor.email.trim() || (!editor.id && !editor.password.trim())) {
       setError('Name, username and password are required');
       return;
     }
+    savingRef.current = true;
     setSaving(true);
     setError('');
     try {
@@ -479,12 +481,14 @@ export function AdminVaultPanel() {
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Save failed');
     } finally {
+      savingRef.current = false;
       setSaving(false);
     }
   };
 
   const confirmDelete = async () => {
-    if (!deleteTarget) return;
+    if (!deleteTarget || savingRef.current) return;
+    savingRef.current = true;
     setSaving(true);
     setError('');
     try {
@@ -495,6 +499,7 @@ export function AdminVaultPanel() {
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Delete failed');
     } finally {
+      savingRef.current = false;
       setSaving(false);
     }
   };

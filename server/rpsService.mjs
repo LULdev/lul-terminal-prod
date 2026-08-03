@@ -763,7 +763,8 @@ async function joinQueueInner(userId, { bet, mode = 'pvp', botDifficulty = 'norm
       await saveUsersDb(db);
       room = { code, hostId: userId, bet: amount, seriesType: series, createdAt: Date.now() };
       rooms.set(code, room);
-      queue.push({ userId, bet: amount, roomCode: code, seriesType: series, at: Date.now() });
+      const nowQ = Date.now();
+      queue.push({ userId, bet: amount, roomCode: code, seriesType: series, at: nowQ, joinedAt: nowQ, heartbeatAt: nowQ });
       return { waiting: true, roomCode: code };
     }
     if ((room.seriesType ?? 'single') !== series) throw new Error('Room series mode mismatch');
@@ -826,7 +827,8 @@ async function joinQueueInner(userId, { bet, mode = 'pvp', botDifficulty = 'norm
     return { waiting: true, bet: q?.bet ?? amount, roomCode: q?.roomCode ?? undefined };
   }
 
-  queue.push({ userId, bet: amount, seriesType: series, at: Date.now() });
+  const nowQ = Date.now();
+  queue.push({ userId, bet: amount, seriesType: series, at: nowQ, joinedAt: nowQ, heartbeatAt: nowQ });
   return { waiting: true, bet: amount };
 }
 

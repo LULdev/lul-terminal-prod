@@ -23,6 +23,20 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '3.55.0',
+    title: 'Full Server+Client audit: forfeit/queue escrow, finalize one-shot, admin double-submit',
+    date: 'Aug 4, 2026 - 03:30',
+    highlight: true,
+    items: [
+      { priority: 'P0', text: 'P0 — Forfeit partial-escrow path returns after refund (no fallthrough double force-credit).' },
+      { priority: 'P1', text: 'P1 — refundBetOnExpire: forceCredit + partial strip credits remainder (full bet restore).' },
+      { priority: 'P1', text: 'P1 — Queue: joinedAt hard lifetime; heartbeat no longer extends join clock (open tab cannot pin escrow forever).' },
+      { priority: 'P1', text: 'P1 — getMatchWithExpiry dual-finalize sets _finalizeAttempted (one-shot with expire path).' },
+      { priority: 'P2', text: 'P2 — Admin busyRef: News save, Users save, Vault save/delete, Moderation approve/reject + reports act.' },
+      { priority: 'P9', text: 'P9 — Version 3.55.0; full module audit Server+Client.' },
+    ],
+  },
+  {
     version: '3.54.1',
     title: 'Residual P0–P1: escrow refund under coin lock, jackpot confirm+idempotency, Firebase stats singleton',
     date: 'Aug 4, 2026 - 02:45',

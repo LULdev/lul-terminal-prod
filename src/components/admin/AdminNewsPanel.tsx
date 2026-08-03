@@ -46,6 +46,7 @@ export function AdminNewsPanel() {
   const [togglingId, setTogglingId] = useState<string | null>(null);
   const loadGenRef = useRef(0);
   const actionGenRef = useRef(0);
+  const savingRef = useRef(false);
   const mountedRef = useRef(true);
 
   useEffect(() => {
@@ -81,6 +82,7 @@ export function AdminNewsPanel() {
   const resetForm = () => setForm(emptyForm());
 
   const save = async () => {
+    if (savingRef.current) return;
     const title = form.title.trim();
     const body = form.body.trim();
     if (!title) {
@@ -93,6 +95,7 @@ export function AdminNewsPanel() {
     }
 
     const gen = ++actionGenRef.current;
+    savingRef.current = true;
     setSaving(true);
     setError('');
     setSuccess('');
@@ -113,6 +116,7 @@ export function AdminNewsPanel() {
       if (gen !== actionGenRef.current || !mountedRef.current) return;
       setError(e instanceof Error ? e.message : 'Save failed');
     } finally {
+      savingRef.current = false;
       if (gen === actionGenRef.current && mountedRef.current) setSaving(false);
     }
   };

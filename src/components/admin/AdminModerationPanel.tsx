@@ -51,8 +51,11 @@ function PendingAccountsPanel() {
 
   useVisibilityAwarePoll(load, 20_000);
 
+  const actingRef = useRef(false);
   const act = async (id: string, action: 'approve' | 'approve_free' | 'reject') => {
+    if (actingRef.current) return;
     if (action === 'reject' && !confirm('Reject and delete account?')) return;
+    actingRef.current = true;
     setActing(id);
     setError('');
     try {
@@ -63,6 +66,7 @@ function PendingAccountsPanel() {
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Action failed');
     } finally {
+      actingRef.current = false;
       setActing(null);
     }
   };
@@ -163,7 +167,10 @@ function AccountReportsPanel() {
 
   useVisibilityAwarePoll(load, 20_000);
 
+  const actingRef = useRef(false);
   const act = async (id: string, action: 'accept' | 'reject') => {
+    if (actingRef.current) return;
+    actingRef.current = true;
     setActing(id);
     setError('');
     try {
@@ -173,6 +180,7 @@ function AccountReportsPanel() {
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Action failed');
     } finally {
+      actingRef.current = false;
       setActing(null);
     }
   };

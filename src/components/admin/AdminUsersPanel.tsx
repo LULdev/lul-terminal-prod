@@ -155,8 +155,10 @@ export function AdminUsersPanel() {
     return () => clearTimeout(t);
   }, [load, search]);
 
+  const savingRef = useRef(false);
   const saveUser = async () => {
-    if (!editor) return;
+    if (!editor || savingRef.current) return;
+    savingRef.current = true;
     setSaving(true);
     setError('');
     try {
@@ -183,6 +185,7 @@ export function AdminUsersPanel() {
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Save failed');
     } finally {
+      savingRef.current = false;
       setSaving(false);
     }
   };

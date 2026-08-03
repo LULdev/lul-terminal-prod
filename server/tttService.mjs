@@ -667,7 +667,8 @@ async function joinTttQueueInner(userId, { bet, mode = 'pvp', botDifficulty = 'n
       await saveUsersDb(db);
       room = { code, hostId: userId, bet: amount, createdAt: Date.now() };
       rooms.set(code, room);
-      queue.push({ userId, bet: amount, roomCode: code, at: Date.now() });
+      const nowQ = Date.now();
+      queue.push({ userId, bet: amount, roomCode: code, at: nowQ, joinedAt: nowQ, heartbeatAt: nowQ });
       return { waiting: true, roomCode: code };
     }
     if (room.hostId === userId) throw new Error('Cannot join your own room');
@@ -729,7 +730,8 @@ async function joinTttQueueInner(userId, { bet, mode = 'pvp', botDifficulty = 'n
     return { waiting: true, bet: q?.bet ?? amount, roomCode: q?.roomCode ?? undefined };
   }
 
-  queue.push({ userId, bet: amount, at: Date.now() });
+  const nowQ = Date.now();
+  queue.push({ userId, bet: amount, at: nowQ, joinedAt: nowQ, heartbeatAt: nowQ });
   return { waiting: true, bet: amount };
 }
 
