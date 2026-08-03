@@ -134,6 +134,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const userRef = useRef(user);
   userRef.current = user;
 
+  const clearLocalSession = useCallback(() => {
+    clearAchievementProofs();
+    closeChatAudioContext();
+    clearViewDedupSessionKeys();
+    setUser(null);
+    setPermissions(defaultPermissions);
+    setAccountsSubmitted(0);
+    setPendingUnlocks([]);
+    setPendingUnlockRewards({});
+    setLoginGate(null);
+    setPendingTabAfterLogin(null);
+  }, []);
+
   const refresh = useCallback(async () => {
     const gen = ++refreshGenRef.current;
     try {
@@ -146,27 +159,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         resetSessionInvalidation();
       } else {
         // Soft /me with no user — clear zombie logged-in UI
-        setUser(null);
-        setPermissions(defaultPermissions);
-        setAccountsSubmitted(0);
+        clearLocalSession();
       }
     } catch (e) {
       if (gen !== refreshGenRef.current) return;
       const status = (e as { status?: number })?.status;
-      // Network blips must not wipe session; hard 401 does
+      // Network blips must not wipe session; hard 401 does full local cleanup
       if (status === 401) {
-        setUser(null);
-        setPermissions(defaultPermissions);
-        setAccountsSubmitted(0);
+        clearLocalSession();
       }
     }
-  }, []);
+  }, [clearLocalSession]);
 
   useEffect(() => {
     let mounted = true;
     const boot = async () => {
-      await refresh();
-      if (mounted) setLoading(false);
+      try {
+        await Promise.race([
+          refresh(),
+          new Promise<void>((resolve) => {
+            window.setTimeout(resolve, 12_000);
+          }),
+        ]);
+      } finally {
+        if (mounted) setLoading(false);
+      }
     };
     void boot();
     const retryAuth = () => {
@@ -186,25 +203,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     return onSessionInvalidated(() => {
-      void import('../lib/arcadeCleanup').then((m) => m.leaveAllArcadeQueuesBestEffort());
       refreshGenRef.current += 1;
-      clearAchievementProofs();
-      closeChatAudioContext();
-      clearViewDedupSessionKeys();
-      setUser(null);
-      setPermissions(defaultPermissions);
-      setAccountsSubmitted(0);
-      setPendingUnlocks([]);
-      setPendingUnlockRewards({});
+      // Best-effort: clear HttpOnly cookie so credentialed polls stop 401-looping
+      void fetch('/api/auth/logout', { method: 'POST', credentials: 'include' }).catch(() => {});
+      void import('../lib/arcadeCleanup').then((m) => m.leaveAllArcadeQueuesBestEffort());
+      clearLocalSession();
       setAuthModal(null);
     });
-  }, []);
+  }, [clearLocalSession]);
 
   const login = useCallback(async (email: string, password: string, remember: boolean) => {
     refreshGenRef.current += 1;
     const loginGen = refreshGenRef.current;
     const data = await authApi.login(email, password, remember);
-    if (loginGen !== refreshGenRef.current) return;
+    if (loginGen !== refreshGenRef.current) {
+      // Cookie may already be set — reconcile or surface interruption
+      throw new Error('Sign-in interrupted — please try again');
+    }
     setUser(data.user);
     if (data.permissions) setPermissions(data.permissions);
     if (data.stats?.accountsSubmitted != null) {
@@ -264,6 +279,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = useCallback(async () => {
     refreshGenRef.current += 1;
+    // Leave arcade queues while cookie is still valid
+    try {
+      const { leaveAllArcadeQueuesBestEffort } = await import('../lib/arcadeCleanup');
+      await leaveAllArcadeQueuesBestEffort();
+    } catch { /* best-effort */ }
     try {
       await authApi.logout();
     } catch (e) {
@@ -273,25 +293,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
       /* clear local session even when server logout fails for other reasons */
     }
-    clearAchievementProofs();
-    closeChatAudioContext();
-    clearViewDedupSessionKeys();
-    setLoginGate(null);
-    setPendingTabAfterLogin(null);
-    setUser(null);
-    setPermissions(defaultPermissions);
-    setAccountsSubmitted(0);
-    setPendingUnlocks([]);
-    setPendingUnlockRewards({});
+    clearLocalSession();
     resetSessionInvalidation();
     return true;
-  }, []);
+  }, [clearLocalSession]);
 
   const syncAchievements = useCallback(async (opts?: SyncAchievementsOpts) => {
+    const gen = refreshGenRef.current;
     try {
       const data = await authApi.syncAchievements(opts);
-      if (data.user) setUser(data.user);
-      handleUnlocks(data.newUnlocks ?? [], data.unlockRewards);
+      // Never resurrect a logged-out session from a late 200
+      if (gen !== refreshGenRef.current) return;
+      if (data.user) {
+        setUser((prev) => (prev ? data.user! : null));
+      }
+      if (userRef.current) {
+        handleUnlocks(data.newUnlocks ?? [], data.unlockRewards);
+      }
     } catch {
       /* non-fatal — achievements may sync on next action */
     }
