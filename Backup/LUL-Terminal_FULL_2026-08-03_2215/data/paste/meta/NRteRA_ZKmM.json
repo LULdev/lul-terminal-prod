@@ -1,0 +1,30 @@
+{
+  "id": "NRteRA_ZKmM",
+  "title": "View/Rate Test",
+  "language": "plaintext",
+  "visibility": "public",
+  "passwordHash": null,
+  "expiresAt": 1784526670009,
+  "burnAfterRead": false,
+  "createdAt": 1784440270009,
+  "updatedAt": 1784440270036,
+  "views": 1,
+  "userId": "owner-test-1",
+  "username": "owner",
+  "size": 17,
+  "lineCount": 2,
+  "pinned": false,
+  "ratingVotes": {
+    "user:owner-test-1": {
+      "stars": 5,
+      "at": 1784440270031
+    },
+    "ip:06aa825072bca7669732744c": {
+      "stars": 4,
+      "at": 1784440270036
+    }
+  },
+  "ratingSum": 9,
+  "ratingCount": 2,
+  "ratingAvg": 4.5
+}

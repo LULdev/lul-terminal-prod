@@ -1,0 +1,78 @@
+{
+  "version": 1,
+  "updatedAt": "2026-07-08T08:52:28.255Z",
+  "emotes": [
+    {
+      "id": "9d76ea4ad422",
+      "code": "Emote1",
+      "label": "LUL Wave",
+      "filename": "9d76ea4ad422.svg",
+      "mime": "image/svg+xml",
+      "url": "/api/chat/emotes/files/9d76ea4ad422.svg",
+      "enabled": true,
+      "isPlaceholder": true,
+      "createdAt": 1783500748250,
+      "updatedAt": 1783500748250
+    },
+    {
+      "id": "c61601c7e766",
+      "code": "Emote2",
+      "label": "GG",
+      "filename": "c61601c7e766.svg",
+      "mime": "image/svg+xml",
+      "url": "/api/chat/emotes/files/c61601c7e766.svg",
+      "enabled": true,
+      "isPlaceholder": true,
+      "createdAt": 1783500748250,
+      "updatedAt": 1783500748250
+    },
+    {
+      "id": "79dfa1435562",
+      "code": "Emote3",
+      "label": "Hype",
+      "filename": "79dfa1435562.svg",
+      "mime": "image/svg+xml",
+      "url": "/api/chat/emotes/files/79dfa1435562.svg",
+      "enabled": true,
+      "isPlaceholder": true,
+      "createdAt": 1783500748250,
+      "updatedAt": 1783500748250
+    },
+    {
+      "id": "d40043082621",
+      "code": "Emote4",
+      "label": "Rip",
+      "filename": "d40043082621.svg",
+      "mime": "image/svg+xml",
+      "url": "/api/chat/emotes/files/d40043082621.svg",
+      "enabled": true,
+      "isPlaceholder": true,
+      "createdAt": 1783500748250,
+      "updatedAt": 1783500748250
+    },
+    {
+      "id": "ba4923954ede",
+      "code": "Emote5",
+      "label": "Cool",
+      "filename": "ba4923954ede.svg",
+      "mime": "image/svg+xml",
+      "url": "/api/chat/emotes/files/ba4923954ede.svg",
+      "enabled": true,
+      "isPlaceholder": true,
+      "createdAt": 1783500748250,
+      "updatedAt": 1783500748250
+    },
+    {
+      "id": "7c8e9f0a1b2c",
+      "code": "Welcome",
+      "label": "Welcome",
+      "filename": "7c8e9f0a1b2c.svg",
+      "mime": "image/svg+xml",
+      "url": "/api/chat/emotes/files/7c8e9f0a1b2c.svg",
+      "enabled": true,
+      "isPlaceholder": false,
+      "createdAt": 1783987200000,
+      "updatedAt": 1783987200000
+    }
+  ]
+}

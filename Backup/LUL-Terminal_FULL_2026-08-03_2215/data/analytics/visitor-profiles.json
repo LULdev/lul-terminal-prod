@@ -1,0 +1,33 @@
+{
+  "version": 1,
+  "updatedAt": "2026-07-15T17:54:27.900Z",
+  "profiles": {
+    "u:372a8eb0b985d2fd": {
+      "key": "u:372a8eb0b985d2fd",
+      "userId": "372a8eb0b985d2fd",
+      "guestId": null,
+      "username": "Administrator",
+      "firstSeenAt": 1784138022206,
+      "visitCount": 2,
+      "sessionCount": 2,
+      "referrers": {},
+      "referrerDomains": {
+        "direct": 2
+      },
+      "devices": {},
+      "languages": {},
+      "timezones": {},
+      "landingPaths": {},
+      "utmSources": {},
+      "lastMeta": {
+        "ip": "127.0.0.1"
+      },
+      "lastSeenAt": 1784138067892,
+      "lastReferrer": "",
+      "lastReferrerDomain": "direct",
+      "lastLandingUrl": "",
+      "lastLandingPath": "",
+      "returnVisitor": false
+    }
+  }
+}

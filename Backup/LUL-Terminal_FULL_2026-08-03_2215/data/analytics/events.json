@@ -1,0 +1,162 @@
+{
+  "version": 1,
+  "updatedAt": "2026-07-15T17:54:27.894Z",
+  "events": [
+    {
+      "id": "6bdc1cd2a555",
+      "type": "login",
+      "userId": "372a8eb0b985d2fd",
+      "username": "Administrator",
+      "guestId": null,
+      "sessionId": "018c02e037550691",
+      "tab": null,
+      "meta": {
+        "ip": "127.0.0.1"
+      },
+      "ts": 1784137828970
+    },
+    {
+      "id": "27a1092f370d",
+      "type": "session_start",
+      "userId": "372a8eb0b985d2fd",
+      "username": "Administrator",
+      "guestId": null,
+      "sessionId": "018c02e037550691",
+      "tab": null,
+      "meta": {
+        "ip": "127.0.0.1"
+      },
+      "ts": 1784137828979
+    },
+    {
+      "id": "3c644789b3af",
+      "type": "login",
+      "userId": "372a8eb0b985d2fd",
+      "username": "Administrator",
+      "guestId": null,
+      "sessionId": "982e5ff62f0664ed",
+      "tab": null,
+      "meta": {
+        "ip": "127.0.0.1"
+      },
+      "ts": 1784137875606
+    },
+    {
+      "id": "8905e38fd16c",
+      "type": "session_start",
+      "userId": "372a8eb0b985d2fd",
+      "username": "Administrator",
+      "guestId": null,
+      "sessionId": "982e5ff62f0664ed",
+      "tab": null,
+      "meta": {
+        "ip": "127.0.0.1"
+      },
+      "ts": 1784137875614
+    },
+    {
+      "id": "5391373be387",
+      "type": "login",
+      "userId": "372a8eb0b985d2fd",
+      "username": "Administrator",
+      "guestId": null,
+      "sessionId": "a66a8b0804650a60",
+      "tab": null,
+      "meta": {
+        "ip": "127.0.0.1"
+      },
+      "ts": 1784137942291
+    },
+    {
+      "id": "f23b40429e70",
+      "type": "session_start",
+      "userId": "372a8eb0b985d2fd",
+      "username": "Administrator",
+      "guestId": null,
+      "sessionId": "a66a8b0804650a60",
+      "tab": null,
+      "meta": {
+        "ip": "127.0.0.1"
+      },
+      "ts": 1784137942300
+    },
+    {
+      "id": "36d8dd87cc62",
+      "type": "login",
+      "userId": "372a8eb0b985d2fd",
+      "username": "Administrator",
+      "guestId": null,
+      "sessionId": "ea8f54b9fa082e2d",
+      "tab": null,
+      "meta": {
+        "ip": "127.0.0.1"
+      },
+      "ts": 1784137968701
+    },
+    {
+      "id": "84ffc21b80c8",
+      "type": "session_start",
+      "userId": "372a8eb0b985d2fd",
+      "username": "Administrator",
+      "guestId": null,
+      "sessionId": "ea8f54b9fa082e2d",
+      "tab": null,
+      "meta": {
+        "ip": "127.0.0.1"
+      },
+      "ts": 1784137968709
+    },
+    {
+      "id": "014bde0bc8b7",
+      "type": "login",
+      "userId": "372a8eb0b985d2fd",
+      "username": "Administrator",
+      "guestId": null,
+      "sessionId": "be5f3ca6d78bb06c",
+      "tab": null,
+      "meta": {
+        "ip": "127.0.0.1"
+      },
+      "ts": 1784138022197
+    },
+    {
+      "id": "cd77169a2cb6",
+      "type": "session_start",
+      "userId": "372a8eb0b985d2fd",
+      "username": "Administrator",
+      "guestId": null,
+      "sessionId": "be5f3ca6d78bb06c",
+      "tab": null,
+      "meta": {
+        "ip": "127.0.0.1"
+      },
+      "ts": 1784138022206
+    },
+    {
+      "id": "e799e2892d79",
+      "type": "login",
+      "userId": "372a8eb0b985d2fd",
+      "username": "Administrator",
+      "guestId": null,
+      "sessionId": "5e0bcbf7f22a3135",
+      "tab": null,
+      "meta": {
+        "ip": "127.0.0.1"
+      },
+      "ts": 1784138067886
+    },
+    {
+      "id": "d8afc0e695cd",
+      "type": "session_start",
+      "userId": "372a8eb0b985d2fd",
+      "username": "Administrator",
+      "guestId": null,
+      "sessionId": "5e0bcbf7f22a3135",
+      "tab": null,
+      "meta": {
+        "ip": "127.0.0.1"
+      },
+      "ts": 1784138067892
+    }
+  ]
+}

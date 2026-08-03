@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "updatedAt": 1784137900871,
+  "buckets": {
+    "auth-me:127.0.0.1": {
+      "start": 1784137900847,
+      "count": 1,
+      "windowMs": 60000
+    },
+    "login:127.0.0.1": {
+      "start": 1784137828913,
+      "count": 3,
+      "windowMs": 900000
+    },
+    "login-email:administrator": {
+      "start": 1784137828918,
+      "count": 3,
+      "windowMs": 900000
+    }
+  }
+}

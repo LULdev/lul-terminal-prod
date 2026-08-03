@@ -1,0 +1,17 @@
+node_modules
+dist
+build
+coverage
+.git
+.github
+.env
+.env.*
+!.env.example
+data
+terminals
+*.log
+.DS_Store
+.vercel
+mcps
+*.md
+!README.md

@@ -1,0 +1,270 @@
+{
+  "version": 1,
+  "updatedAt": "2026-07-15T17:52:22.292Z",
+  "messages": [
+    {
+      "id": "d2b979ceeb07",
+      "lobby": "main",
+      "userId": "5a8b579a1896889d",
+      "username": "bot",
+      "displayName": "BOT",
+      "role": "bot",
+      "avatarUrl": "https://api.dicebear.com/7.x/bottts/svg?seed=bot",
+      "kind": "achievement",
+      "text": "🎖️ @Administrator unlocked 5 achievements: 🚀 The Journey Begins · 🖌️ Cover Curator · 🪙 Coin Baron · ✅ Trusted Contributor · +1 more",
+      "segments": [
+        {
+          "type": "text",
+          "text": "🎖️ "
+        },
+        {
+          "type": "user",
+          "username": "Administrator",
+          "href": "/profile/administrator",
+          "label": "@Administrator"
+        },
+        {
+          "type": "text",
+          "text": " unlocked 5 achievements: "
+        },
+        {
+          "type": "text",
+          "text": "🚀 "
+        },
+        {
+          "type": "text",
+          "text": "The Journey Begins",
+          "style": "achievement"
+        },
+        {
+          "type": "text",
+          "text": " · "
+        },
+        {
+          "type": "text",
+          "text": "🖌️ "
+        },
+        {
+          "type": "text",
+          "text": "Cover Curator",
+          "style": "achievement"
+        },
+        {
+          "type": "text",
+          "text": " · "
+        },
+        {
+          "type": "text",
+          "text": "🪙 "
+        },
+        {
+          "type": "text",
+          "text": "Coin Baron",
+          "style": "achievement"
+        },
+        {
+          "type": "text",
+          "text": " · "
+        },
+        {
+          "type": "text",
+          "text": "✅ "
+        },
+        {
+          "type": "text",
+          "text": "Trusted Contributor",
+          "style": "achievement"
+        },
+        {
+          "type": "text",
+          "text": " · +1 more"
+        },
+        {
+          "type": "text",
+          "text": " — congrats!"
+        }
+      ],
+      "createdAt": 1784137732976
+    },
+    {
+      "id": "7731ca5a69fb",
+      "lobby": "main",
+      "userId": "883d9525fbe8e1ef",
+      "username": "bot",
+      "displayName": "BOT",
+      "role": "bot",
+      "avatarUrl": "https://api.dicebear.com/7.x/bottts/svg?seed=bot",
+      "kind": "bot",
+      "text": "🏆 Leaderboard alert! @Administrator hit #1 on LULcoin Tycoon and earned LULcoin Tycoon!",
+      "segments": [
+        {
+          "type": "text",
+          "text": "🏆 Leaderboard alert! "
+        },
+        {
+          "type": "user",
+          "username": "Administrator",
+          "href": "/profile/administrator",
+          "label": "@Administrator"
+        },
+        {
+          "type": "text",
+          "text": " hit #1 on "
+        },
+        {
+          "type": "link",
+          "href": "/?tab=leaderboard",
+          "label": "LULcoin Tycoon"
+        },
+        {
+          "type": "text",
+          "text": " and earned "
+        },
+        {
+          "type": "text",
+          "text": "🪙 LULcoin Tycoon",
+          "style": "achievement"
+        },
+        {
+          "type": "text",
+          "text": "!"
+        }
+      ],
+      "createdAt": 1784137814934
+    },
+    {
+      "id": "5579c6a7490e",
+      "lobby": "main",
+      "userId": "883d9525fbe8e1ef",
+      "username": "bot",
+      "displayName": "BOT",
+      "role": "bot",
+      "avatarUrl": "https://api.dicebear.com/7.x/bottts/svg?seed=bot",
+      "kind": "achievement",
+      "text": "🎖️ @Administrator unlocked 5 achievements: 🚀 The Journey Begins · 🖌️ Cover Curator · 🪙 Coin Baron · ✅ Trusted Contributor · +1 more",
+      "segments": [
+        {
+          "type": "text",
+          "text": "🎖️ "
+        },
+        {
+          "type": "user",
+          "username": "Administrator",
+          "href": "/profile/administrator",
+          "label": "@Administrator"
+        },
+        {
+          "type": "text",
+          "text": " unlocked 5 achievements: "
+        },
+        {
+          "type": "text",
+          "text": "🚀 "
+        },
+        {
+          "type": "text",
+          "text": "The Journey Begins",
+          "style": "achievement"
+        },
+        {
+          "type": "text",
+          "text": " · "
+        },
+        {
+          "type": "text",
+          "text": "🖌️ "
+        },
+        {
+          "type": "text",
+          "text": "Cover Curator",
+          "style": "achievement"
+        },
+        {
+          "type": "text",
+          "text": " · "
+        },
+        {
+          "type": "text",
+          "text": "🪙 "
+        },
+        {
+          "type": "text",
+          "text": "Coin Baron",
+          "style": "achievement"
+        },
+        {
+          "type": "text",
+          "text": " · "
+        },
+        {
+          "type": "text",
+          "text": "✅ "
+        },
+        {
+          "type": "text",
+          "text": "Trusted Contributor",
+          "style": "achievement"
+        },
+        {
+          "type": "text",
+          "text": " · +1 more"
+        },
+        {
+          "type": "text",
+          "text": " — congrats!"
+        }
+      ],
+      "createdAt": 1784137828969
+    },
+    {
+      "id": "347bb808a6e4",
+      "lobby": "main",
+      "userId": "883d9525fbe8e1ef",
+      "username": "bot",
+      "displayName": "BOT",
+      "role": "bot",
+      "avatarUrl": "https://api.dicebear.com/7.x/bottts/svg?seed=bot",
+      "kind": "achievement",
+      "text": "🎖️ Achievement unlocked! @Administrator earned 🔁 Returning User +25 LULcoins!",
+      "segments": [
+        {
+          "type": "text",
+          "text": "🎖️ Achievement unlocked! "
+        },
+        {
+          "type": "user",
+          "username": "Administrator",
+          "href": "/profile/administrator",
+          "label": "@Administrator"
+        },
+        {
+          "type": "text",
+          "text": " earned "
+        },
+        {
+          "type": "text",
+          "text": "🔁 Returning User",
+          "style": "achievement"
+        },
+        {
+          "type": "text",
+          "text": " (+25 LULcoins)"
+        },
+        {
+          "type": "text",
+          "text": "! Congrats — check "
+        },
+        {
+          "type": "link",
+          "href": "/profile/administrator",
+          "label": "your profile"
+        },
+        {
+          "type": "text",
+          "text": "."
+        }
+      ],
+      "createdAt": 1784137942290
+    }
+  ]
+}

@@ -1,0 +1,1645 @@
+{
+  "version": 2,
+  "updatedAt": "2026-07-18T11:04:10.993Z",
+  "count": 234,
+  "sources": [
+    {
+      "id": "hookzof-socks5-list-proxy-txt",
+      "name": "hookzof · socks5_list · proxy.txt",
+      "url": "https://raw.githubusercontent.com/hookzof/socks5_list/master/proxy.txt",
+      "type": "http",
+      "repo": "hookzof/socks5_list"
+    },
+    {
+      "id": "hookzof-socks5-list-tg-mtproto-json",
+      "name": "hookzof · socks5_list · tg · mtproto.json",
+      "url": "https://raw.githubusercontent.com/hookzof/socks5_list/master/tg/mtproto.json",
+      "type": "http",
+      "repo": "hookzof/socks5_list"
+    },
+    {
+      "id": "hookzof-socks5-list-tg-socks-json",
+      "name": "hookzof · socks5_list · tg · socks.json",
+      "url": "https://raw.githubusercontent.com/hookzof/socks5_list/master/tg/socks.json",
+      "type": "socks5",
+      "repo": "hookzof/socks5_list"
+    },
+    {
+      "id": "clarketm-proxy-list-last-status-update-txt",
+      "name": "clarketm · proxy-list · last-status-update.txt",
+      "url": "https://raw.githubusercontent.com/clarketm/proxy-list/master/last-status-update.txt",
+      "type": "http",
+      "repo": "clarketm/proxy-list"
+    },
+    {
+      "id": "clarketm-proxy-list-proxy-list-raw-txt",
+      "name": "clarketm · proxy-list · proxy-list-raw.txt",
+      "url": "https://raw.githubusercontent.com/clarketm/proxy-list/master/proxy-list-raw.txt",
+      "type": "http",
+      "repo": "clarketm/proxy-list"
+    },
+    {
+      "id": "clarketm-proxy-list-proxy-list-status-txt",
+      "name": "clarketm · proxy-list · proxy-list-status.txt",
+      "url": "https://raw.githubusercontent.com/clarketm/proxy-list/master/proxy-list-status.txt",
+      "type": "http",
+      "repo": "clarketm/proxy-list"
+    },
+    {
+      "id": "clarketm-proxy-list-proxy-list-txt",
+      "name": "clarketm · proxy-list · proxy-list.txt",
+      "url": "https://raw.githubusercontent.com/clarketm/proxy-list/master/proxy-list.txt",
+      "type": "http",
+      "repo": "clarketm/proxy-list"
+    },
+    {
+      "id": "mmpx12-proxy-list-readme-txt",
+      "name": "mmpx12 · proxy-list · README.txt",
+      "url": "https://raw.githubusercontent.com/mmpx12/proxy-list/master/README.txt",
+      "type": "http",
+      "repo": "mmpx12/proxy-list"
+    },
+    {
+      "id": "mmpx12-proxy-list-http-txt",
+      "name": "mmpx12 · proxy-list · http.txt",
+      "url": "https://raw.githubusercontent.com/mmpx12/proxy-list/master/http.txt",
+      "type": "http",
+      "repo": "mmpx12/proxy-list"
+    },
+    {
+      "id": "mmpx12-proxy-list-https-txt",
+      "name": "mmpx12 · proxy-list · https.txt",
+      "url": "https://raw.githubusercontent.com/mmpx12/proxy-list/master/https.txt",
+      "type": "https",
+      "repo": "mmpx12/proxy-list"
+    },
+    {
+      "id": "mmpx12-proxy-list-ips-list-txt",
+      "name": "mmpx12 · proxy-list · ips-list.txt",
+      "url": "https://raw.githubusercontent.com/mmpx12/proxy-list/master/ips-list.txt",
+      "type": "http",
+      "repo": "mmpx12/proxy-list"
+    },
+    {
+      "id": "mmpx12-proxy-list-proxies-txt",
+      "name": "mmpx12 · proxy-list · proxies.txt",
+      "url": "https://raw.githubusercontent.com/mmpx12/proxy-list/master/proxies.txt",
+      "type": "http",
+      "repo": "mmpx12/proxy-list"
+    },
+    {
+      "id": "mmpx12-proxy-list-socks4-txt",
+      "name": "mmpx12 · proxy-list · socks4.txt",
+      "url": "https://raw.githubusercontent.com/mmpx12/proxy-list/master/socks4.txt",
+      "type": "socks4",
+      "repo": "mmpx12/proxy-list"
+    },
+    {
+      "id": "mmpx12-proxy-list-socks5-txt",
+      "name": "mmpx12 · proxy-list · socks5.txt",
+      "url": "https://raw.githubusercontent.com/mmpx12/proxy-list/master/socks5.txt",
+      "type": "socks5",
+      "repo": "mmpx12/proxy-list"
+    },
+    {
+      "id": "mmpx12-proxy-list-tor-exit-nodes-txt",
+      "name": "mmpx12 · proxy-list · tor-exit-nodes.txt",
+      "url": "https://raw.githubusercontent.com/mmpx12/proxy-list/master/tor-exit-nodes.txt",
+      "type": "http",
+      "repo": "mmpx12/proxy-list"
+    },
+    {
+      "id": "mmpx12-proxy-list-update-txt",
+      "name": "mmpx12 · proxy-list · update.txt",
+      "url": "https://raw.githubusercontent.com/mmpx12/proxy-list/master/update.txt",
+      "type": "http",
+      "repo": "mmpx12/proxy-list"
+    },
+    {
+      "id": "roosterkid-openproxylist-https-txt",
+      "name": "roosterkid · openproxylist · HTTPS.txt",
+      "url": "https://raw.githubusercontent.com/roosterkid/openproxylist/main/HTTPS.txt",
+      "type": "https",
+      "repo": "roosterkid/openproxylist"
+    },
+    {
+      "id": "roosterkid-openproxylist-https-raw-txt",
+      "name": "roosterkid · openproxylist · HTTPS_RAW.txt",
+      "url": "https://raw.githubusercontent.com/roosterkid/openproxylist/main/HTTPS_RAW.txt",
+      "type": "https",
+      "repo": "roosterkid/openproxylist"
+    },
+    {
+      "id": "roosterkid-openproxylist-socks4-txt",
+      "name": "roosterkid · openproxylist · SOCKS4.txt",
+      "url": "https://raw.githubusercontent.com/roosterkid/openproxylist/main/SOCKS4.txt",
+      "type": "socks4",
+      "repo": "roosterkid/openproxylist"
+    },
+    {
+      "id": "roosterkid-openproxylist-socks4-raw-txt",
+      "name": "roosterkid · openproxylist · SOCKS4_RAW.txt",
+      "url": "https://raw.githubusercontent.com/roosterkid/openproxylist/main/SOCKS4_RAW.txt",
+      "type": "socks4",
+      "repo": "roosterkid/openproxylist"
+    },
+    {
+      "id": "roosterkid-openproxylist-socks5-txt",
+      "name": "roosterkid · openproxylist · SOCKS5.txt",
+      "url": "https://raw.githubusercontent.com/roosterkid/openproxylist/main/SOCKS5.txt",
+      "type": "socks5",
+      "repo": "roosterkid/openproxylist"
+    },
+    {
+      "id": "roosterkid-openproxylist-socks5-raw-txt",
+      "name": "roosterkid · openproxylist · SOCKS5_RAW.txt",
+      "url": "https://raw.githubusercontent.com/roosterkid/openproxylist/main/SOCKS5_RAW.txt",
+      "type": "socks5",
+      "repo": "roosterkid/openproxylist"
+    },
+    {
+      "id": "roosterkid-openproxylist-v2ray-txt",
+      "name": "roosterkid · openproxylist · V2RAY.txt",
+      "url": "https://raw.githubusercontent.com/roosterkid/openproxylist/main/V2RAY.txt",
+      "type": "http",
+      "repo": "roosterkid/openproxylist"
+    },
+    {
+      "id": "roosterkid-openproxylist-v2ray-base64-txt",
+      "name": "roosterkid · openproxylist · V2RAY_BASE64.txt",
+      "url": "https://raw.githubusercontent.com/roosterkid/openproxylist/main/V2RAY_BASE64.txt",
+      "type": "http",
+      "repo": "roosterkid/openproxylist"
+    },
+    {
+      "id": "roosterkid-openproxylist-v2ray-raw-txt",
+      "name": "roosterkid · openproxylist · V2RAY_RAW.txt",
+      "url": "https://raw.githubusercontent.com/roosterkid/openproxylist/main/V2RAY_RAW.txt",
+      "type": "http",
+      "repo": "roosterkid/openproxylist"
+    },
+    {
+      "id": "mzyui-proxy-list-all-txt",
+      "name": "mzyui · proxy-list · all.txt",
+      "url": "https://raw.githubusercontent.com/mzyui/proxy-list/main/all.txt",
+      "type": "http",
+      "repo": "mzyui/proxy-list"
+    },
+    {
+      "id": "mzyui-proxy-list-http-txt",
+      "name": "mzyui · proxy-list · http.txt",
+      "url": "https://raw.githubusercontent.com/mzyui/proxy-list/main/http.txt",
+      "type": "http",
+      "repo": "mzyui/proxy-list"
+    },
+    {
+      "id": "mzyui-proxy-list-socks4-txt",
+      "name": "mzyui · proxy-list · socks4.txt",
+      "url": "https://raw.githubusercontent.com/mzyui/proxy-list/main/socks4.txt",
+      "type": "socks4",
+      "repo": "mzyui/proxy-list"
+    },
+    {
+      "id": "mzyui-proxy-list-socks5-txt",
+      "name": "mzyui · proxy-list · socks5.txt",
+      "url": "https://raw.githubusercontent.com/mzyui/proxy-list/main/socks5.txt",
+      "type": "socks5",
+      "repo": "mzyui/proxy-list"
+    },
+    {
+      "id": "thespeedx-proxy-list-http-txt",
+      "name": "TheSpeedX · PROXY-List · http.txt",
+      "url": "https://raw.githubusercontent.com/TheSpeedX/PROXY-List/master/http.txt",
+      "type": "http",
+      "repo": "TheSpeedX/PROXY-List"
+    },
+    {
+      "id": "thespeedx-proxy-list-socks4-txt",
+      "name": "TheSpeedX · PROXY-List · socks4.txt",
+      "url": "https://raw.githubusercontent.com/TheSpeedX/PROXY-List/master/socks4.txt",
+      "type": "socks4",
+      "repo": "TheSpeedX/PROXY-List"
+    },
+    {
+      "id": "thespeedx-proxy-list-socks5-txt",
+      "name": "TheSpeedX · PROXY-List · socks5.txt",
+      "url": "https://raw.githubusercontent.com/TheSpeedX/PROXY-List/master/socks5.txt",
+      "type": "socks5",
+      "repo": "TheSpeedX/PROXY-List"
+    },
+    {
+      "id": "shiftytr-proxy-list-http-txt",
+      "name": "ShiftyTR · Proxy-List · http.txt",
+      "url": "https://raw.githubusercontent.com/ShiftyTR/Proxy-List/master/http.txt",
+      "type": "http",
+      "repo": "ShiftyTR/Proxy-List"
+    },
+    {
+      "id": "shiftytr-proxy-list-https-txt",
+      "name": "ShiftyTR · Proxy-List · https.txt",
+      "url": "https://raw.githubusercontent.com/ShiftyTR/Proxy-List/master/https.txt",
+      "type": "https",
+      "repo": "ShiftyTR/Proxy-List"
+    },
+    {
+      "id": "shiftytr-proxy-list-socks4-txt",
+      "name": "ShiftyTR · Proxy-List · socks4.txt",
+      "url": "https://raw.githubusercontent.com/ShiftyTR/Proxy-List/master/socks4.txt",
+      "type": "socks4",
+      "repo": "ShiftyTR/Proxy-List"
+    },
+    {
+      "id": "shiftytr-proxy-list-socks5-txt",
+      "name": "ShiftyTR · Proxy-List · socks5.txt",
+      "url": "https://raw.githubusercontent.com/ShiftyTR/Proxy-List/master/socks5.txt",
+      "type": "socks5",
+      "repo": "ShiftyTR/Proxy-List"
+    },
+    {
+      "id": "monosans-proxy-list-proxies-http-txt",
+      "name": "monosans · proxy-list · proxies · http.txt",
+      "url": "https://raw.githubusercontent.com/monosans/proxy-list/main/proxies/http.txt",
+      "type": "http",
+      "repo": "monosans/proxy-list"
+    },
+    {
+      "id": "monosans-proxy-list-proxies-socks4-txt",
+      "name": "monosans · proxy-list · proxies · socks4.txt",
+      "url": "https://raw.githubusercontent.com/monosans/proxy-list/main/proxies/socks4.txt",
+      "type": "socks4",
+      "repo": "monosans/proxy-list"
+    },
+    {
+      "id": "monosans-proxy-list-proxies-socks5-txt",
+      "name": "monosans · proxy-list · proxies · socks5.txt",
+      "url": "https://raw.githubusercontent.com/monosans/proxy-list/main/proxies/socks5.txt",
+      "type": "socks5",
+      "repo": "monosans/proxy-list"
+    },
+    {
+      "id": "jetkai-proxy-list-archive-txt",
+      "name": "jetkai · proxy-list · archive.txt",
+      "url": "https://raw.githubusercontent.com/jetkai/proxy-list/master/archive.txt",
+      "type": "http",
+      "repo": "jetkai/proxy-list"
+    },
+    {
+      "id": "jetkai-proxy-list-online-proxies-txt-proxies-http-txt",
+      "name": "jetkai · proxy-list · online-proxies · txt · proxies-http.txt",
+      "url": "https://raw.githubusercontent.com/jetkai/proxy-list/master/online-proxies/txt/proxies-http.txt",
+      "type": "http",
+      "repo": "jetkai/proxy-list"
+    },
+    {
+      "id": "jetkai-proxy-list-online-proxies-txt-proxies-https-txt",
+      "name": "jetkai · proxy-list · online-proxies · txt · proxies-https.txt",
+      "url": "https://raw.githubusercontent.com/jetkai/proxy-list/master/online-proxies/txt/proxies-https.txt",
+      "type": "https",
+      "repo": "jetkai/proxy-list"
+    },
+    {
+      "id": "jetkai-proxy-list-online-proxies-txt-proxies-socks4-txt",
+      "name": "jetkai · proxy-list · online-proxies · txt · proxies-socks4.txt",
+      "url": "https://raw.githubusercontent.com/jetkai/proxy-list/master/online-proxies/txt/proxies-socks4.txt",
+      "type": "socks4",
+      "repo": "jetkai/proxy-list"
+    },
+    {
+      "id": "jetkai-proxy-list-online-proxies-txt-proxies-socks5-txt",
+      "name": "jetkai · proxy-list · online-proxies · txt · proxies-socks5.txt",
+      "url": "https://raw.githubusercontent.com/jetkai/proxy-list/master/online-proxies/txt/proxies-socks5.txt",
+      "type": "socks5",
+      "repo": "jetkai/proxy-list"
+    },
+    {
+      "id": "zaeem20-free-proxies-list-http-txt",
+      "name": "Zaeem20 · FREE_PROXIES_LIST · http.txt",
+      "url": "https://raw.githubusercontent.com/Zaeem20/FREE_PROXIES_LIST/master/http.txt",
+      "type": "http",
+      "repo": "Zaeem20/FREE_PROXIES_LIST"
+    },
+    {
+      "id": "zaeem20-free-proxies-list-socks4-txt",
+      "name": "Zaeem20 · FREE_PROXIES_LIST · socks4.txt",
+      "url": "https://raw.githubusercontent.com/Zaeem20/FREE_PROXIES_LIST/master/socks4.txt",
+      "type": "socks4",
+      "repo": "Zaeem20/FREE_PROXIES_LIST"
+    },
+    {
+      "id": "zaeem20-free-proxies-list-socks5-txt",
+      "name": "Zaeem20 · FREE_PROXIES_LIST · socks5.txt",
+      "url": "https://raw.githubusercontent.com/Zaeem20/FREE_PROXIES_LIST/master/socks5.txt",
+      "type": "socks5",
+      "repo": "Zaeem20/FREE_PROXIES_LIST"
+    },
+    {
+      "id": "muriot-proxy-list-proxy-list-http-txt",
+      "name": "MuRiot · proxy-list · proxy-list · http.txt",
+      "url": "https://raw.githubusercontent.com/MuRiot/proxy-list/main/proxy-list/http.txt",
+      "type": "http",
+      "repo": "MuRiot/proxy-list"
+    },
+    {
+      "id": "muriot-proxy-list-proxy-list-https-txt",
+      "name": "MuRiot · proxy-list · proxy-list · https.txt",
+      "url": "https://raw.githubusercontent.com/MuRiot/proxy-list/main/proxy-list/https.txt",
+      "type": "https",
+      "repo": "MuRiot/proxy-list"
+    },
+    {
+      "id": "muriot-proxy-list-proxy-list-socks4-txt",
+      "name": "MuRiot · proxy-list · proxy-list · socks4.txt",
+      "url": "https://raw.githubusercontent.com/MuRiot/proxy-list/main/proxy-list/socks4.txt",
+      "type": "socks4",
+      "repo": "MuRiot/proxy-list"
+    },
+    {
+      "id": "muriot-proxy-list-proxy-list-socks5-txt",
+      "name": "MuRiot · proxy-list · proxy-list · socks5.txt",
+      "url": "https://raw.githubusercontent.com/MuRiot/proxy-list/main/proxy-list/socks5.txt",
+      "type": "socks5",
+      "repo": "MuRiot/proxy-list"
+    },
+    {
+      "id": "iplocate-free-proxy-list-protocols-http-csv",
+      "name": "iplocate · free-proxy-list · protocols · http.csv",
+      "url": "https://raw.githubusercontent.com/iplocate/free-proxy-list/main/protocols/http.csv",
+      "type": "http",
+      "repo": "iplocate/free-proxy-list"
+    },
+    {
+      "id": "iplocate-free-proxy-list-protocols-https-csv",
+      "name": "iplocate · free-proxy-list · protocols · https.csv",
+      "url": "https://raw.githubusercontent.com/iplocate/free-proxy-list/main/protocols/https.csv",
+      "type": "https",
+      "repo": "iplocate/free-proxy-list"
+    },
+    {
+      "id": "iplocate-free-proxy-list-protocols-socks4-csv",
+      "name": "iplocate · free-proxy-list · protocols · socks4.csv",
+      "url": "https://raw.githubusercontent.com/iplocate/free-proxy-list/main/protocols/socks4.csv",
+      "type": "socks4",
+      "repo": "iplocate/free-proxy-list"
+    },
+    {
+      "id": "iplocate-free-proxy-list-protocols-socks5-csv",
+      "name": "iplocate · free-proxy-list · protocols · socks5.csv",
+      "url": "https://raw.githubusercontent.com/iplocate/free-proxy-list/main/protocols/socks5.csv",
+      "type": "socks5",
+      "repo": "iplocate/free-proxy-list"
+    },
+    {
+      "id": "iplocate-free-proxy-list-all-proxies-csv",
+      "name": "iplocate · free-proxy-list · all-proxies.csv",
+      "url": "https://raw.githubusercontent.com/iplocate/free-proxy-list/main/all-proxies.csv",
+      "type": "http",
+      "repo": "iplocate/free-proxy-list"
+    },
+    {
+      "id": "proxifly-free-proxy-list-proxies-all-data-csv",
+      "name": "proxifly · free-proxy-list · proxies · all · data.csv",
+      "url": "https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/all/data.csv",
+      "type": "http",
+      "repo": "proxifly/free-proxy-list"
+    },
+    {
+      "id": "proxifly-free-proxy-list-proxies-all-data-json",
+      "name": "proxifly · free-proxy-list · proxies · all · data.json",
+      "url": "https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/all/data.json",
+      "type": "http",
+      "repo": "proxifly/free-proxy-list"
+    },
+    {
+      "id": "proxifly-free-proxy-list-proxies-all-data-txt",
+      "name": "proxifly · free-proxy-list · proxies · all · data.txt",
+      "url": "https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/all/data.txt",
+      "type": "http",
+      "repo": "proxifly/free-proxy-list"
+    },
+    {
+      "id": "proxifly-free-proxy-list-proxies-countries-ae-data-csv",
+      "name": "proxifly · free-proxy-list · proxies · countries · AE · data.csv",
+      "url": "https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/countries/AE/data.csv",
+      "type": "http",
+      "repo": "proxifly/free-proxy-list"
+    },
+    {
+      "id": "proxifly-free-proxy-list-proxies-countries-ae-data-json",
+      "name": "proxifly · free-proxy-list · proxies · countries · AE · data.json",
+      "url": "https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/countries/AE/data.json",
+      "type": "http",
+      "repo": "proxifly/free-proxy-list"
+    },
+    {
+      "id": "proxifly-free-proxy-list-proxies-countries-ae-data-txt",
+      "name": "proxifly · free-proxy-list · proxies · countries · AE · data.txt",
+      "url": "https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/countries/AE/data.txt",
+      "type": "http",
+      "repo": "proxifly/free-proxy-list"
+    },
+    {
+      "id": "proxifly-free-proxy-list-proxies-countries-al-data-csv",
+      "name": "proxifly · free-proxy-list · proxies · countries · AL · data.csv",
+      "url": "https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/countries/AL/data.csv",
+      "type": "http",
+      "repo": "proxifly/free-proxy-list"
+    },
+    {
+      "id": "proxifly-free-proxy-list-proxies-countries-al-data-json",
+      "name": "proxifly · free-proxy-list · proxies · countries · AL · data.json",
+      "url": "https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/countries/AL/data.json",
+      "type": "http",
+      "repo": "proxifly/free-proxy-list"
+    },
+    {
+      "id": "proxifly-free-proxy-list-proxies-countries-al-data-txt",
+      "name": "proxifly · free-proxy-list · proxies · countries · AL · data.txt",
+      "url": "https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/countries/AL/data.txt",
+      "type": "http",
+      "repo": "proxifly/free-proxy-list"
+    },
+    {
+      "id": "proxifly-free-proxy-list-proxies-countries-am-data-csv",
+      "name": "proxifly · free-proxy-list · proxies · countries · AM · data.csv",
+      "url": "https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/countries/AM/data.csv",
+      "type": "http",
+      "repo": "proxifly/free-proxy-list"
+    },
+    {
+      "id": "proxifly-free-proxy-list-proxies-countries-am-data-json",
+      "name": "proxifly · free-proxy-list · proxies · countries · AM · data.json",
+      "url": "https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/countries/AM/data.json",
+      "type": "http",
+      "repo": "proxifly/free-proxy-list"
+    },
+    {
+      "id": "proxifly-free-proxy-list-proxies-countries-am-data-txt",
+      "name": "proxifly · free-proxy-list · proxies · countries · AM · data.txt",
+      "url": "https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/countries/AM/data.txt",
+      "type": "http",
+      "repo": "proxifly/free-proxy-list"
+    },
+    {
+      "id": "proxifly-free-proxy-list-proxies-countries-ar-data-csv",
+      "name": "proxifly · free-proxy-list · proxies · countries · AR · data.csv",
+      "url": "https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/countries/AR/data.csv",
+      "type": "http",
+      "repo": "proxifly/free-proxy-list"
+    },
+    {
+      "id": "proxifly-free-proxy-list-proxies-countries-ar-data-json",
+      "name": "proxifly · free-proxy-list · proxies · countries · AR · data.json",
+      "url": "https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/countries/AR/data.json",
+      "type": "http",
+      "repo": "proxifly/free-proxy-list"
+    },
+    {
+      "id": "proxifly-free-proxy-list-proxies-countries-ar-data-txt",
+      "name": "proxifly · free-proxy-list · proxies · countries · AR · data.txt",
+      "url": "https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/countries/AR/data.txt",
+      "type": "http",
+      "repo": "proxifly/free-proxy-list"
+    },
+    {
+      "id": "proxifly-free-proxy-list-proxies-countries-at-data-csv",
+      "name": "proxifly · free-proxy-list · proxies · countries · AT · data.csv",
+      "url": "https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/countries/AT/data.csv",
+      "type": "http",
+      "repo": "proxifly/free-proxy-list"
+    },
+    {
+      "id": "proxifly-free-proxy-list-proxies-countries-at-data-json",
+      "name": "proxifly · free-proxy-list · proxies · countries · AT · data.json",
+      "url": "https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/countries/AT/data.json",
+      "type": "http",
+      "repo": "proxifly/free-proxy-list"
+    },
+    {
+      "id": "proxifly-free-proxy-list-proxies-countries-at-data-txt",
+      "name": "proxifly · free-proxy-list · proxies · countries · AT · data.txt",
+      "url": "https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/countries/AT/data.txt",
+      "type": "http",
+      "repo": "proxifly/free-proxy-list"
+    },
+    {
+      "id": "proxifly-free-proxy-list-proxies-countries-au-data-csv",
+      "name": "proxifly · free-proxy-list · proxies · countries · AU · data.csv",
+      "url": "https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/countries/AU/data.csv",
+      "type": "http",
+      "repo": "proxifly/free-proxy-list"
+    },
+    {
+      "id": "proxifly-free-proxy-list-proxies-countries-au-data-json",
+      "name": "proxifly · free-proxy-list · proxies · countries · AU · data.json",
+      "url": "https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/countries/AU/data.json",
+      "type": "http",
+      "repo": "proxifly/free-proxy-list"
+    },
+    {
+      "id": "proxifly-free-proxy-list-proxies-countries-au-data-txt",
+      "name": "proxifly · free-proxy-list · proxies · countries · AU · data.txt",
+      "url": "https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/countries/AU/data.txt",
+      "type": "http",
+      "repo": "proxifly/free-proxy-list"
+    },
+    {
+      "id": "proxifly-free-proxy-list-proxies-countries-bd-data-csv",
+      "name": "proxifly · free-proxy-list · proxies · countries · BD · data.csv",
+      "url": "https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/countries/BD/data.csv",
+      "type": "http",
+      "repo": "proxifly/free-proxy-list"
+    },
+    {
+      "id": "proxifly-free-proxy-list-proxies-countries-bd-data-json",
+      "name": "proxifly · free-proxy-list · proxies · countries · BD · data.json",
+      "url": "https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/countries/BD/data.json",
+      "type": "http",
+      "repo": "proxifly/free-proxy-list"
+    },
+    {
+      "id": "proxifly-free-proxy-list-proxies-countries-bd-data-txt",
+      "name": "proxifly · free-proxy-list · proxies · countries · BD · data.txt",
+      "url": "https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/countries/BD/data.txt",
+      "type": "http",
+      "repo": "proxifly/free-proxy-list"
+    },
+    {
+      "id": "proxifly-free-proxy-list-proxies-countries-be-data-csv",
+      "name": "proxifly · free-proxy-list · proxies · countries · BE · data.csv",
+      "url": "https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/countries/BE/data.csv",
+      "type": "http",
+      "repo": "proxifly/free-proxy-list"
+    },
+    {
+      "id": "proxifly-free-proxy-list-proxies-countries-be-data-json",
+      "name": "proxifly · free-proxy-list · proxies · countries · BE · data.json",
+      "url": "https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/countries/BE/data.json",
+      "type": "http",
+      "repo": "proxifly/free-proxy-list"
+    },
+    {
+      "id": "proxifly-free-proxy-list-proxies-countries-be-data-txt",
+      "name": "proxifly · free-proxy-list · proxies · countries · BE · data.txt",
+      "url": "https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/countries/BE/data.txt",
+      "type": "http",
+      "repo": "proxifly/free-proxy-list"
+    },
+    {
+      "id": "proxifly-free-proxy-list-proxies-countries-bg-data-csv",
+      "name": "proxifly · free-proxy-list · proxies · countries · BG · data.csv",
+      "url": "https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/countries/BG/data.csv",
+      "type": "http",
+      "repo": "proxifly/free-proxy-list"
+    },
+    {
+      "id": "proxifly-free-proxy-list-proxies-countries-bg-data-json",
+      "name": "proxifly · free-proxy-list · proxies · countries · BG · data.json",
+      "url": "https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/countries/BG/data.json",
+      "type": "http",
+      "repo": "proxifly/free-proxy-list"
+    },
+    {
+      "id": "proxifly-free-proxy-list-proxies-countries-bg-data-txt",
+      "name": "proxifly · free-proxy-list · proxies · countries · BG · data.txt",
+      "url": "https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/countries/BG/data.txt",
+      "type": "http",
+      "repo": "proxifly/free-proxy-list"
+    },
+    {
+      "id": "proxifly-free-proxy-list-proxies-countries-br-data-csv",
+      "name": "proxifly · free-proxy-list · proxies · countries · BR · data.csv",
+      "url": "https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/countries/BR/data.csv",
+      "type": "http",
+      "repo": "proxifly/free-proxy-list"
+    },
+    {
+      "id": "proxifly-free-proxy-list-proxies-countries-br-data-json",
+      "name": "proxifly · free-proxy-list · proxies · countries · BR · data.json",
+      "url": "https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/countries/BR/data.json",
+      "type": "http",
+      "repo": "proxifly/free-proxy-list"
+    },
+    {
+      "id": "proxifly-free-proxy-list-proxies-countries-br-data-txt",
+      "name": "proxifly · free-proxy-list · proxies · countries · BR · data.txt",
+      "url": "https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/countries/BR/data.txt",
+      "type": "http",
+      "repo": "proxifly/free-proxy-list"
+    },
+    {
+      "id": "proxifly-free-proxy-list-proxies-countries-bw-data-csv",
+      "name": "proxifly · free-proxy-list · proxies · countries · BW · data.csv",
+      "url": "https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/countries/BW/data.csv",
+      "type": "http",
+      "repo": "proxifly/free-proxy-list"
+    },
+    {
+      "id": "proxifly-free-proxy-list-proxies-countries-bw-data-json",
+      "name": "proxifly · free-proxy-list · proxies · countries · BW · data.json",
+      "url": "https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/countries/BW/data.json",
+      "type": "http",
+      "repo": "proxifly/free-proxy-list"
+    },
+    {
+      "id": "proxifly-free-proxy-list-proxies-countries-bw-data-txt",
+      "name": "proxifly · free-proxy-list · proxies · countries · BW · data.txt",
+      "url": "https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/countries/BW/data.txt",
+      "type": "http",
+      "repo": "proxifly/free-proxy-list"
+    },
+    {
+      "id": "proxifly-free-proxy-list-proxies-countries-ca-data-csv",
+      "name": "proxifly · free-proxy-list · proxies · countries · CA · data.csv",
+      "url": "https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/countries/CA/data.csv",
+      "type": "http",
+      "repo": "proxifly/free-proxy-list"
+    },
+    {
+      "id": "proxifly-free-proxy-list-proxies-countries-ca-data-json",
+      "name": "proxifly · free-proxy-list · proxies · countries · CA · data.json",
+      "url": "https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/countries/CA/data.json",
+      "type": "http",
+      "repo": "proxifly/free-proxy-list"
+    },
+    {
+      "id": "proxifly-free-proxy-list-proxies-countries-ca-data-txt",
+      "name": "proxifly · free-proxy-list · proxies · countries · CA · data.txt",
+      "url": "https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/countries/CA/data.txt",
+      "type": "http",
+      "repo": "proxifly/free-proxy-list"
+    },
+    {
+      "id": "proxifly-free-proxy-list-proxies-countries-ch-data-csv",
+      "name": "proxifly · free-proxy-list · proxies · countries · CH · data.csv",
+      "url": "https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/countries/CH/data.csv",
+      "type": "http",
+      "repo": "proxifly/free-proxy-list"
+    },
+    {
+      "id": "proxifly-free-proxy-list-proxies-countries-ch-data-json",
+      "name": "proxifly · free-proxy-list · proxies · countries · CH · data.json",
+      "url": "https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/countries/CH/data.json",
+      "type": "http",
+      "repo": "proxifly/free-proxy-list"
+    },
+    {
+      "id": "proxifly-free-proxy-list-proxies-countries-ch-data-txt",
+      "name": "proxifly · free-proxy-list · proxies · countries · CH · data.txt",
+      "url": "https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/countries/CH/data.txt",
+      "type": "http",
+      "repo": "proxifly/free-proxy-list"
+    },
+    {
+      "id": "proxifly-free-proxy-list-proxies-countries-cl-data-csv",
+      "name": "proxifly · free-proxy-list · proxies · countries · CL · data.csv",
+      "url": "https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/countries/CL/data.csv",
+      "type": "http",
+      "repo": "proxifly/free-proxy-list"
+    },
+    {
+      "id": "proxifly-free-proxy-list-proxies-countries-cl-data-json",
+      "name": "proxifly · free-proxy-list · proxies · countries · CL · data.json",
+      "url": "https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/countries/CL/data.json",
+      "type": "http",
+      "repo": "proxifly/free-proxy-list"
+    },
+    {
+      "id": "proxifly-free-proxy-list-proxies-countries-cl-data-txt",
+      "name": "proxifly · free-proxy-list · proxies · countries · CL · data.txt",
+      "url": "https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/countries/CL/data.txt",
+      "type": "http",
+      "repo": "proxifly/free-proxy-list"
+    },
+    {
+      "id": "proxifly-free-proxy-list-proxies-countries-cn-data-csv",
+      "name": "proxifly · free-proxy-list · proxies · countries · CN · data.csv",
+      "url": "https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/countries/CN/data.csv",
+      "type": "http",
+      "repo": "proxifly/free-proxy-list"
+    },
+    {
+      "id": "proxifly-free-proxy-list-proxies-countries-cn-data-json",
+      "name": "proxifly · free-proxy-list · proxies · countries · CN · data.json",
+      "url": "https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/countries/CN/data.json",
+      "type": "http",
+      "repo": "proxifly/free-proxy-list"
+    },
+    {
+      "id": "proxifly-free-proxy-list-proxies-countries-cn-data-txt",
+      "name": "proxifly · free-proxy-list · proxies · countries · CN · data.txt",
+      "url": "https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/countries/CN/data.txt",
+      "type": "http",
+      "repo": "proxifly/free-proxy-list"
+    },
+    {
+      "id": "proxifly-free-proxy-list-proxies-countries-co-data-csv",
+      "name": "proxifly · free-proxy-list · proxies · countries · CO · data.csv",
+      "url": "https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/countries/CO/data.csv",
+      "type": "http",
+      "repo": "proxifly/free-proxy-list"
+    },
+    {
+      "id": "proxifly-free-proxy-list-proxies-countries-co-data-json",
+      "name": "proxifly · free-proxy-list · proxies · countries · CO · data.json",
+      "url": "https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/countries/CO/data.json",
+      "type": "http",
+      "repo": "proxifly/free-proxy-list"
+    },
+    {
+      "id": "proxifly-free-proxy-list-proxies-countries-co-data-txt",
+      "name": "proxifly · free-proxy-list · proxies · countries · CO · data.txt",
+      "url": "https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/countries/CO/data.txt",
+      "type": "http",
+      "repo": "proxifly/free-proxy-list"
+    },
+    {
+      "id": "proxifly-free-proxy-list-proxies-countries-cr-data-csv",
+      "name": "proxifly · free-proxy-list · proxies · countries · CR · data.csv",
+      "url": "https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/countries/CR/data.csv",
+      "type": "http",
+      "repo": "proxifly/free-proxy-list"
+    },
+    {
+      "id": "proxifly-free-proxy-list-proxies-countries-cr-data-json",
+      "name": "proxifly · free-proxy-list · proxies · countries · CR · data.json",
+      "url": "https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/countries/CR/data.json",
+      "type": "http",
+      "repo": "proxifly/free-proxy-list"
+    },
+    {
+      "id": "proxifly-free-proxy-list-proxies-countries-cr-data-txt",
+      "name": "proxifly · free-proxy-list · proxies · countries · CR · data.txt",
+      "url": "https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/countries/CR/data.txt",
+      "type": "http",
+      "repo": "proxifly/free-proxy-list"
+    },
+    {
+      "id": "proxifly-free-proxy-list-proxies-countries-cz-data-csv",
+      "name": "proxifly · free-proxy-list · proxies · countries · CZ · data.csv",
+      "url": "https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/countries/CZ/data.csv",
+      "type": "http",
+      "repo": "proxifly/free-proxy-list"
+    },
+    {
+      "id": "proxifly-free-proxy-list-proxies-countries-cz-data-json",
+      "name": "proxifly · free-proxy-list · proxies · countries · CZ · data.json",
+      "url": "https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/countries/CZ/data.json",
+      "type": "http",
+      "repo": "proxifly/free-proxy-list"
+    },
+    {
+      "id": "proxifly-free-proxy-list-proxies-countries-cz-data-txt",
+      "name": "proxifly · free-proxy-list · proxies · countries · CZ · data.txt",
+      "url": "https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/countries/CZ/data.txt",
+      "type": "http",
+      "repo": "proxifly/free-proxy-list"
+    },
+    {
+      "id": "proxifly-free-proxy-list-proxies-countries-de-data-csv",
+      "name": "proxifly · free-proxy-list · proxies · countries · DE · data.csv",
+      "url": "https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/countries/DE/data.csv",
+      "type": "http",
+      "repo": "proxifly/free-proxy-list"
+    },
+    {
+      "id": "proxifly-free-proxy-list-proxies-countries-de-data-json",
+      "name": "proxifly · free-proxy-list · proxies · countries · DE · data.json",
+      "url": "https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/countries/DE/data.json",
+      "type": "http",
+      "repo": "proxifly/free-proxy-list"
+    },
+    {
+      "id": "proxifly-free-proxy-list-proxies-countries-de-data-txt",
+      "name": "proxifly · free-proxy-list · proxies · countries · DE · data.txt",
+      "url": "https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/countries/DE/data.txt",
+      "type": "http",
+      "repo": "proxifly/free-proxy-list"
+    },
+    {
+      "id": "proxifly-free-proxy-list-proxies-countries-dk-data-csv",
+      "name": "proxifly · free-proxy-list · proxies · countries · DK · data.csv",
+      "url": "https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/countries/DK/data.csv",
+      "type": "http",
+      "repo": "proxifly/free-proxy-list"
+    },
+    {
+      "id": "proxifly-free-proxy-list-proxies-countries-dk-data-json",
+      "name": "proxifly · free-proxy-list · proxies · countries · DK · data.json",
+      "url": "https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/countries/DK/data.json",
+      "type": "http",
+      "repo": "proxifly/free-proxy-list"
+    },
+    {
+      "id": "proxifly-free-proxy-list-proxies-countries-dk-data-txt",
+      "name": "proxifly · free-proxy-list · proxies · countries · DK · data.txt",
+      "url": "https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/countries/DK/data.txt",
+      "type": "http",
+      "repo": "proxifly/free-proxy-list"
+    },
+    {
+      "id": "proxifly-free-proxy-list-proxies-countries-ec-data-csv",
+      "name": "proxifly · free-proxy-list · proxies · countries · EC · data.csv",
+      "url": "https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/countries/EC/data.csv",
+      "type": "http",
+      "repo": "proxifly/free-proxy-list"
+    },
+    {
+      "id": "proxifly-free-proxy-list-proxies-countries-ec-data-json",
+      "name": "proxifly · free-proxy-list · proxies · countries · EC · data.json",
+      "url": "https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/countries/EC/data.json",
+      "type": "http",
+      "repo": "proxifly/free-proxy-list"
+    },
+    {
+      "id": "proxifly-free-proxy-list-proxies-countries-ec-data-txt",
+      "name": "proxifly · free-proxy-list · proxies · countries · EC · data.txt",
+      "url": "https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/countries/EC/data.txt",
+      "type": "http",
+      "repo": "proxifly/free-proxy-list"
+    },
+    {
+      "id": "proxifly-free-proxy-list-proxies-countries-ee-data-csv",
+      "name": "proxifly · free-proxy-list · proxies · countries · EE · data.csv",
+      "url": "https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/countries/EE/data.csv",
+      "type": "http",
+      "repo": "proxifly/free-proxy-list"
+    },
+    {
+      "id": "proxifly-free-proxy-list-proxies-countries-ee-data-json",
+      "name": "proxifly · free-proxy-list · proxies · countries · EE · data.json",
+      "url": "https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/countries/EE/data.json",
+      "type": "http",
+      "repo": "proxifly/free-proxy-list"
+    },
+    {
+      "id": "proxifly-free-proxy-list-proxies-countries-ee-data-txt",
+      "name": "proxifly · free-proxy-list · proxies · countries · EE · data.txt",
+      "url": "https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/countries/EE/data.txt",
+      "type": "http",
+      "repo": "proxifly/free-proxy-list"
+    },
+    {
+      "id": "proxifly-free-proxy-list-proxies-countries-eg-data-csv",
+      "name": "proxifly · free-proxy-list · proxies · countries · EG · data.csv",
+      "url": "https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/countries/EG/data.csv",
+      "type": "http",
+      "repo": "proxifly/free-proxy-list"
+    },
+    {
+      "id": "proxifly-free-proxy-list-proxies-countries-eg-data-json",
+      "name": "proxifly · free-proxy-list · proxies · countries · EG · data.json",
+      "url": "https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/countries/EG/data.json",
+      "type": "http",
+      "repo": "proxifly/free-proxy-list"
+    },
+    {
+      "id": "proxifly-free-proxy-list-proxies-countries-eg-data-txt",
+      "name": "proxifly · free-proxy-list · proxies · countries · EG · data.txt",
+      "url": "https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/countries/EG/data.txt",
+      "type": "http",
+      "repo": "proxifly/free-proxy-list"
+    },
+    {
+      "id": "proxifly-free-proxy-list-proxies-countries-es-data-csv",
+      "name": "proxifly · free-proxy-list · proxies · countries · ES · data.csv",
+      "url": "https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/countries/ES/data.csv",
+      "type": "http",
+      "repo": "proxifly/free-proxy-list"
+    },
+    {
+      "id": "proxifly-free-proxy-list-proxies-countries-es-data-json",
+      "name": "proxifly · free-proxy-list · proxies · countries · ES · data.json",
+      "url": "https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/countries/ES/data.json",
+      "type": "http",
+      "repo": "proxifly/free-proxy-list"
+    },
+    {
+      "id": "proxifly-free-proxy-list-proxies-countries-es-data-txt",
+      "name": "proxifly · free-proxy-list · proxies · countries · ES · data.txt",
+      "url": "https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/countries/ES/data.txt",
+      "type": "http",
+      "repo": "proxifly/free-proxy-list"
+    },
+    {
+      "id": "proxifly-free-proxy-list-proxies-countries-fi-data-csv",
+      "name": "proxifly · free-proxy-list · proxies · countries · FI · data.csv",
+      "url": "https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/countries/FI/data.csv",
+      "type": "http",
+      "repo": "proxifly/free-proxy-list"
+    },
+    {
+      "id": "proxifly-free-proxy-list-proxies-countries-fi-data-json",
+      "name": "proxifly · free-proxy-list · proxies · countries · FI · data.json",
+      "url": "https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/countries/FI/data.json",
+      "type": "http",
+      "repo": "proxifly/free-proxy-list"
+    },
+    {
+      "id": "proxifly-free-proxy-list-proxies-countries-fi-data-txt",
+      "name": "proxifly · free-proxy-list · proxies · countries · FI · data.txt",
+      "url": "https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/countries/FI/data.txt",
+      "type": "http",
+      "repo": "proxifly/free-proxy-list"
+    },
+    {
+      "id": "proxifly-free-proxy-list-proxies-countries-fr-data-csv",
+      "name": "proxifly · free-proxy-list · proxies · countries · FR · data.csv",
+      "url": "https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/countries/FR/data.csv",
+      "type": "http",
+      "repo": "proxifly/free-proxy-list"
+    },
+    {
+      "id": "proxifly-free-proxy-list-proxies-countries-fr-data-json",
+      "name": "proxifly · free-proxy-list · proxies · countries · FR · data.json",
+      "url": "https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/countries/FR/data.json",
+      "type": "http",
+      "repo": "proxifly/free-proxy-list"
+    },
+    {
+      "id": "proxifly-free-proxy-list-proxies-countries-fr-data-txt",
+      "name": "proxifly · free-proxy-list · proxies · countries · FR · data.txt",
+      "url": "https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/countries/FR/data.txt",
+      "type": "http",
+      "repo": "proxifly/free-proxy-list"
+    },
+    {
+      "id": "proxifly-free-proxy-list-proxies-countries-gb-data-csv",
+      "name": "proxifly · free-proxy-list · proxies · countries · GB · data.csv",
+      "url": "https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/countries/GB/data.csv",
+      "type": "http",
+      "repo": "proxifly/free-proxy-list"
+    },
+    {
+      "id": "proxifly-free-proxy-list-proxies-countries-gb-data-json",
+      "name": "proxifly · free-proxy-list · proxies · countries · GB · data.json",
+      "url": "https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/countries/GB/data.json",
+      "type": "http",
+      "repo": "proxifly/free-proxy-list"
+    },
+    {
+      "id": "proxifly-free-proxy-list-proxies-countries-gb-data-txt",
+      "name": "proxifly · free-proxy-list · proxies · countries · GB · data.txt",
+      "url": "https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/countries/GB/data.txt",
+      "type": "http",
+      "repo": "proxifly/free-proxy-list"
+    },
+    {
+      "id": "proxifly-free-proxy-list-proxies-countries-gh-data-csv",
+      "name": "proxifly · free-proxy-list · proxies · countries · GH · data.csv",
+      "url": "https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/countries/GH/data.csv",
+      "type": "http",
+      "repo": "proxifly/free-proxy-list"
+    },
+    {
+      "id": "proxifly-free-proxy-list-proxies-countries-gh-data-json",
+      "name": "proxifly · free-proxy-list · proxies · countries · GH · data.json",
+      "url": "https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/countries/GH/data.json",
+      "type": "http",
+      "repo": "proxifly/free-proxy-list"
+    },
+    {
+      "id": "proxifly-free-proxy-list-proxies-countries-gh-data-txt",
+      "name": "proxifly · free-proxy-list · proxies · countries · GH · data.txt",
+      "url": "https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/countries/GH/data.txt",
+      "type": "http",
+      "repo": "proxifly/free-proxy-list"
+    },
+    {
+      "id": "proxifly-free-proxy-list-proxies-countries-gr-data-csv",
+      "name": "proxifly · free-proxy-list · proxies · countries · GR · data.csv",
+      "url": "https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/countries/GR/data.csv",
+      "type": "http",
+      "repo": "proxifly/free-proxy-list"
+    },
+    {
+      "id": "proxifly-free-proxy-list-proxies-countries-gr-data-json",
+      "name": "proxifly · free-proxy-list · proxies · countries · GR · data.json",
+      "url": "https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/countries/GR/data.json",
+      "type": "http",
+      "repo": "proxifly/free-proxy-list"
+    },
+    {
+      "id": "proxifly-free-proxy-list-proxies-countries-gr-data-txt",
+      "name": "proxifly · free-proxy-list · proxies · countries · GR · data.txt",
+      "url": "https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/countries/GR/data.txt",
+      "type": "http",
+      "repo": "proxifly/free-proxy-list"
+    },
+    {
+      "id": "proxifly-free-proxy-list-proxies-countries-hk-data-csv",
+      "name": "proxifly · free-proxy-list · proxies · countries · HK · data.csv",
+      "url": "https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/countries/HK/data.csv",
+      "type": "http",
+      "repo": "proxifly/free-proxy-list"
+    },
+    {
+      "id": "proxifly-free-proxy-list-proxies-countries-hk-data-json",
+      "name": "proxifly · free-proxy-list · proxies · countries · HK · data.json",
+      "url": "https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/countries/HK/data.json",
+      "type": "http",
+      "repo": "proxifly/free-proxy-list"
+    },
+    {
+      "id": "proxifly-free-proxy-list-proxies-countries-hk-data-txt",
+      "name": "proxifly · free-proxy-list · proxies · countries · HK · data.txt",
+      "url": "https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/countries/HK/data.txt",
+      "type": "http",
+      "repo": "proxifly/free-proxy-list"
+    },
+    {
+      "id": "proxifly-free-proxy-list-proxies-countries-hn-data-csv",
+      "name": "proxifly · free-proxy-list · proxies · countries · HN · data.csv",
+      "url": "https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/countries/HN/data.csv",
+      "type": "http",
+      "repo": "proxifly/free-proxy-list"
+    },
+    {
+      "id": "proxifly-free-proxy-list-proxies-countries-hn-data-json",
+      "name": "proxifly · free-proxy-list · proxies · countries · HN · data.json",
+      "url": "https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/countries/HN/data.json",
+      "type": "http",
+      "repo": "proxifly/free-proxy-list"
+    },
+    {
+      "id": "proxifly-free-proxy-list-proxies-countries-hn-data-txt",
+      "name": "proxifly · free-proxy-list · proxies · countries · HN · data.txt",
+      "url": "https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/countries/HN/data.txt",
+      "type": "http",
+      "repo": "proxifly/free-proxy-list"
+    },
+    {
+      "id": "proxifly-free-proxy-list-proxies-countries-hu-data-csv",
+      "name": "proxifly · free-proxy-list · proxies · countries · HU · data.csv",
+      "url": "https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/countries/HU/data.csv",
+      "type": "http",
+      "repo": "proxifly/free-proxy-list"
+    },
+    {
+      "id": "proxifly-free-proxy-list-proxies-countries-hu-data-json",
+      "name": "proxifly · free-proxy-list · proxies · countries · HU · data.json",
+      "url": "https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/countries/HU/data.json",
+      "type": "http",
+      "repo": "proxifly/free-proxy-list"
+    },
+    {
+      "id": "proxifly-free-proxy-list-proxies-countries-hu-data-txt",
+      "name": "proxifly · free-proxy-list · proxies · countries · HU · data.txt",
+      "url": "https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/countries/HU/data.txt",
+      "type": "http",
+      "repo": "proxifly/free-proxy-list"
+    },
+    {
+      "id": "proxifly-free-proxy-list-proxies-countries-id-data-csv",
+      "name": "proxifly · free-proxy-list · proxies · countries · ID · data.csv",
+      "url": "https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/countries/ID/data.csv",
+      "type": "http",
+      "repo": "proxifly/free-proxy-list"
+    },
+    {
+      "id": "proxifly-free-proxy-list-proxies-countries-id-data-json",
+      "name": "proxifly · free-proxy-list · proxies · countries · ID · data.json",
+      "url": "https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/countries/ID/data.json",
+      "type": "http",
+      "repo": "proxifly/free-proxy-list"
+    },
+    {
+      "id": "proxifly-free-proxy-list-proxies-countries-id-data-txt",
+      "name": "proxifly · free-proxy-list · proxies · countries · ID · data.txt",
+      "url": "https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/countries/ID/data.txt",
+      "type": "http",
+      "repo": "proxifly/free-proxy-list"
+    },
+    {
+      "id": "proxifly-free-proxy-list-proxies-countries-ie-data-csv",
+      "name": "proxifly · free-proxy-list · proxies · countries · IE · data.csv",
+      "url": "https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/countries/IE/data.csv",
+      "type": "http",
+      "repo": "proxifly/free-proxy-list"
+    },
+    {
+      "id": "proxifly-free-proxy-list-proxies-countries-ie-data-json",
+      "name": "proxifly · free-proxy-list · proxies · countries · IE · data.json",
+      "url": "https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/countries/IE/data.json",
+      "type": "http",
+      "repo": "proxifly/free-proxy-list"
+    },
+    {
+      "id": "proxifly-free-proxy-list-proxies-countries-ie-data-txt",
+      "name": "proxifly · free-proxy-list · proxies · countries · IE · data.txt",
+      "url": "https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/countries/IE/data.txt",
+      "type": "http",
+      "repo": "proxifly/free-proxy-list"
+    },
+    {
+      "id": "proxifly-free-proxy-list-proxies-countries-il-data-csv",
+      "name": "proxifly · free-proxy-list · proxies · countries · IL · data.csv",
+      "url": "https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/countries/IL/data.csv",
+      "type": "http",
+      "repo": "proxifly/free-proxy-list"
+    },
+    {
+      "id": "proxifly-free-proxy-list-proxies-countries-il-data-json",
+      "name": "proxifly · free-proxy-list · proxies · countries · IL · data.json",
+      "url": "https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/countries/IL/data.json",
+      "type": "http",
+      "repo": "proxifly/free-proxy-list"
+    },
+    {
+      "id": "proxifly-free-proxy-list-proxies-countries-il-data-txt",
+      "name": "proxifly · free-proxy-list · proxies · countries · IL · data.txt",
+      "url": "https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/countries/IL/data.txt",
+      "type": "http",
+      "repo": "proxifly/free-proxy-list"
+    },
+    {
+      "id": "proxifly-free-proxy-list-proxies-countries-in-data-csv",
+      "name": "proxifly · free-proxy-list · proxies · countries · IN · data.csv",
+      "url": "https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/countries/IN/data.csv",
+      "type": "http",
+      "repo": "proxifly/free-proxy-list"
+    },
+    {
+      "id": "proxifly-free-proxy-list-proxies-countries-in-data-json",
+      "name": "proxifly · free-proxy-list · proxies · countries · IN · data.json",
+      "url": "https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/countries/IN/data.json",
+      "type": "http",
+      "repo": "proxifly/free-proxy-list"
+    },
+    {
+      "id": "proxifly-free-proxy-list-proxies-countries-in-data-txt",
+      "name": "proxifly · free-proxy-list · proxies · countries · IN · data.txt",
+      "url": "https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/countries/IN/data.txt",
+      "type": "http",
+      "repo": "proxifly/free-proxy-list"
+    },
+    {
+      "id": "extra-proxyscrape-api",
+      "name": "ProxyScrape API",
+      "url": "https://api.proxyscrape.com/v4/free-proxy-list/get?request=display_proxies&proxy_format=protocolipport&format=text",
+      "type": "http",
+      "repo": "custom"
+    },
+    {
+      "id": "extra-freeproxy24-com",
+      "name": "freeproxy24.com",
+      "url": "https://freeproxy24.com/free-proxy-list",
+      "type": "http",
+      "repo": "custom"
+    },
+    {
+      "id": "extra-geonode-com",
+      "name": "geonode.com",
+      "url": "https://geonode.com/free-proxy-list",
+      "type": "http",
+      "repo": "custom"
+    },
+    {
+      "id": "extra-databay-com-all",
+      "name": "databay.com · all",
+      "url": "https://databay.com/free-proxy-list",
+      "type": "http",
+      "repo": "custom"
+    },
+    {
+      "id": "extra-databay-com-socks5",
+      "name": "databay.com · socks5",
+      "url": "https://databay.com/free-proxy-list/socks5",
+      "type": "socks5",
+      "repo": "custom"
+    },
+    {
+      "id": "extra-free-proxy-list-net-socks",
+      "name": "free-proxy-list.net · socks",
+      "url": "https://free-proxy-list.net/en/socks-proxy.html",
+      "type": "socks5",
+      "repo": "custom"
+    },
+    {
+      "id": "extra-freeproxy-world-socks5",
+      "name": "freeproxy.world · socks5",
+      "url": "https://www.freeproxy.world/?type=socks5",
+      "type": "socks5",
+      "repo": "custom"
+    },
+    {
+      "id": "extra-freeproxyupdate-com",
+      "name": "freeproxyupdate.com",
+      "url": "https://freeproxyupdate.com/download-txt",
+      "type": "http",
+      "repo": "custom"
+    },
+    {
+      "id": "extra-sockslist-us",
+      "name": "sockslist.us",
+      "url": "https://sockslist.us",
+      "type": "socks5",
+      "repo": "custom"
+    },
+    {
+      "id": "extra-spys-one-socks",
+      "name": "spys.one · socks",
+      "url": "https://spys.one/en/socks-proxy-list/",
+      "type": "socks5",
+      "repo": "custom"
+    },
+    {
+      "id": "extra-openproxylist-com-proxy",
+      "name": "openproxylist.com · proxy",
+      "url": "https://openproxylist.com/proxy/",
+      "type": "http",
+      "repo": "custom"
+    },
+    {
+      "id": "extra-openproxylist-com",
+      "name": "openproxylist.com",
+      "url": "https://openproxylist.com/",
+      "type": "http",
+      "repo": "custom"
+    },
+    {
+      "id": "extra-openproxylist-xyz",
+      "name": "openproxylist.xyz",
+      "url": "https://www.openproxylist.xyz/",
+      "type": "http",
+      "repo": "custom"
+    },
+    {
+      "id": "extra-proxy-list-download",
+      "name": "proxy-list.download",
+      "url": "https://www.proxy-list.download/",
+      "type": "http",
+      "repo": "custom"
+    },
+    {
+      "id": "extra-proxyscan-io",
+      "name": "proxyscan.io",
+      "url": "https://www.proxyscan.io/",
+      "type": "http",
+      "repo": "custom"
+    },
+    {
+      "id": "extra-proxydocker-com",
+      "name": "proxydocker.com",
+      "url": "https://www.proxydocker.com/",
+      "type": "http",
+      "repo": "custom"
+    },
+    {
+      "id": "extra-megaproxylist-net",
+      "name": "megaproxylist.net",
+      "url": "https://megaproxylist.net/",
+      "type": "http",
+      "repo": "custom"
+    },
+    {
+      "id": "extra-proxy-daily-com",
+      "name": "proxy-daily.com",
+      "url": "https://proxy-daily.com/",
+      "type": "http",
+      "repo": "custom"
+    },
+    {
+      "id": "extra-free-proxy-cz",
+      "name": "free-proxy.cz",
+      "url": "http://free-proxy.cz/en/",
+      "type": "http",
+      "repo": "custom"
+    },
+    {
+      "id": "extra-proxynova-com",
+      "name": "proxynova.com",
+      "url": "https://www.proxynova.com/",
+      "type": "http",
+      "repo": "custom"
+    },
+    {
+      "id": "extra-hidemy-name",
+      "name": "hidemy.name",
+      "url": "https://hidemy.name/",
+      "type": "http",
+      "repo": "custom"
+    },
+    {
+      "id": "extra-openproxy-space",
+      "name": "openproxy.space",
+      "url": "https://openproxy.space/",
+      "type": "http",
+      "repo": "custom"
+    },
+    {
+      "id": "extra-sslproxies-org",
+      "name": "sslproxies.org",
+      "url": "https://www.sslproxies.org/",
+      "type": "https",
+      "repo": "custom"
+    },
+    {
+      "id": "extra-us-proxy-org",
+      "name": "us-proxy.org",
+      "url": "https://www.us-proxy.org/",
+      "type": "http",
+      "repo": "custom"
+    },
+    {
+      "id": "extra-socks-proxy-net",
+      "name": "socks-proxy.net",
+      "url": "https://www.socks-proxy.net/",
+      "type": "socks5",
+      "repo": "custom"
+    },
+    {
+      "id": "extra-webscraping-ai",
+      "name": "webscraping.ai",
+      "url": "https://webscraping.ai/",
+      "type": "http",
+      "repo": "custom"
+    },
+    {
+      "id": "extra-jsdelivr-proxifly-all",
+      "name": "jsdelivr · proxifly · all",
+      "url": "https://cdn.jsdelivr.net/gh/proxifly/free-proxy-list@main/proxies/all/data.txt",
+      "type": "http",
+      "repo": "custom"
+    },
+    {
+      "id": "extra-jsdelivr-proxifly-http",
+      "name": "jsdelivr · proxifly · http",
+      "url": "https://cdn.jsdelivr.net/gh/proxifly/free-proxy-list@main/proxies/protocols/http/data.txt",
+      "type": "http",
+      "repo": "custom"
+    },
+    {
+      "id": "extra-jsdelivr-proxifly-socks4",
+      "name": "jsdelivr · proxifly · socks4",
+      "url": "https://cdn.jsdelivr.net/gh/proxifly/free-proxy-list@main/proxies/protocols/socks4/data.txt",
+      "type": "socks4",
+      "repo": "custom"
+    },
+    {
+      "id": "extra-jsdelivr-proxifly-socks5",
+      "name": "jsdelivr · proxifly · socks5",
+      "url": "https://cdn.jsdelivr.net/gh/proxifly/free-proxy-list@main/proxies/protocols/socks5/data.txt",
+      "type": "socks5",
+      "repo": "custom"
+    },
+    {
+      "id": "extra-github-proxifly-free-proxy-list",
+      "name": "github · proxifly/free-proxy-list",
+      "url": "https://github.com/proxifly/free-proxy-list",
+      "type": "http",
+      "repo": "custom"
+    },
+    {
+      "id": "extra-github-iplocate-free-proxy-list",
+      "name": "github · iplocate/free-proxy-list",
+      "url": "https://github.com/iplocate/free-proxy-list",
+      "type": "http",
+      "repo": "custom"
+    },
+    {
+      "id": "extra-github-r00tee-proxy-list",
+      "name": "github · r00tee/Proxy-List",
+      "url": "https://github.com/r00tee/Proxy-List",
+      "type": "http",
+      "repo": "custom"
+    },
+    {
+      "id": "extra-github-jakee8718-free-proxies",
+      "name": "github · Jakee8718/Free-Proxies",
+      "url": "https://github.com/Jakee8718/Free-Proxies",
+      "type": "http",
+      "repo": "custom"
+    },
+    {
+      "id": "extra-github-gfpcom-free-proxy-list",
+      "name": "github · gfpcom/free-proxy-list",
+      "url": "https://github.com/gfpcom/free-proxy-list",
+      "type": "http",
+      "repo": "custom"
+    },
+    {
+      "id": "extra-github-proxygenerator1-proxygenerator",
+      "name": "github · proxygenerator1/ProxyGenerator",
+      "url": "https://github.com/proxygenerator1/ProxyGenerator",
+      "type": "http",
+      "repo": "custom"
+    },
+    {
+      "id": "extra-github-thespeedx-proxy-list",
+      "name": "github · TheSpeedX/PROXY-List",
+      "url": "https://github.com/TheSpeedX/PROXY-List",
+      "type": "http",
+      "repo": "custom"
+    },
+    {
+      "id": "extra-github-shiftytr-proxy-list",
+      "name": "github · ShiftyTR/Proxy-List",
+      "url": "https://github.com/ShiftyTR/Proxy-List",
+      "type": "http",
+      "repo": "custom"
+    },
+    {
+      "id": "extra-github-hookzof-socks5-list",
+      "name": "github · hookzof/socks5_list",
+      "url": "https://github.com/hookzof/socks5_list",
+      "type": "socks5",
+      "repo": "custom"
+    },
+    {
+      "id": "extra-github-prxchk-proxy-list",
+      "name": "github · prxchk/proxy-list",
+      "url": "https://github.com/prxchk/proxy-list",
+      "type": "http",
+      "repo": "custom"
+    },
+    {
+      "id": "extra-github-vakhov-fresh-proxy-list",
+      "name": "github · vakhov/fresh-proxy-list",
+      "url": "https://github.com/vakhov/fresh-proxy-list",
+      "type": "http",
+      "repo": "custom"
+    },
+    {
+      "id": "extra-github-rxyzqc-socks5-proxy-gen",
+      "name": "github · rxyzqc/SOCKS5-Proxy-Gen",
+      "url": "https://github.com/rxyzqc/SOCKS5-Proxy-Gen",
+      "type": "socks5",
+      "repo": "custom"
+    },
+    {
+      "id": "extra-r00tee-proxy-list-https-txt",
+      "name": "r00tee/Proxy-List · Https.txt",
+      "url": "https://raw.githubusercontent.com/r00tee/Proxy-List/main/Https.txt",
+      "type": "https",
+      "repo": "custom"
+    },
+    {
+      "id": "extra-r00tee-proxy-list-socks4-txt",
+      "name": "r00tee/Proxy-List · Socks4.txt",
+      "url": "https://raw.githubusercontent.com/r00tee/Proxy-List/main/Socks4.txt",
+      "type": "socks4",
+      "repo": "custom"
+    },
+    {
+      "id": "extra-r00tee-proxy-list-socks5-txt",
+      "name": "r00tee/Proxy-List · Socks5.txt",
+      "url": "https://raw.githubusercontent.com/r00tee/Proxy-List/main/Socks5.txt",
+      "type": "socks5",
+      "repo": "custom"
+    },
+    {
+      "id": "extra-thespeedx-socks-list-http-txt",
+      "name": "TheSpeedX/SOCKS-List · http.txt",
+      "url": "https://raw.githubusercontent.com/TheSpeedX/SOCKS-List/master/http.txt",
+      "type": "http",
+      "repo": "custom"
+    },
+    {
+      "id": "extra-thespeedx-socks-list-socks4-txt",
+      "name": "TheSpeedX/SOCKS-List · socks4.txt",
+      "url": "https://raw.githubusercontent.com/TheSpeedX/SOCKS-List/master/socks4.txt",
+      "type": "socks4",
+      "repo": "custom"
+    },
+    {
+      "id": "extra-thespeedx-socks-list-socks5-txt",
+      "name": "TheSpeedX/SOCKS-List · socks5.txt",
+      "url": "https://raw.githubusercontent.com/TheSpeedX/SOCKS-List/master/socks5.txt",
+      "type": "socks5",
+      "repo": "custom"
+    },
+    {
+      "id": "extra-prxchk-proxy-list-http-txt",
+      "name": "prxchk/proxy-list · http.txt",
+      "url": "https://raw.githubusercontent.com/prxchk/proxy-list/main/http.txt",
+      "type": "http",
+      "repo": "custom"
+    },
+    {
+      "id": "extra-prxchk-proxy-list-socks4-txt",
+      "name": "prxchk/proxy-list · socks4.txt",
+      "url": "https://raw.githubusercontent.com/prxchk/proxy-list/main/socks4.txt",
+      "type": "socks4",
+      "repo": "custom"
+    },
+    {
+      "id": "extra-prxchk-proxy-list-socks5-txt",
+      "name": "prxchk/proxy-list · socks5.txt",
+      "url": "https://raw.githubusercontent.com/prxchk/proxy-list/main/socks5.txt",
+      "type": "socks5",
+      "repo": "custom"
+    },
+    {
+      "id": "extra-monosans-proxy-list-proxies-anonymous-http-txt",
+      "name": "monosans/proxy-list · proxies_anonymous/http.txt",
+      "url": "https://raw.githubusercontent.com/monosans/proxy-list/main/proxies_anonymous/http.txt",
+      "type": "http",
+      "repo": "custom"
+    },
+    {
+      "id": "extra-monosans-proxy-list-proxies-anonymous-socks4-txt",
+      "name": "monosans/proxy-list · proxies_anonymous/socks4.txt",
+      "url": "https://raw.githubusercontent.com/monosans/proxy-list/main/proxies_anonymous/socks4.txt",
+      "type": "socks4",
+      "repo": "custom"
+    },
+    {
+      "id": "extra-jetkai-proxy-list-main-http",
+      "name": "jetkai/proxy-list · main · http",
+      "url": "https://raw.githubusercontent.com/jetkai/proxy-list/main/online-proxies/txt/proxies-http.txt",
+      "type": "http",
+      "repo": "custom"
+    },
+    {
+      "id": "extra-jetkai-proxy-list-main-socks4",
+      "name": "jetkai/proxy-list · main · socks4",
+      "url": "https://raw.githubusercontent.com/jetkai/proxy-list/main/online-proxies/txt/proxies-socks4.txt",
+      "type": "socks4",
+      "repo": "custom"
+    },
+    {
+      "id": "extra-mertguvencli-http-proxy-list",
+      "name": "mertguvencli/http-proxy-list",
+      "url": "https://raw.githubusercontent.com/mertguvencli/http-proxy-list/main/proxy-list/data.txt",
+      "type": "http",
+      "repo": "custom"
+    },
+    {
+      "id": "extra-murongpig-proxy-master-http-txt",
+      "name": "MuRongPIG/Proxy-Master · http.txt",
+      "url": "https://raw.githubusercontent.com/MuRongPIG/Proxy-Master/main/http.txt",
+      "type": "http",
+      "repo": "custom"
+    },
+    {
+      "id": "extra-proxylist-to-proxy-list-http-txt",
+      "name": "proxylist-to/proxy-list · http.txt",
+      "url": "https://raw.githubusercontent.com/proxylist-to/proxy-list/main/http.txt",
+      "type": "http",
+      "repo": "custom"
+    },
+    {
+      "id": "extra-murongpig-proxy-master-socks4-txt",
+      "name": "MuRongPIG/Proxy-Master · socks4.txt",
+      "url": "https://raw.githubusercontent.com/MuRongPIG/Proxy-Master/main/socks4.txt",
+      "type": "socks4",
+      "repo": "custom"
+    },
+    {
+      "id": "extra-proxylist-to-proxy-list-socks4-txt",
+      "name": "proxylist-to/proxy-list · socks4.txt",
+      "url": "https://raw.githubusercontent.com/proxylist-to/proxy-list/main/socks4.txt",
+      "type": "socks4",
+      "repo": "custom"
+    },
+    {
+      "id": "extra-checkerproxy-net",
+      "name": "checkerproxy.net",
+      "url": "https://checkerproxy.net/",
+      "type": "http",
+      "repo": "custom"
+    },
+    {
+      "id": "extra-premproxy-com",
+      "name": "premproxy.com",
+      "url": "https://premproxy.com/list/",
+      "type": "http",
+      "repo": "custom"
+    },
+    {
+      "id": "extra-openproxylist-xyz-api",
+      "name": "openproxylist.xyz API",
+      "url": "https://api.openproxylist.xyz/proxy.txt",
+      "type": "http",
+      "repo": "custom"
+    },
+    {
+      "id": "extra-proxydocker-com-txt",
+      "name": "proxydocker.com · txt",
+      "url": "https://www.proxydocker.com/en/proxylist/download?format=txt&type=http",
+      "type": "http",
+      "repo": "custom"
+    },
+    {
+      "id": "extra-github-roundproxies-free-proxy-list",
+      "name": "github · roundproxies/free-proxy-list",
+      "url": "https://github.com/roundproxies/free-proxy-list",
+      "type": "http",
+      "repo": "custom"
+    },
+    {
+      "id": "extra-github-jetkai-proxy-list",
+      "name": "github · jetkai/proxy-list",
+      "url": "https://github.com/jetkai/proxy-list",
+      "type": "http",
+      "repo": "custom"
+    },
+    {
+      "id": "extra-iplocate-all-proxies-txt",
+      "name": "iplocate · all-proxies.txt",
+      "url": "https://raw.githubusercontent.com/iplocate/free-proxy-list/main/all-proxies.txt",
+      "type": "http",
+      "repo": "custom"
+    }
+  ]
+}

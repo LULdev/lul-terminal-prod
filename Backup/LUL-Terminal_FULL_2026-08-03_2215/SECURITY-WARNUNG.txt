@@ -1,0 +1,23 @@
+================================================================================
+  SICHERHEITSWARNUNG — DIESES BACKUP ENTHÄLT GEHEIMNISSE
+================================================================================
+
+Enthalten u.a.:
+  - secrets/dotenv.env          (.env mit Domain-/API-Konfiguration)
+  - secrets/admin-credentials*  (Admin-Zugangsdaten)
+  - secrets/lul-auth.sqlite*    (User-DB inkl. Passwort-Hashes, Sessions)
+  - secrets/data-secrets/*      (Premium-Vault-Key)
+  - data/**                     (gesamter Runtime-Zustand)
+
+Das GitHub-Repository "lul-terminal-prod" kann ÖFFENTLICH sein.
+
+EMPFOHLEN:
+  1) Repo auf Private stellen, ODER
+  2) Nach dem Push: Admin-Passwort ändern, Keys rotieren, alte Tokens invalidieren
+  3) Backup-Ordner nur für Disaster-Recovery behalten und später aus Public-History
+     entfernen (force-push / BFG), falls Secrets geleakt wurden
+
+OHNE Vault-Key (PREMIUM_VAULT_KEY / data/secrets/premium-vault.key) sind
+verschlüsselte Premium-Account-Passwörter NICHT wiederherstellbar.
+
+================================================================================

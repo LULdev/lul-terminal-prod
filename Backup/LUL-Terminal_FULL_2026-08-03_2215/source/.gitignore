@@ -1,0 +1,25 @@
+node_modules/
+build/
+dist/
+coverage/
+.DS_Store
+*.log
+.env*
+!.env.example
+.cookies.txt
+
+.vercel
+data/image-host/
+data/analytics/guest-views.json
+data/rate-limits/
+data/locks/
+data/proxy-scraper/state.json
+data/proxy-scraper/last-results.json
+data/auth/lul-auth.sqlite
+data/auth/lul-auth.sqlite-*
+data/auth/admin-credentials.json
+data/auth/demo-credentials.json
+data/secrets/
+# Runtime data (persisted via Docker volume / host backup)
+data/**/*
+!data/.gitkeep

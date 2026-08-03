@@ -1,0 +1,2 @@
+  backup-706b467 706b467 Align shoutbox message text with username vertically
+* main           87d875f [origin/main] 10-round full audit: vault poison, burn-paste, session epoch, boot escrow

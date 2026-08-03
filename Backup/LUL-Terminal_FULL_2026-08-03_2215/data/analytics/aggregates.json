@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "updatedAt": "2026-07-15T17:54:27.897Z",
+  "tabHits": {},
+  "eventCounts": {
+    "login": 6,
+    "session_start": 6
+  },
+  "daily": {
+    "2026-07-15": {
+      "events": 12,
+      "uniqueUsers": [
+        "372a8eb0b985d2fd"
+      ],
+      "logins": 6,
+      "tabVisits": 0
+    }
+  },
+  "visitorStats": {
+    "returnVisits": 0,
+    "newVisits": 6,
+    "referrerDomains": {},
+    "referrerTypes": {},
+    "devices": {},
+    "languages": {},
+    "timezones": {},
+    "connections": {},
+    "colorSchemes": {},
+    "landingPaths": {},
+    "utmSources": {},
+    "utmMediums": {},
+    "utmCampaigns": {},
+    "platforms": {}
+  }
+}

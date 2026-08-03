@@ -1,0 +1,7 @@
+{
+  "rewrites": [
+    { "source": "/i/:id", "destination": "/" },
+    { "source": "/p/:id", "destination": "/" },
+    { "source": "/profile/:username", "destination": "/" }
+  ]
+}

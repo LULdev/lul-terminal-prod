@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "meta": {
+    "totalEverCollected": 0,
+    "totalRemovedStale": 0,
+    "lastDailyCheckAt": 1784137829932,
+    "lastDailyCheckDay": "2026-07-15",
+    "lastUpsertAt": null
+  },
+  "proxies": []
+}

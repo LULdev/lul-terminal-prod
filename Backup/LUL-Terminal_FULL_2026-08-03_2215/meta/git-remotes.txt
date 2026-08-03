@@ -1,0 +1,2 @@
+origin	https://github.com/LULdev/lul-terminal-prod.git (fetch)
+origin	https://github.com/LULdev/lul-terminal-prod.git (push)
