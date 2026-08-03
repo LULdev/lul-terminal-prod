@@ -112,6 +112,7 @@ function refundBetOnExpire(user, { gameId, chatLabel, matchId, bet, amount }, { 
   }
   const gid = gameId ?? 'arcade';
   // Prefer stripping real escrow rows over minting coins
+  // Only strip same-game rows — never steal another game's stake via cross-game strip
   const strippedGame = stripEscrowRows(user, amt, { gameId: gid });
   if (strippedGame > 0) {
     logMatchExpireRefund(user, { ...base, amount: strippedGame });
@@ -119,16 +120,7 @@ function refundBetOnExpire(user, { gameId, chatLabel, matchId, bet, amount }, { 
       userId: user.id,
       gameId: gid,
       amount: strippedGame,
-    });
-    return;
-  }
-  const strippedAny = stripEscrowRows(user, amt);
-  if (strippedAny > 0) {
-    logMatchExpireRefund(user, { ...base, amount: strippedAny });
-    console.warn('[games] escrow recovery — cross-game strip fallback + credited', {
-      userId: user.id,
-      gameId: gid,
-      amount: strippedAny,
+      partial: strippedGame < amt,
     });
     return;
   }
@@ -1007,7 +999,12 @@ export async function expireMatchWithRefund(m, activeMatches, expireMeta) {
     } else if (m._finalizeAttempted) {
       // already tried — fall through to dual refund
     } else {
-      return;
+      // Both moved but no finalizeDualSubmit — never leave match stuck forever
+      console.warn('[games] dual-move expire without finalizeDualSubmit — refunding', {
+        matchId: m.id,
+        gameId,
+      });
+      // fall through to refund path
     }
   }
 
@@ -1026,9 +1023,9 @@ export async function expireMatchWithRefund(m, activeMatches, expireMeta) {
     const loser = forfeitWinner === 'p1' ? p2 : p1;
     if (winner && loser) {
       const wEscrow = releaseGameEscrow(winner, { gameId, amount: bet })
-        || releaseAnyGameEscrow(winner, bet);
+        || releaseAnyGameEscrow(winner, bet, { preferGameId: gameId });
       const lEscrow = releaseGameEscrow(loser, { gameId, amount: bet })
-        || releaseAnyGameEscrow(loser, bet);
+        || releaseAnyGameEscrow(loser, bet, { preferGameId: gameId });
       // Require both escrows so we never mint pot without both stakes locked
       if (wEscrow && lEscrow) {
         logGameWinCredit(winner, {
@@ -1049,6 +1046,8 @@ export async function expireMatchWithRefund(m, activeMatches, expireMeta) {
         }
         winner.updatedAt = Date.now();
         loser.updatedAt = Date.now();
+        // Durable save FIRST — only then mark match done (retryable if save fails)
+        await saveUsersDb(db);
         m.status = 'done';
         m.doneAt = Date.now();
         m.result = {
@@ -1060,7 +1059,6 @@ export async function expireMatchWithRefund(m, activeMatches, expireMeta) {
         m.streakBonus = 0;
         m.jackpotHit = false;
         m.jackpotAmount = 0;
-        await saveUsersDb(db);
         await appendMatchHistory({
           id: m.id,
           game: gameId,
@@ -1090,9 +1088,6 @@ export async function expireMatchWithRefund(m, activeMatches, expireMeta) {
   }
 
   // Refund path (bot, abandon, simultaneous no-moves, or forfeit escrow failed)
-  m.status = 'done';
-  m.doneAt = Date.now();
-  m.result = { outcome: 'expired', winner: 'draw' };
   const releasedMap = m._releasedStakeByUserId ?? {};
   if (p1) {
     const forceP1 = Boolean(forceIds?.has(m.player1.userId) || releasedMap[m.player1.userId]);
@@ -1105,6 +1100,10 @@ export async function expireMatchWithRefund(m, activeMatches, expireMeta) {
     p2.updatedAt = Date.now();
   }
   await saveUsersDb(db);
+  // Mark done only after durable refund save
+  m.status = 'done';
+  m.doneAt = Date.now();
+  m.result = { outcome: 'expired', winner: 'draw' };
   await appendMatchHistory({
     id: m.id,
     game: gameId,

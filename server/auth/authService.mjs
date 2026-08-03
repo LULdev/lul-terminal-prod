@@ -247,20 +247,35 @@ export async function loginUser({ email, password, remember }) {
     };
   });
 
+  // Phase 1: snapshot expired sessions WITHOUT nesting leaveAll (users lock) under sessions lock
+  // (avoids sessions→users vs admin users→sessions deadlock).
+  let expiredUserIds = [];
   await withSessionsWrite(async () => {
     const sessionsDb = await loadSessionsDb();
     const now = Date.now();
-    const expired = sessionsDb.sessions.filter((s) => s.expiresAt <= now);
-    if (expired.length) {
-      const { leaveAllGameQueues } = await import('../gamesService.mjs');
-      for (const s of expired) {
-        const cleanup = await leaveAllGameQueues(s.userId).catch((e) => {
-          console.warn('[auth] login expired-session arcade cleanup failed', s.userId, e);
-          return { ok: false, errors: [] };
-        });
-        await refundOrphanEscrowsAfterCleanup(s.userId, cleanup);
-      }
+    expiredUserIds = [
+      ...new Set(
+        sessionsDb.sessions
+          .filter((s) => s.expiresAt <= now)
+          .map((s) => s.userId)
+          .filter(Boolean),
+      ),
+    ];
+  });
+  if (expiredUserIds.length) {
+    const { leaveAllGameQueues } = await import('../gamesService.mjs');
+    for (const uid of expiredUserIds) {
+      const cleanup = await leaveAllGameQueues(uid).catch((e) => {
+        console.warn('[auth] login expired-session arcade cleanup failed', uid, e);
+        return { ok: false, errors: [] };
+      });
+      await refundOrphanEscrowsAfterCleanup(uid, cleanup);
     }
+  }
+  // Phase 2: prune expired + create session (no users-lock nesting)
+  await withSessionsWrite(async () => {
+    const sessionsDb = await loadSessionsDb();
+    const now = Date.now();
     sessionsDb.sessions = sessionsDb.sessions.filter((s) => s.expiresAt > now);
     sessionsDb.sessions.push({
       token,

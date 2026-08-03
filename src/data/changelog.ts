@@ -23,6 +23,22 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '3.51.1',
+    title: 'Residual P0–P2: sessions↔users deadlock, expire-after-save, no cross-game strip, lock token write',
+    date: 'Aug 4, 2026 - 00:15',
+    highlight: true,
+    items: [
+      { priority: 'P0', text: 'P0 — Login expired-session cleanup no longer nests leaveAll (users lock) under withSessionsWrite; breaks AB-BA with admin deactivate (users→sessions).' },
+      { priority: 'P0', text: 'P0 — Admin update/delete: arcade leaveAll + refunds OUTSIDE withUsersWrite; revokeUserSessions only after users write completes.' },
+      { priority: 'P1', text: 'P1 — expireMatchWithRefund: mark done only after saveUsersDb (forfeit + refund paths); dual-move without finalize falls through to refund (no stuck match).' },
+      { priority: 'P1', text: 'P1 — refundBetOnExpire removed cross-game stripEscrowRows fallback (never steal another game’s stake).' },
+      { priority: 'P1', text: 'P1 — forfeit releaseAnyGameEscrow uses preferGameId.' },
+      { priority: 'P2', text: 'P2 — File lock: fail hard if owner pid/token write fails before critical section.' },
+      { priority: 'P2', text: 'P2 — premium reports.json cross-process lock; jackpot confirm marks userCredited before unlink; boot skips re-credit when userCredited.' },
+      { priority: 'P9', text: 'P9 — Version 3.51.1 (follow-up to 25-round residual server audit).' },
+    ],
+  },
+  {
     version: '3.51.0',
     title: '25-round full system audit (Server+Client P0–P9): locks, jackpot id, soft401 polls, double-submit',
     date: 'Aug 3, 2026 - 23:55',

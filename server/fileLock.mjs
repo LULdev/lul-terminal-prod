@@ -95,7 +95,14 @@ export async function withCrossProcessLock(key, task, { maxWaitMs = 4000 } = {})
 
   let heartbeat = null;
   try {
-    await handle.writeFile(JSON.stringify({ pid: process.pid, token, at: Date.now() }), 'utf8').catch(() => {});
+    // Must durable-write owner token before critical section (else silent dual holders)
+    try {
+      await handle.writeFile(JSON.stringify({ pid: process.pid, token, at: Date.now() }), 'utf8');
+    } catch (writeErr) {
+      await handle.close().catch(() => {});
+      await fs.unlink(lockPath).catch(() => {});
+      throw writeErr instanceof Error ? writeErr : new Error('File lock token write failed');
+    }
     heartbeat = setInterval(() => {
       fs.writeFile(lockPath, JSON.stringify({ pid: process.pid, token, at: Date.now() }), 'utf8').catch(() => {});
     }, Math.max(2000, Math.floor(STALE_LOCK_MS / 3)));

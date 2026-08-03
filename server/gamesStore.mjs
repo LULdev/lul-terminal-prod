@@ -185,6 +185,16 @@ export function jackpotPayoutPendingId(result) {
 /** Call after user coins for the jackpot were durably saved. */
 export async function confirmJackpotPayout() {
   return withGamesAuxWrite(async () => {
+    // Mark credited first so boot recovery never re-mints if unlink fails mid-flight
+    try {
+      const raw = await fs.readFile(JACKPOT_PENDING_FILE, 'utf8');
+      const pending = JSON.parse(raw);
+      pending.userCredited = true;
+      pending.creditedAt = Date.now();
+      await atomicWriteJson(JACKPOT_PENDING_FILE, pending);
+    } catch {
+      /* missing pending — ok */
+    }
     try {
       await fs.unlink(JACKPOT_PENDING_FILE);
     } catch {
@@ -223,6 +233,13 @@ export async function recoverJackpotPendingOnBoot(settle) {
   if (!pending) return null;
 
   const amount = Math.floor(Number(pending.amount) || 0);
+  // Already credited on a prior crash after confirm mark — just clear pending
+  if (pending.userCredited === true) {
+    await withGamesAuxWrite(async () => {
+      try { await fs.unlink(JACKPOT_PENDING_FILE); } catch { /* */ }
+    });
+    return { outcome: 'skipped', amount, winner: pending.winner };
+  }
   let outcome = 'restored';
   if (typeof settle === 'function') {
     try {
@@ -232,6 +249,7 @@ export async function recoverJackpotPendingOnBoot(settle) {
         matchId: pending.matchId,
         gameId: pending.gameId,
         at: pending.at,
+        id: pending.id,
       });
     } catch (err) {
       console.error('[games] jackpot pending settle failed — restoring pool', err);

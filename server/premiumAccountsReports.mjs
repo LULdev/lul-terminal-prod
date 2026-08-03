@@ -17,7 +17,10 @@ const EMPTY_REPORTS = { version: 1, updatedAt: null, reports: [] };
 let reportsWriteChain = Promise.resolve();
 
 export function withReportsWrite(task) {
-  const run = reportsWriteChain.then(() => task());
+  const run = reportsWriteChain.then(async () => {
+    const { withCrossProcessLock } = await import('./fileLock.mjs');
+    return withCrossProcessLock('premium-reports', () => task(), { maxWaitMs: 8000 });
+  });
   reportsWriteChain = run.then(() => undefined, () => undefined);
   return run;
 }
