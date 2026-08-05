@@ -31,6 +31,8 @@ import {
   sweepStaleQueueEntries,
   touchQueueHeartbeat,
   withMatchmakerWrite,
+  withMatchmakerRead,
+  hydrateOtherMatchmakers,
 } from './gamesCore.mjs';
 import { runCoinTransaction } from './gamesCoinLock.mjs';
 import { assertNoOtherArcadeSession, assertPvpPairReady } from './gamesSessionGuard.mjs';
@@ -532,7 +534,7 @@ async function finalizeMatch(m, boardState) {
 }
 
 export async function getTttUserSlice(userId) {
-  return withMatchmakerWrite(mm, async () => {
+  const run = async () => {
     const db = await loadUsersDb();
     const user = userId ? getUser(db, userId) : null;
 
@@ -564,10 +566,19 @@ export async function getTttUserSlice(userId) {
         : null,
       activeMatch: resolveActiveMatchForSlice({ queue, activeMatches, userId, publicMatch }),
     };
-  });
+  };
+  const needsWrite = Boolean(userId && (
+    queue.some((q) => q.userId === userId)
+    || [...activeMatches.values()].some(
+      (m) => m.status !== 'done'
+        && (m.player1?.userId === userId || m.player2?.userId === userId),
+    )
+  ));
+  return needsWrite ? withMatchmakerWrite(mm, run) : withMatchmakerRead(mm, run);
 }
 
 export async function joinTttQueue(userId, opts = {}) {
+  await hydrateOtherMatchmakers('ttt');
   return withMatchmakerWrite(mm, () => runCoinTransaction(() => joinTttQueueInner(userId, opts)));
 }
 

@@ -55,6 +55,7 @@ function CopyField({ label, value, mono = true }: { label: string; value: string
 export function ImageHostingPage() {
   const { isLoggedIn, syncAchievements, refresh } = useAuth();
   const inputRef = useRef<HTMLInputElement>(null);
+  const mountedRef = useRef(true);
   const [hostTab, setHostTab] = useState<HostTab>('upload');
   const [galleryRefresh, setGalleryRefresh] = useState(0);
   const [phase, setPhase] = useState<Phase>('idle');
@@ -67,8 +68,15 @@ export function ImageHostingPage() {
   const [liveViews, setLiveViews] = useState(0);
 
   useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
+
+  useEffect(() => {
     if (!result?.id) return;
-    return pollImageMeta(result.id, (m) => setLiveViews(m.views ?? 0), 3000);
+    return pollImageMeta(result.id, (m) => {
+      if (mountedRef.current) setLiveViews(m.views ?? 0);
+    }, 3000);
   }, [result?.id]);
 
   useEffect(() => () => {
@@ -92,11 +100,17 @@ export function ImageHostingPage() {
     const validation = await validateImageFileAsync(file);
     if (validation) {
       uploadingRef.current = false;
-      setError(validation);
-      setPhase('error');
+      if (mountedRef.current) {
+        setError(validation);
+        setPhase('error');
+      }
       return;
     }
 
+    if (!mountedRef.current) {
+      uploadingRef.current = false;
+      return;
+    }
     setError('');
     setPhase('uploading');
     setProgress(0);
@@ -105,7 +119,10 @@ export function ImageHostingPage() {
     setPreview(URL.createObjectURL(file));
 
     try {
-      const meta = await uploadHostedImage(file, setProgress);
+      const meta = await uploadHostedImage(file, (p) => {
+        if (mountedRef.current) setProgress(p);
+      });
+      if (!mountedRef.current) return;
       setResult(meta);
       setPhase('success');
       setPreview((prev) => {
@@ -118,6 +135,7 @@ export function ImageHostingPage() {
         refresh().catch(() => {});
       }
     } catch (e) {
+      if (!mountedRef.current) return;
       const msg = e instanceof Error ? e.message : 'Upload failed';
       const friendly = msg.includes('Server unreachable')
         ? 'Image host API offline — run npm run dev or npm run start'

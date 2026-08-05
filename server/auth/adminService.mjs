@@ -54,6 +54,9 @@ export async function createUserAdmin(payload) {
 
   if (!email.includes('@') || password.length < 6) throw new Error('Email and password (min. 6) required');
 
+  // scrypt OUTSIDE users write — same as registerUser (3.60); admin path was still under lock
+  const passwordHash = await hashPassword(password);
+
   return withUsersWrite(async () => {
   const db = await loadUsersDb();
   if (db.users.some((u) => u.email === email)) throw new Error('Email taken');
@@ -64,7 +67,7 @@ export async function createUserAdmin(payload) {
     id: newUserId(),
     username,
     email,
-    passwordHash: await hashPassword(password),
+    passwordHash,
     role,
     active: payload.active !== false,
     displayName: String(payload.displayName ?? username).trim() || username,
@@ -122,6 +125,14 @@ export async function updateUserAdmin(id, payload) {
     revokeSessionsAfter = true;
   }
 
+  // scrypt OUTSIDE users write — only assign precomputed hash under lock
+  let newPasswordHash = null;
+  if (payload.password) {
+    const pw = String(payload.password);
+    if (pw.length < 6) throw new Error('Password min. 6 characters');
+    newPasswordHash = await hashPassword(pw);
+  }
+
   const result = await withUsersWrite(async () => {
   const db = await loadUsersDb();
   const user = db.users.find((u) => u.id === id);
@@ -169,10 +180,8 @@ export async function updateUserAdmin(id, payload) {
   if (payload.coverUrl != null) user.coverUrl = sanitizeCoverUrl(payload.coverUrl);
   if (payload.verified != null) user.verified = Boolean(payload.verified);
   let passwordChanged = false;
-  if (payload.password) {
-    const pw = String(payload.password);
-    if (pw.length < 6) throw new Error('Password min. 6 characters');
-    user.passwordHash = await hashPassword(pw);
+  if (newPasswordHash) {
+    user.passwordHash = newPasswordHash;
     passwordChanged = true;
   }
 

@@ -90,6 +90,7 @@ export function AdminPastesPanel() {
   const [viewer, setViewer] = useState<{ meta: AdminPasteMeta; content: string } | null>(null);
   const [saving, setSaving] = useState(false);
   const savingRef = useRef(false);
+  const detailGenRef = useRef(0);
   const { mountedRef, loadGenRef } = useMountedLoad();
 
   const load = useCallback(async () => {
@@ -127,26 +128,32 @@ export function AdminPastesPanel() {
   const visCounts = useMemo(() => stats?.byVisibility ?? {}, [stats]);
 
   const openView = async (id: string) => {
+    const gen = ++detailGenRef.current;
     setActing(id);
     setError('');
     try {
       const record = await fetchAdminPaste(id);
+      if (gen !== detailGenRef.current || !mountedRef.current) return;
       setViewer({
         meta: record,
         content: record.content ?? '',
       });
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Could not load paste');
+      if (gen === detailGenRef.current && mountedRef.current) {
+        setError(e instanceof Error ? e.message : 'Could not load paste');
+      }
     } finally {
-      setActing(null);
+      if (gen === detailGenRef.current && mountedRef.current) setActing(null);
     }
   };
 
   const openEdit = async (id: string) => {
+    const gen = ++detailGenRef.current;
     setActing(id);
     setError('');
     try {
       const record = await fetchAdminPaste(id);
+      if (gen !== detailGenRef.current || !mountedRef.current) return;
       let expiry: PasteExpiry = 'never';
       if (record.expiresAt) {
         const diff = record.expiresAt - record.createdAt;
@@ -176,9 +183,11 @@ export function AdminPastesPanel() {
         hasPassword: Boolean(record.hasPassword),
       });
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Could not load paste');
+      if (gen === detailGenRef.current && mountedRef.current) {
+        setError(e instanceof Error ? e.message : 'Could not load paste');
+      }
     } finally {
-      setActing(null);
+      if (gen === detailGenRef.current && mountedRef.current) setActing(null);
     }
   };
 
@@ -201,14 +210,17 @@ export function AdminPastesPanel() {
         patch.password = editor.password.trim();
       }
       await adminUpdatePaste(editor.id, patch);
+      if (!mountedRef.current) return;
       setEditor(null);
       setSuccess('Paste updated');
       await load();
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Save failed');
+      if (mountedRef.current) {
+        setError(e instanceof Error ? e.message : 'Save failed');
+      }
     } finally {
       savingRef.current = false;
-      setSaving(false);
+      if (mountedRef.current) setSaving(false);
     }
   };
 
@@ -220,15 +232,18 @@ export function AdminPastesPanel() {
     setError('');
     try {
       await adminDeletePaste(id);
+      if (!mountedRef.current) return;
       if (viewer?.meta.id === id) setViewer(null);
       if (editor?.id === id) setEditor(null);
       setSuccess('Paste deleted');
       await load();
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Delete failed');
+      if (mountedRef.current) {
+        setError(e instanceof Error ? e.message : 'Delete failed');
+      }
     } finally {
       savingRef.current = false;
-      setActing(null);
+      if (mountedRef.current) setActing(null);
     }
   };
 

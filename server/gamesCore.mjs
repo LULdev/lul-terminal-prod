@@ -891,15 +891,24 @@ export {
   withMatchmakerWrite,
   withMatchmakerRead,
   hydrateMatchmaker,
+  hydrateOtherMatchmakers,
 } from './gamesMatchmakerStore.mjs';
-import { withMatchmakerWrite, withMatchmakerRead } from './gamesMatchmakerStore.mjs';
+import {
+  withMatchmakerWrite,
+  withMatchmakerRead,
+  hydrateOtherMatchmakers,
+  hydrateAllMatchmakers,
+} from './gamesMatchmakerStore.mjs';
 
 export async function joinMatchQueue(params) {
   const mm = params.mm;
   // Matchmaker lock outer — coin lock inner (never reverse)
   if (mm?.gameId) {
+    // Multi-worker: refresh other games before session assert under coin lock
+    await hydrateOtherMatchmakers(mm.gameId);
     return withMatchmakerWrite(mm, () => runCoinTransaction(() => joinMatchQueueInner(params)));
   }
+  await hydrateAllMatchmakers().catch(() => {});
   return runCoinTransaction(() => joinMatchQueueInner(params));
 }
 

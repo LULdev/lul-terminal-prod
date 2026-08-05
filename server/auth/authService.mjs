@@ -788,22 +788,31 @@ export async function incrementProfileView(username, { viewer = null, clientIp: 
 }
 
 export async function getReferralInfo(userId, req) {
-  return withUsersWrite(async () => {
-    const db = await loadUsersDb();
-    const user = db.users.find((u) => u.id === userId);
-    if (!user) throw new Error('User not found');
-    ensureUniqueReferralCode(db, user);
-    user.updatedAt = Date.now();
-    await saveUsersDb(db);
-    const { accountsSubmitted, reportedNotWorkingAccounts, profileStats } = await profileExtrasForUser(user);
-    const code = user.referralCode;
-    return {
-      referralCode: code,
-      referralsCount: Number(user.referralsCount) || 0,
-      inviteUrl: buildInviteUrl(req, code),
-      user: enrichUserForClient(user, accountsSubmitted, reportedNotWorkingAccounts, profileStats),
-    };
-  });
+  // Read path: only take users write when referral code is missing (polls must not thrash coin lock)
+  const snap = await loadUsersDb();
+  let user = snap.users.find((u) => u.id === userId);
+  if (!user) throw new Error('User not found');
+  if (!user.referralCode) {
+    await withUsersWrite(async () => {
+      const db = await loadUsersDb();
+      const u = db.users.find((x) => x.id === userId);
+      if (!u) throw new Error('User not found');
+      if (!u.referralCode) {
+        ensureUniqueReferralCode(db, u);
+        u.updatedAt = Date.now();
+        await saveUsersDb(db);
+      }
+      user = u;
+    });
+  }
+  const { accountsSubmitted, reportedNotWorkingAccounts, profileStats } = await profileExtrasForUser(user);
+  const code = user.referralCode;
+  return {
+    referralCode: code,
+    referralsCount: Number(user.referralsCount) || 0,
+    inviteUrl: buildInviteUrl(req, code),
+    user: enrichUserForClient(user, accountsSubmitted, reportedNotWorkingAccounts, profileStats),
+  };
 }
 
 export async function syncAchievementsOnLoadedUser(user, db, ctx = {}) {

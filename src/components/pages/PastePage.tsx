@@ -109,9 +109,15 @@ export function PastePage() {
   const [burnAfterRead, setBurnAfterRead] = useState(false);
   const [saving, setSaving] = useState(false);
   const savingRef = useRef(false);
+  const mountedRef = useRef(true);
   const [error, setError] = useState('');
   const [result, setResult] = useState<PasteRecord | null>(null);
   const [liveViews, setLiveViews] = useState(0);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -190,16 +196,19 @@ export function PastePage() {
         expiry,
         burnAfterRead,
       });
+      if (!mountedRef.current) return;
       setResult(paste);
       setGalleryKey((k) => k + 1);
       const unlocks = (paste as PasteRecord & { achievementUnlocks?: string[] }).achievementUnlocks;
       if (unlocks?.length) handleUnlocks(unlocks);
       syncAchievements().catch(() => {});
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not save paste');
+      if (mountedRef.current) {
+        setError(err instanceof Error ? err.message : 'Could not save paste');
+      }
     } finally {
       savingRef.current = false;
-      setSaving(false);
+      if (mountedRef.current) setSaving(false);
     }
   };
 

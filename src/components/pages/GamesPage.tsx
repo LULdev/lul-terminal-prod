@@ -344,7 +344,8 @@ export function GamesPage() {
       setState(s);
       if (s.myCoins != null && Number.isFinite(Number(s.myCoins))) {
         const c = Math.floor(Number(s.myCoins));
-        patchUser((u) => (u ? { ...u, lulCoins: c } : u));
+        // Bump updatedAt so AuthContext merge keeps fresher coins over stale /me
+        patchUser((u) => (u ? { ...u, lulCoins: c, updatedAt: Date.now() } : u));
       }
       const activeId = selectedGameRef.current;
       if (opts?.applySlice !== false) {
@@ -381,7 +382,7 @@ export function GamesPage() {
       setState(s);
       if (s.myCoins != null && Number.isFinite(Number(s.myCoins))) {
         const c = Math.floor(Number(s.myCoins));
-        patchUser((u) => (u ? { ...u, lulCoins: c } : u));
+        patchUser((u) => (u ? { ...u, lulCoins: c, updatedAt: Date.now() } : u));
       }
       if (opts?.applySlice !== false) {
         const game = opts?.gameId ?? selectedGameRef.current;
@@ -746,9 +747,13 @@ export function GamesPage() {
   };
 
   const minBet = state?.minBet ?? 1;
-  const streakBonusAtBet = stats?.nextStreakBonus
-    ? Math.floor((stats.nextStreakBonus / minBet) * bet)
-    : 0;
+  const streakBonusAtBet = (() => {
+    const base = Number(stats?.nextStreakBonus);
+    const mb = Number(minBet) || 1;
+    const b = Number(bet) || mb;
+    if (!Number.isFinite(base) || base <= 0) return 0;
+    return Math.floor((base / mb) * b);
+  })();
 
   const gameBoard = boards?.[selectedGame] as GameLeaderboardSlice | undefined;
   const sharedArena = {
@@ -1152,8 +1157,8 @@ export function GamesPage() {
                       : prev.dailyBonus,
                   }
                 : prev));
-              // Sync UserBar immediately (don't wait for /me)
-              patchUser((u) => (u ? { ...u, lulCoins: c } : u));
+              // Sync UserBar immediately (don't wait for /me); bump updatedAt for merge protect
+              patchUser((u) => (u ? { ...u, lulCoins: c, updatedAt: Date.now() } : u));
               void refresh();
               void load();
               setCoinFeedTick((t) => t + 1);

@@ -9,7 +9,8 @@ import { claimDailyBonus, type DailyBonusInfo } from '../../lib/games';
 import { LulCoinAmount } from './LulCoinAmount';
 
 function formatCountdown(ms: number): string {
-  const total = Math.max(0, Math.ceil(ms / 1000));
+  const safe = Number.isFinite(ms) ? ms : 0;
+  const total = Math.max(0, Math.ceil(safe / 1000));
   const h = Math.floor(total / 3600);
   const m = Math.floor((total % 3600) / 60);
   const s = total % 60;
@@ -47,7 +48,8 @@ export function DailyBonusCard({
   }, []);
 
   useEffect(() => {
-    setRemainingMs(bonus.remainingMs);
+    const rem = Number(bonus.remainingMs);
+    setRemainingMs(Number.isFinite(rem) ? Math.max(0, rem) : 0);
     // Server says claimable again — clear local latch
     if (bonus.canClaim) setClaimedLocal(false);
   }, [bonus.remainingMs, bonus.canClaim, bonus.nextClaimAt]);
@@ -55,15 +57,19 @@ export function DailyBonusCard({
   useEffect(() => {
     if (bonus.canClaim && !claimedLocal) return;
     const tick = setInterval(() => {
-      setRemainingMs((prev) => Math.max(0, prev - 1000));
+      setRemainingMs((prev) => Math.max(0, (Number.isFinite(prev) ? prev : 0) - 1000));
     }, 1000);
     return () => clearInterval(tick);
   }, [bonus.canClaim, claimedLocal]);
 
   const canClaim = bonus.canClaim && !claimedLocal;
+  const cooldownMs = Number.isFinite(bonus.cooldownMs) && bonus.cooldownMs > 0
+    ? bonus.cooldownMs
+    : 1;
+  const safeRemaining = Number.isFinite(remainingMs) ? remainingMs : 0;
   const progress = canClaim
     ? 1
-    : 1 - remainingMs / Math.max(1, bonus.cooldownMs);
+    : 1 - safeRemaining / cooldownMs;
   const circumference = 2 * Math.PI * 28;
 
   const handleClaim = useCallback(async () => {
@@ -80,7 +86,9 @@ export function DailyBonusCard({
         if (mountedRef.current) setPulse(false);
         pulseTimerRef.current = null;
       }, 1200);
-      setRemainingMs(res.remainingMs ?? bonus.cooldownMs);
+      const nextRem = Number(res.remainingMs);
+      const fallback = Number.isFinite(bonus.cooldownMs) ? bonus.cooldownMs : 0;
+      setRemainingMs(Number.isFinite(nextRem) ? nextRem : fallback);
       onClaimed?.(res.coins, res.bonus);
     } catch (e) {
       if (mountedRef.current) {

@@ -529,6 +529,7 @@ function ImageDetailModal({
   const [tagInput, setTagInput] = useState('');
   const [tags, setTags] = useState(img.tags ?? []);
   const [saving, setSaving] = useState(false);
+  const savingRef = useRef(false);
 
   useEffect(() => {
     setName(img.name);
@@ -546,10 +547,13 @@ function ImageDetailModal({
   };
 
   const saveMeta = async () => {
+    if (savingRef.current) return;
+    savingRef.current = true;
     setSaving(true);
     try {
       await onSave({ name: name.trim() || img.name, tags });
     } finally {
+      savingRef.current = false;
       setSaving(false);
     }
   };

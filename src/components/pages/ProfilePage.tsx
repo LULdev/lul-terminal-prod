@@ -351,7 +351,7 @@ export function ProfilePage({ routeUsername, profileTabReadyTick = 0, onNavigate
                 compact
                 onClaimed={(coins, amount) => {
                   const c = Math.floor(Number(coins) || 0);
-                  patchUser((u) => (u ? { ...u, lulCoins: c } : u));
+                  patchUser((u) => (u ? { ...u, lulCoins: c, updatedAt: Date.now() } : u));
                   void refresh();
                   setCoinFeedTick((t) => t + 1);
                   flashSuccess(

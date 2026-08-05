@@ -23,6 +23,25 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '3.61.0',
+    title: '25-round full audit Server+Client P0–P9: admin scrypt, MM hydrate, coin merge, busyRefs',
+    date: 'Aug 5, 2026',
+    highlight: true,
+    items: [
+      { priority: 'P1', text: 'P1 — Admin create/updateUser: scrypt hash outside withUsersWrite (parity with register/updateProfile).' },
+      { priority: 'P1', text: 'P1 — GamesPage/Profile patchUser lulCoins also bumps updatedAt (AuthContext merge keeps fresher balance).' },
+      { priority: 'P2', text: 'P2 — hydrateOtherMatchmakers before join (RPS/TTT/joinMatchQueue) for multi-worker session asserts.' },
+      { priority: 'P2', text: 'P2 — getReferralInfo write only when referral code missing (polls no longer thrash coin lock).' },
+      { priority: 'P2', text: 'P2 — RPS/TTT getUserSlice needsWrite → withMatchmakerRead when idle (less disk thrash).' },
+      { priority: 'P2', text: 'P2 — XML runScan scanBusyRef + mounted; AdminPastes openView/openEdit detailGenRef; image saveMeta busyRef.' },
+      { priority: 'P3', text: 'P3 — ImageHosting upload + PastePage create mountedRef guards after async.' },
+      { priority: 'P3', text: 'P3 — AdminPastes saveEdit/remove mounted guards on post-await setState.' },
+      { priority: 'P4', text: 'P4 — DailyBonus countdown/progress NaN-safe; formatBytes/formatImageBytes/formatPasteBytes/formatRelativeEn.' },
+      { priority: 'P5', text: 'P5 — GamesPage streakBonusAtBet finite-safe (no NaN chip).' },
+      { priority: 'P9', text: 'P9 — Version 3.61.0; every fix listed (full system audit after 3.60).' },
+    ],
+  },
+  {
     version: '3.60.0',
     title: '25-round full audit Server+Client P0–P9: scrypt off lock, admin purge/xml/gallery busyRefs',
     date: 'Aug 4, 2026',

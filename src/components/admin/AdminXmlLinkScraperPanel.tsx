@@ -118,6 +118,7 @@ export function AdminXmlLinkScraperPanel() {
   const [query, setQuery] = useState('');
   const [groupDomain, setGroupDomain] = useState(false);
   const [busy, setBusy] = useState(false);
+  const scanBusyRef = useRef(false);
   const [msg, setMsg] = useState('');
   const [copied, setCopied] = useState('');
   const [history, setHistory] = useState<HistoryEntry[]>([]);
@@ -272,11 +273,14 @@ export function AdminXmlLinkScraperPanel() {
       setMsg('Paste XML or upload a .xml file first');
       return;
     }
+    if (scanBusyRef.current) return;
+    scanBusyRef.current = true;
     setBusy(true);
     setMsg('Scanning…');
     setResult(null);
     try {
       const data = await scanXmlLinks({ xml, pattern, mode });
+      if (!mountedRef.current) return;
       setResult(data);
       setMsg(`Done in ${data.scanMs}ms — ${data.stats.totalMatches} matches (${data.stats.uniqueMatches} unique)`);
       const entry: HistoryEntry = {
@@ -289,9 +293,12 @@ export function AdminXmlLinkScraperPanel() {
       setHistory(next);
       localStorage.setItem(HISTORY_KEY, JSON.stringify(next));
     } catch (e) {
-      setMsg(e instanceof Error ? e.message : 'Scan failed');
+      if (mountedRef.current) {
+        setMsg(e instanceof Error ? e.message : 'Scan failed');
+      }
     } finally {
-      setBusy(false);
+      scanBusyRef.current = false;
+      if (mountedRef.current) setBusy(false);
     }
   };
 

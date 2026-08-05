@@ -223,6 +223,24 @@ export async function hydrateAllMatchmakers() {
 }
 
 /**
+ * Hydrate all matchmakers except one game (sorted lock order).
+ * Call BEFORE withMatchmakerWrite(thisGame) + coin lock so multi-worker
+ * session guards see durable queues/matches on other games (no nest under users write).
+ */
+export async function hydrateOtherMatchmakers(exceptGameId) {
+  const except = String(exceptGameId ?? '');
+  const ids = listRegisteredMatchmakerGameIds()
+    .filter((id) => id !== except)
+    .sort();
+  for (const id of ids) {
+    await hydrateMatchmaker(id).catch((e) => {
+      console.error('[games] matchmaker hydrate failed', id, e);
+    });
+  }
+  return ids.length;
+}
+
+/**
  * True if user is in any registered matchmaker queue or non-done match.
  * In-memory only — call after hydrateAllMatchmakers when freshness matters.
  * Safe under users write lock (no matchmaker acquisition).

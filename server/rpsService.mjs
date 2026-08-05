@@ -33,6 +33,8 @@ import {
   sweepStaleQueueEntries,
   touchQueueHeartbeat,
   withMatchmakerWrite,
+  withMatchmakerRead,
+  hydrateOtherMatchmakers,
 } from './gamesCore.mjs';
 import { runCoinTransaction } from './gamesCoinLock.mjs';
 import { assertNoOtherArcadeSession, assertPvpPairReady } from './gamesSessionGuard.mjs';
@@ -572,7 +574,7 @@ async function finalizeMatch(m) {
 }
 
 export async function getRpsUserSlice(userId) {
-  return withMatchmakerWrite(mm, async () => {
+  const run = async () => {
     const db = await loadUsersDb();
     const user = userId ? getUser(db, userId) : null;
 
@@ -606,7 +608,16 @@ export async function getRpsUserSlice(userId) {
       globalMoves: aggregateGlobalMoves(db.users),
       activeMatch: resolveActiveMatchForSlice({ queue, activeMatches, userId, publicMatch }),
     };
-  });
+  };
+  // Heartbeat/sweep need write; pure status uses read (no disk thrash)
+  const needsWrite = Boolean(userId && (
+    queue.some((q) => q.userId === userId)
+    || [...activeMatches.values()].some(
+      (m) => m.status !== 'done'
+        && (m.player1?.userId === userId || m.player2?.userId === userId),
+    )
+  ));
+  return needsWrite ? withMatchmakerWrite(mm, run) : withMatchmakerRead(mm, run);
 }
 
 export function getDailyBonusStatus(user) {
@@ -660,6 +671,7 @@ export async function claimDailyBonus(userId) {
 }
 
 export async function joinQueue(userId, opts = {}) {
+  await hydrateOtherMatchmakers('rps');
   return withMatchmakerWrite(mm, () => runCoinTransaction(() => joinQueueInner(userId, opts)));
 }
 
