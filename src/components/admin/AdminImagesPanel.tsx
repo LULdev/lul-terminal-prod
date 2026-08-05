@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useMountedLoad } from '../../hooks/useMountedLoad';
 import { ExternalLink, ImageIcon, RefreshCw, Search, Trash2 } from 'lucide-react';
 import {
@@ -26,6 +26,7 @@ export function AdminImagesPanel() {
   const [search, setSearch] = useState('');
   const [sort, setSort] = useState<Sort>('newest');
   const [acting, setActing] = useState<string | null>(null);
+  const actingRef = useRef(false);
   const [preview, setPreview] = useState<AdminImageMeta | null>(null);
   const { mountedRef, loadGenRef } = useMountedLoad();
 
@@ -57,7 +58,9 @@ export function AdminImagesPanel() {
   }, [success]);
 
   const handleDelete = async (img: AdminImageMeta) => {
+    if (actingRef.current) return;
     if (!confirm(`Delete image "${img.name}"?`)) return;
+    actingRef.current = true;
     setActing(img.id);
     try {
       await adminDeleteImage(img.id);
@@ -67,6 +70,7 @@ export function AdminImagesPanel() {
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Delete failed');
     } finally {
+      actingRef.current = false;
       setActing(null);
     }
   };

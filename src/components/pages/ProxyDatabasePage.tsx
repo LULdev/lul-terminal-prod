@@ -64,6 +64,7 @@ export function ProxyDatabasePage() {
   const [showOffline, setShowOffline] = useState(false);
   const [search, setSearch] = useState('');
   const [busy, setBusy] = useState(false);
+  const busyRef = useRef(false);
   const [msg, setMsg] = useState('');
   const [copied, setCopied] = useState(false);
   const loadGenRef = useRef(0);
@@ -93,6 +94,8 @@ export function ProxyDatabasePage() {
   useVisibilityAwarePoll(() => { void refresh(); }, 15_000);
 
   const runDaily = async (force = false) => {
+    if (busyRef.current) return;
+    busyRef.current = true;
     setBusy(true);
     setMsg('Daily check running…');
     try {
@@ -108,6 +111,7 @@ export function ProxyDatabasePage() {
     } catch (e) {
       setMsg(e instanceof Error ? e.message : 'Error');
     } finally {
+      busyRef.current = false;
       setBusy(false);
     }
   };

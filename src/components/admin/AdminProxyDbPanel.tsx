@@ -37,6 +37,7 @@ export function AdminProxyDbPanel() {
   const [proxies, setProxies] = useState<DatabaseProxy[]>([]);
   const [loading, setLoading] = useState(true);
   const [checking, setChecking] = useState(false);
+  const checkingRef = useRef(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'working' | 'offline'>('working');
@@ -83,6 +84,8 @@ export function AdminProxyDbPanel() {
   }, [success]);
 
   const runCheck = async () => {
+    if (checkingRef.current) return;
+    checkingRef.current = true;
     setChecking(true);
     setError('');
     try {
@@ -92,6 +95,7 @@ export function AdminProxyDbPanel() {
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Check failed');
     } finally {
+      checkingRef.current = false;
       setChecking(false);
     }
   };

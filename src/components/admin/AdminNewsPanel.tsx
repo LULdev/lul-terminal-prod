@@ -122,7 +122,9 @@ export function AdminNewsPanel() {
   };
 
   const remove = async (a: NewsArticle) => {
+    if (savingRef.current) return;
     if (!confirm(`Really delete article "${a.title}"?`)) return;
+    savingRef.current = true;
     const gen = ++actionGenRef.current;
     setError('');
     setSuccess('');
@@ -135,10 +137,14 @@ export function AdminNewsPanel() {
     } catch (e) {
       if (gen !== actionGenRef.current || !mountedRef.current) return;
       setError(e instanceof Error ? e.message : 'Delete failed');
+    } finally {
+      savingRef.current = false;
     }
   };
 
   const togglePublish = async (a: NewsArticle) => {
+    if (savingRef.current) return;
+    savingRef.current = true;
     const gen = ++actionGenRef.current;
     setTogglingId(a.id);
     setError('');
@@ -150,6 +156,7 @@ export function AdminNewsPanel() {
       if (gen !== actionGenRef.current || !mountedRef.current) return;
       setError(e instanceof Error ? e.message : 'Update failed');
     } finally {
+      savingRef.current = false;
       if (gen === actionGenRef.current && mountedRef.current) setTogglingId(null);
     }
   };

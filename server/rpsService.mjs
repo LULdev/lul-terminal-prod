@@ -572,39 +572,41 @@ async function finalizeMatch(m) {
 }
 
 export async function getRpsUserSlice(userId) {
-  const db = await loadUsersDb();
-  const user = userId ? getUser(db, userId) : null;
+  return withMatchmakerWrite(mm, async () => {
+    const db = await loadUsersDb();
+    const user = userId ? getUser(db, userId) : null;
 
-  if (userId && queue.some((q) => q.userId === userId)) {
-    await sweepStaleQueueEntries({ queue, rooms }, { gameId: 'rps', chatLabel: 'RPS' });
-  }
-  touchQueueHeartbeat(queue, userId);
-  await sweepExpiredMatchesForUser(activeMatches, userId, RPS_EXPIRE_META);
+    if (userId && queue.some((q) => q.userId === userId)) {
+      await sweepStaleQueueEntries(mm, RPS_EXPIRE_META);
+    }
+    touchQueueHeartbeat(queue, userId);
+    await sweepExpiredMatchesForUser(activeMatches, userId, RPS_EXPIRE_META);
 
-  return {
-    queueSize: queue.length,
-    ...queueStatusForUser(queue, userId),
-    myStats: user
-      ? {
-          wins: user.gameRpsWins ?? 0,
-          losses: user.gameRpsLosses ?? 0,
-          draws: user.gameRpsDraws ?? 0,
-          games: user.gameRpsGames ?? 0,
-          streak: user.gameRpsStreak ?? 0,
-          bestStreak: user.gameRpsBestStreak ?? 0,
-          jackpotsWon: user.gameJackpotsWon ?? 0,
-          totalWon: user.gameTotalWon ?? 0,
-          totalLost: user.gameTotalLost ?? 0,
-          moves: user.gameRpsMoves ?? emptyMoves(),
-          nextStreakBonus: calcStreakBonus(
-            MIN_BET,
-            (Number(user.gameRpsStreak) || 0) + 1,
-          ),
-        }
-      : null,
-    globalMoves: aggregateGlobalMoves(db.users),
-    activeMatch: resolveActiveMatchForSlice({ queue, activeMatches, userId, publicMatch }),
-  };
+    return {
+      queueSize: queue.length,
+      ...queueStatusForUser(queue, userId),
+      myStats: user
+        ? {
+            wins: user.gameRpsWins ?? 0,
+            losses: user.gameRpsLosses ?? 0,
+            draws: user.gameRpsDraws ?? 0,
+            games: user.gameRpsGames ?? 0,
+            streak: user.gameRpsStreak ?? 0,
+            bestStreak: user.gameRpsBestStreak ?? 0,
+            jackpotsWon: user.gameJackpotsWon ?? 0,
+            totalWon: user.gameTotalWon ?? 0,
+            totalLost: user.gameTotalLost ?? 0,
+            moves: user.gameRpsMoves ?? emptyMoves(),
+            nextStreakBonus: calcStreakBonus(
+              MIN_BET,
+              (Number(user.gameRpsStreak) || 0) + 1,
+            ),
+          }
+        : null,
+      globalMoves: aggregateGlobalMoves(db.users),
+      activeMatch: resolveActiveMatchForSlice({ queue, activeMatches, userId, publicMatch }),
+    };
+  });
 }
 
 export function getDailyBonusStatus(user) {

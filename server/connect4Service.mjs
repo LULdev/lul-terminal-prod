@@ -141,6 +141,7 @@ async function finalizeC4(m, winnerKey) {
     winnerKey,
     publicMatch,
     activeMatches: mm.activeMatches,
+    mm,
   });
 }
 

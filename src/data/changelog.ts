@@ -23,6 +23,18 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '3.58.0',
+    title: '25-round full audit Server+Client P0–P9: matchmaker slice persist, settle mm, admin busyRefs',
+    date: 'Aug 4, 2026',
+    highlight: true,
+    items: [
+      { priority: 'P0', text: 'P0 — buildUserSlice / RPS / TTT getUserSlice run under withMatchmakerWrite (heartbeat + stale sweeps persist).' },
+      { priority: 'P1', text: 'P1 — settleMatch accepts mm; expire refund paths pass expireCtx.mm (C4/Nim/instant finalize).' },
+      { priority: 'P2', text: 'P2 — Client busyRef: AdminImages delete, Colon-DB delete, News remove/toggle, Proxy DB daily + admin check.' },
+      { priority: 'P9', text: 'P9 — Version 3.58.0; every fix listed (full system audit after 3.57 durable MM).' },
+    ],
+  },
+  {
     version: '3.57.0',
     title: 'Durable arcade matchmaker: queue/matches on disk + multi-worker file locks',
     date: 'Aug 4, 2026 - 05:30',

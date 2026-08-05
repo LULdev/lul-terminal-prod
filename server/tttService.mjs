@@ -532,37 +532,39 @@ async function finalizeMatch(m, boardState) {
 }
 
 export async function getTttUserSlice(userId) {
-  const db = await loadUsersDb();
-  const user = userId ? getUser(db, userId) : null;
+  return withMatchmakerWrite(mm, async () => {
+    const db = await loadUsersDb();
+    const user = userId ? getUser(db, userId) : null;
 
-  if (userId && queue.some((q) => q.userId === userId)) {
-    await sweepStaleQueueEntries({ queue, rooms }, { gameId: 'ttt', chatLabel: 'Tic-Tac-Toe' });
-  }
-  touchQueueHeartbeat(queue, userId);
-  await sweepExpiredMatchesForUser(activeMatches, userId, { gameId: 'ttt', chatLabel: 'Tic-Tac-Toe' });
+    if (userId && queue.some((q) => q.userId === userId)) {
+      await sweepStaleQueueEntries(mm, TTT_EXPIRE_META);
+    }
+    touchQueueHeartbeat(queue, userId);
+    await sweepExpiredMatchesForUser(activeMatches, userId, TTT_EXPIRE_META);
 
-  return {
-    queueSize: queue.length,
-    ...queueStatusForUser(queue, userId),
-    myStats: user
-      ? {
-          wins: user.gameTttWins ?? 0,
-          losses: user.gameTttLosses ?? 0,
-          draws: user.gameTttDraws ?? 0,
-          games: user.gameTttGames ?? 0,
-          streak: user.gameTttStreak ?? 0,
-          bestStreak: user.gameTttBestStreak ?? 0,
-          jackpotsWon: user.gameJackpotsWon ?? 0,
-          totalWon: user.gameTotalWon ?? 0,
-          totalLost: user.gameTotalLost ?? 0,
-          nextStreakBonus: calcStreakBonus(
-            MIN_BET,
-            (Number(user.gameTttStreak) || 0) + 1,
-          ),
-        }
-      : null,
-    activeMatch: resolveActiveMatchForSlice({ queue, activeMatches, userId, publicMatch }),
-  };
+    return {
+      queueSize: queue.length,
+      ...queueStatusForUser(queue, userId),
+      myStats: user
+        ? {
+            wins: user.gameTttWins ?? 0,
+            losses: user.gameTttLosses ?? 0,
+            draws: user.gameTttDraws ?? 0,
+            games: user.gameTttGames ?? 0,
+            streak: user.gameTttStreak ?? 0,
+            bestStreak: user.gameTttBestStreak ?? 0,
+            jackpotsWon: user.gameJackpotsWon ?? 0,
+            totalWon: user.gameTotalWon ?? 0,
+            totalLost: user.gameTotalLost ?? 0,
+            nextStreakBonus: calcStreakBonus(
+              MIN_BET,
+              (Number(user.gameTttStreak) || 0) + 1,
+            ),
+          }
+        : null,
+      activeMatch: resolveActiveMatchForSlice({ queue, activeMatches, userId, publicMatch }),
+    };
+  });
 }
 
 export async function joinTttQueue(userId, opts = {}) {

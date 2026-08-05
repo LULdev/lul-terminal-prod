@@ -382,11 +382,13 @@ export async function settleMatch({
   publicMatch,
   historyExtra = {},
   activeMatches,
+  mm = null,
 }) {
   // Deferred pot/jackpot work runs AFTER users write lock is released (no users→games-aux nest).
   let deferredLossPot = 0;
   let deferredHouseSeed = 0;
   let deferredJackpot = null; // { userId, username }
+  const expireCtx = { gameId, chatLabel, ...(mm?.gameId ? { mm } : {}) };
 
   const settled = await runCoinTransaction(async () => {
   if (m.status === 'done') return { match: publicMatch(m), unlocks: undefined, early: true };
@@ -394,7 +396,7 @@ export async function settleMatch({
   const db = await loadUsersDb();
   const p1 = getUser(db, m.player1.userId);
   if (!p1) {
-    await expireMatchWithRefund(m, activeMatches, { gameId, chatLabel });
+    await expireMatchWithRefund(m, activeMatches, expireCtx);
     return { match: publicMatch(m), unlocks: undefined, early: true };
   }
 
@@ -413,7 +415,7 @@ export async function settleMatch({
   if (m.mode === 'pvp') {
     p2 = getUser(db, m.player2.userId);
     if (!p2) {
-      await expireMatchWithRefund(m, activeMatches, { gameId, chatLabel });
+      await expireMatchWithRefund(m, activeMatches, expireCtx);
       return { match: publicMatch(m), unlocks: undefined, early: true };
     }
   }
@@ -421,7 +423,7 @@ export async function settleMatch({
     m.expiresAt = 0;
     m._finalizeAttempted = true; // skip dual-finalize loop
     // No stake released — refund path must NOT mint (forceAbandon without forceIds)
-    await expireMatchWithRefund(m, activeMatches, { gameId, chatLabel, forceAbandon: true });
+    await expireMatchWithRefund(m, activeMatches, { ...expireCtx, forceAbandon: true });
     return { match: publicMatch(m), unlocks: undefined, early: true };
   }
   // Track released stakes so force-credit only applies where escrow was stripped
@@ -433,7 +435,7 @@ export async function settleMatch({
       m._expireCreditUserIds = new Set([m.player1.userId]);
       m.expiresAt = 0;
       m._finalizeAttempted = true;
-      await expireMatchWithRefund(m, activeMatches, { gameId, chatLabel, forceAbandon: true });
+      await expireMatchWithRefund(m, activeMatches, { ...expireCtx, forceAbandon: true });
       return { match: publicMatch(m), unlocks: undefined, early: true };
     }
     m._releasedStakeByUserId[m.player2.userId] = bet;
@@ -816,26 +818,32 @@ export async function getMatchWithExpiry(activeMatches, matchId, userId, expireM
 
 export function buildUserSlice({ statKey, queue, activeMatches, publicMatch, extraStats, expireMeta, mm }) {
   return async (userId) => {
-    const db = await loadUsersDb();
-    const user = userId ? getUser(db, userId) : null;
-    if (mm && expireMeta && userId && queue.some((q) => q.userId === userId)) {
-      await sweepStaleQueueEntries(mm, expireMeta);
-    }
-    touchQueueHeartbeat(queue, userId);
-    await sweepExpiredMatchesForUser(activeMatches, userId, expireMeta);
-    const base = user ? defaultGameStats(user, statKey) : null;
-    return {
-      queueSize: queue.length,
-      ...queueStatusForUser(queue, userId),
-      myStats: base
-        ? {
-            ...base,
-            ...extraStats?.(user),
-            nextStreakBonus: calcStreakBonus(MIN_BET, (Number(user[statFields(statKey).streak]) || 0) + 1),
-          }
-        : null,
-      activeMatch: resolveActiveMatchForSlice({ queue, activeMatches, userId, publicMatch }),
+    const run = async () => {
+      const db = await loadUsersDb();
+      const user = userId ? getUser(db, userId) : null;
+      const meta = mm?.gameId && expireMeta ? { ...expireMeta, mm } : expireMeta;
+      if (mm && meta && userId && queue.some((q) => q.userId === userId)) {
+        await sweepStaleQueueEntries(mm, meta);
+      }
+      touchQueueHeartbeat(queue, userId);
+      await sweepExpiredMatchesForUser(activeMatches, userId, meta);
+      const base = user ? defaultGameStats(user, statKey) : null;
+      return {
+        queueSize: queue.length,
+        ...queueStatusForUser(queue, userId),
+        myStats: base
+          ? {
+              ...base,
+              ...extraStats?.(user),
+              nextStreakBonus: calcStreakBonus(MIN_BET, (Number(user[statFields(statKey).streak]) || 0) + 1),
+            }
+          : null,
+        activeMatch: resolveActiveMatchForSlice({ queue, activeMatches, userId, publicMatch }),
+      };
     };
+    // Persist heartbeat + stale sweeps for durable multi-worker matchmaker
+    if (mm?.gameId) return withMatchmakerWrite(mm, run);
+    return run();
   };
 }
 

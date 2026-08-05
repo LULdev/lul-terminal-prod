@@ -113,6 +113,7 @@ async function finalizeNim(m, winnerKey) {
     publicMatch,
     historyExtra: { piles: m.piles },
     activeMatches: mm.activeMatches,
+    mm,
   });
 }
 

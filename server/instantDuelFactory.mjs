@@ -119,6 +119,7 @@ export function createInstantDuelGame(cfg) {
       winnerKey,
       publicMatch,
       activeMatches: mm.activeMatches,
+      mm,
     });
   }
 

@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useMountedLoad } from '../../hooks/useMountedLoad';
 import { Database, RefreshCw, Search, Trash2 } from 'lucide-react';
 import {
@@ -34,6 +34,7 @@ export function AdminColonDbPanel() {
   const [search, setSearch] = useState('');
   const [website, setWebsite] = useState('');
   const [acting, setActing] = useState<string | null>(null);
+  const actingRef = useRef(false);
   const { mountedRef, loadGenRef } = useMountedLoad();
 
   const load = useCallback(async () => {
@@ -77,7 +78,9 @@ export function AdminColonDbPanel() {
   }, [stats]);
 
   const handleDelete = async (id: string) => {
+    if (actingRef.current) return;
     if (!confirm('Delete this Colon-DB entry?')) return;
+    actingRef.current = true;
     setActing(id);
     try {
       await adminDeleteColonEntry(id);
@@ -86,6 +89,7 @@ export function AdminColonDbPanel() {
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Delete failed');
     } finally {
+      actingRef.current = false;
       setActing(null);
     }
   };
