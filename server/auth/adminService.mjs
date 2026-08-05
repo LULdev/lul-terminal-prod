@@ -103,26 +103,21 @@ export async function updateUserAdmin(id, payload) {
   const snapUser = snap.users.find((u) => u.id === id);
   if (!snapUser) throw new Error('User not found');
 
-  let revokeSessionsAfter = false;
-  if (payload.role != null && ROLES.includes(payload.role) && snapUser.role !== payload.role && payload.role === 'bot') {
-    const { leaveAllGameQueues } = await import('../gamesService.mjs');
-    const cleanup = await leaveAllGameQueues(id);
-    if (!cleanup.ok) {
-      console.warn('[auth] bot role arcade cleanup incomplete', { userId: id, errors: cleanup.errors });
-      throw new Error(`Cannot assign bot role: arcade cleanup failed (${cleanup.errors.map((e) => e.gameId).join(', ')})`);
-    }
-    revokeSessionsAfter = true;
-  }
-  if (payload.active != null && snapUser.active !== false && payload.active === false) {
-    const { leaveAllGameQueues } = await import('../gamesService.mjs');
-    const cleanup = await leaveAllGameQueues(id);
-    if (!cleanup.ok) {
-      console.warn('[auth] deactivate arcade cleanup incomplete', { userId: id, errors: cleanup.errors });
-      throw new Error(`Cannot deactivate user: arcade cleanup failed (${cleanup.errors.map((e) => e.gameId).join(', ')})`);
-    }
-    const { refundOrphanEscrowsAfterCleanup } = await import('./authService.mjs');
-    await refundOrphanEscrowsAfterCleanup(id, cleanup);
-    revokeSessionsAfter = true;
+  const goingBot = payload.role != null && ROLES.includes(payload.role)
+    && snapUser.role !== payload.role && payload.role === 'bot';
+  const deactivating = payload.active != null
+    && snapUser.active !== false && payload.active === false;
+
+  let sessionsAlreadyRevoked = false;
+  if (goingBot || deactivating) {
+    // Revoke FIRST so concurrent join cannot re-enter during leave/refund
+    const { prepareUserLifecycleExit } = await import('./authService.mjs');
+    await prepareUserLifecycleExit(id, {
+      failMessage: goingBot
+        ? 'Cannot assign bot role: user has an active arcade match'
+        : 'Cannot deactivate: user has an active arcade match',
+    });
+    sessionsAlreadyRevoked = true;
   }
 
   // scrypt OUTSIDE users write — only assign precomputed hash under lock
@@ -137,6 +132,11 @@ export async function updateUserAdmin(id, payload) {
   const db = await loadUsersDb();
   const user = db.users.find((u) => u.id === id);
   if (!user) throw new Error('User not found');
+
+  if (goingBot || deactivating) {
+    const { assertNoGameEscrowsOnUser } = await import('./authService.mjs');
+    assertNoGameEscrowsOnUser(user, goingBot ? 'assign bot role' : 'deactivate user');
+  }
 
   if (payload.username != null) {
     const username = normalizeUsername(payload.username);
@@ -187,9 +187,9 @@ export async function updateUserAdmin(id, payload) {
 
   user.updatedAt = Date.now();
   await saveUsersDb(db);
-  return { user: publicUser(user), passwordChanged, revokeSessionsAfter };
+  return { user: publicUser(user), passwordChanged };
   });
-  if (result.passwordChanged || result.revokeSessionsAfter || revokeSessionsAfter) {
+  if (result.passwordChanged && !sessionsAlreadyRevoked) {
     const { revokeUserSessions } = await import('./authService.mjs');
     await revokeUserSessions(id);
   }
@@ -197,7 +197,7 @@ export async function updateUserAdmin(id, payload) {
 }
 
 export async function deleteUserAdmin(id, actorId) {
-  // Arcade cleanup + refunds OUTSIDE users write (no users→sessions nesting)
+  // Pre-checks then lifecycle exit OUTSIDE users write
   {
     const snap = await loadUsersDb();
     const pre = snap.users.find((u) => u.id === id);
@@ -208,17 +208,9 @@ export async function deleteUserAdmin(id, actorId) {
     if (pre.role === 'admin' && countActiveAdmins(snap.users) <= 1) {
       throw new Error('Last admin cannot be deleted');
     }
-    const { leaveAllGameQueues } = await import('../gamesService.mjs');
-    const cleanup = await leaveAllGameQueues(id);
-    if (!cleanup.ok) {
-      console.warn('[auth] admin delete arcade cleanup incomplete', { userId: id, errors: cleanup.errors });
-      throw new Error(`Cannot delete user: arcade cleanup failed (${cleanup.errors.map((e) => e.gameId).join(', ')})`);
-    }
-    const { refundOrphanEscrowsAfterCleanup } = await import('./authService.mjs');
-    await refundOrphanEscrowsAfterCleanup(id, cleanup);
-    const { refundUserEscrows } = await import('../gamesEscrow.mjs');
-    await refundUserEscrows(id).catch((e) => {
-      console.warn('[auth] final escrow refund before admin delete failed', id, e);
+    const { prepareUserLifecycleExit } = await import('./authService.mjs');
+    await prepareUserLifecycleExit(id, {
+      failMessage: 'Cannot delete user: finish their active arcade match first',
     });
   }
 
@@ -232,6 +224,8 @@ export async function deleteUserAdmin(id, actorId) {
   if (target.role === 'admin' && countActiveAdmins(db.users) <= 1) {
     throw new Error('Last admin cannot be deleted');
   }
+  const { assertNoGameEscrowsOnUser } = await import('./authService.mjs');
+  assertNoGameEscrowsOnUser(target, 'delete user');
   target.registrationBlocked = true;
   const { blockRegistrationSignalsForUser } = await import('./registrationRegistry.mjs');
   await blockRegistrationSignalsForUser(target);
@@ -239,6 +233,7 @@ export async function deleteUserAdmin(id, actorId) {
   await saveUsersDb(db);
   });
 
+  // Sessions already revoked in prepareUserLifecycleExit
   await withSessionsWrite(async () => {
     const sessionsDb = await loadSessionsDb();
     sessionsDb.sessions = sessionsDb.sessions.filter((s) => s.userId !== id);

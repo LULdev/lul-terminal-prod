@@ -23,6 +23,19 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '3.61.1',
+    title: 'P0 lifecycle: revoke→leave→hard refund before delete/deactivate/bot; queue heartbeat',
+    date: 'Aug 5, 2026',
+    highlight: true,
+    items: [
+      { priority: 'P0', text: 'P0 — prepareUserLifecycleExit: revoke sessions first, leaveAll, stillLive, hard escrow refund.' },
+      { priority: 'P0', text: 'P0 — admin delete + self-delete abort if gameEscrows remain under users write.' },
+      { priority: 'P0', text: 'P0 — admin deactivate / role→bot same lifecycle exit (no rejoin window before revoke).' },
+      { priority: 'P3', text: 'P3 — same-bet queue rejoin refreshes heartbeatAt (Core/RPS/TTT).' },
+      { priority: 'P9', text: 'P9 — Version 3.61.1 residual after delayed server P0 audit findings.' },
+    ],
+  },
+  {
     version: '3.61.0',
     title: '25-round full audit Server+Client P0–P9: admin scrypt, MM hydrate, coin merge, busyRefs',
     date: 'Aug 5, 2026',

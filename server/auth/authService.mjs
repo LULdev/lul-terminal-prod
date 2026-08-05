@@ -313,10 +313,9 @@ function arcadeCleanupError(cleanup) {
 }
 
 /** Refund persisted escrows when arcade RAM is clear but rows remain (orphan sweep / cleanup ok). */
-export async function refundOrphanEscrowsAfterCleanup(userId, cleanup) {
+export async function refundOrphanEscrowsAfterCleanup(userId, cleanup, { hard = false } = {}) {
   if (!userId) return;
-  // Always go through refundUserEscrows — it re-checks userHasActiveArcadeSession
-  // UNDER the coin lock (fixes TOCTOU vs concurrent join after unlocked stillActive peek).
+  // Always go through refundUserEscrows — it re-checks live session under coin lock.
   const db = await loadUsersDb();
   const user = db.users.find((u) => u.id === userId);
   const hasEscrows = (user?.gameEscrows?.length ?? 0) > 0;
@@ -325,10 +324,67 @@ export async function refundOrphanEscrowsAfterCleanup(userId, cleanup) {
     userId,
     hasEscrows,
     cleanupOk: cleanup?.ok ?? true,
+    hard,
   });
-  await refundUserEscrows(userId).catch((e) => {
-    console.warn('[auth] escrow refund after cleanup failed', userId, e);
-  });
+  if (hard) {
+    await refundUserEscrows(userId);
+  } else {
+    await refundUserEscrows(userId).catch((e) => {
+      console.warn('[auth] escrow refund after cleanup failed', userId, e);
+    });
+  }
+}
+
+/**
+ * Lifecycle exit (delete / deactivate / role→bot): stop rejoin, clear arcade, hard refund.
+ * Call OUTSIDE withUsersWrite. Order: revoke sessions → leaveAll → stillLive → refund.
+ */
+export async function prepareUserLifecycleExit(userId, {
+  failMessage = 'Finish your active arcade match first',
+} = {}) {
+  if (!userId) throw new Error('User id required');
+  await revokeUserSessions(userId);
+
+  const { leaveAllGameQueues, userHasActiveArcadeSession } = await import('../gamesService.mjs');
+  const cleanup = await leaveAllGameQueues(userId);
+  if (!cleanup.ok) {
+    const games = cleanup.errors?.map((e) => e.gameId).join(', ') || 'unknown';
+    throw new Error(`Arcade cleanup failed (${games})`);
+  }
+
+  await refundOrphanEscrowsAfterCleanup(userId, cleanup, { hard: true });
+
+  const stillLive = await userHasActiveArcadeSession(userId).catch(() => true);
+  if (stillLive) {
+    throw new Error(failMessage);
+  }
+
+  // Residual refund — hard fail if rows remain after
+  await refundUserEscrows(userId);
+  const after = await loadUsersDb();
+  const u = after.users.find((x) => x.id === userId);
+  if ((u?.gameEscrows?.length ?? 0) > 0) {
+    // One more pass after re-hydrate inside refundUserEscrows
+    await refundUserEscrows(userId);
+    const after2 = await loadUsersDb();
+    const u2 = after2.users.find((x) => x.id === userId);
+    if ((u2?.gameEscrows?.length ?? 0) > 0) {
+      throw new Error('Cannot proceed: unpaid arcade escrows remain');
+    }
+  }
+
+  const stillLive2 = await userHasActiveArcadeSession(userId).catch(() => true);
+  if (stillLive2) {
+    throw new Error(failMessage);
+  }
+  return cleanup;
+}
+
+/** Under users write: refuse lifecycle mutate/delete if escrows still on the row. */
+export function assertNoGameEscrowsOnUser(user, action = 'proceed') {
+  if ((user?.gameEscrows?.length ?? 0) > 0) {
+    throw new Error(`Cannot ${action}: unpaid arcade escrows remain`);
+  }
 }
 
 /** Expired session still in DB — release arcade state so escrow is not held until queue sweep. */
@@ -924,7 +980,6 @@ export async function incrementUserMemeCreated(userId, memeImageId = '') {
 }
 
 export async function deleteOwnAccount(userId, password) {
-  const { leaveAllGameQueues, userHasActiveArcadeSession } = await import('../gamesService.mjs');
   const { blockRegistrationSignalsForUser } = await import('./registrationRegistry.mjs');
 
   const db = await loadUsersDb();
@@ -939,15 +994,9 @@ export async function deleteOwnAccount(userId, password) {
     throw new Error('Last admin cannot be deleted');
   }
 
-  // Arcade cleanup OUTSIDE users write (no users→sessions / coin nesting under write lock)
-  const cleanup = await leaveAllGameQueues(userId);
-  await refundOrphanEscrowsAfterCleanup(userId, cleanup);
-  const stillLive = await userHasActiveArcadeSession(userId).catch(() => true);
-  if (stillLive) {
-    throw new Error('Finish your active arcade match before deleting your account');
-  }
-  await refundUserEscrows(userId).catch((e) => {
-    console.warn('[auth] final escrow refund before delete failed', userId, e);
+  // Revoke → leaveAll → stillLive → hard refund (no rejoin window)
+  await prepareUserLifecycleExit(userId, {
+    failMessage: 'Finish your active arcade match before deleting your account',
   });
 
   await withUsersWrite(async () => {
@@ -957,12 +1006,14 @@ export async function deleteOwnAccount(userId, password) {
     if (freshUser.role === 'admin' && countActiveAdmins(freshDb.users) <= 1) {
       throw new Error('Last admin cannot be deleted');
     }
+    assertNoGameEscrowsOnUser(freshUser, 'delete account');
     await blockRegistrationSignalsForUser(freshUser);
     freshUser.registrationBlocked = true;
     freshDb.users = freshDb.users.filter((u) => u.id !== userId);
     await saveUsersDb(freshDb);
   });
 
+  // Sessions already revoked in prepareUserLifecycleExit — belt-and-suspenders clear
   await withSessionsWrite(async () => {
     const sessionsDb = await loadSessionsDb();
     sessionsDb.sessions = sessionsDb.sessions.filter((s) => s.userId !== userId);

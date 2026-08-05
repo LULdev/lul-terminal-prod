@@ -700,7 +700,9 @@ async function joinQueueInner(userId, { bet, mode = 'pvp', botDifficulty = 'norm
     const sameRoom = (queued.roomCode ?? undefined) === code;
     const sameSeries = (queued.seriesType ?? 'single') === series;
     if (sameBet && sameRoom && sameSeries) {
-      queued.at = Date.now();
+      const now = Date.now();
+      queued.at = now;
+      queued.heartbeatAt = now;
       return { waiting: true, bet: queued.bet, roomCode: queued.roomCode ?? undefined };
     }
     if (queued.bet !== amount) {
@@ -718,7 +720,11 @@ async function joinQueueInner(userId, { bet, mode = 'pvp', botDifficulty = 'norm
     } else {
       delete queued.roomCode;
     }
-    queued.at = Date.now();
+    {
+      const now = Date.now();
+      queued.at = now;
+      queued.heartbeatAt = now;
+    }
     user.updatedAt = Date.now();
     await saveUsersDb(db);
     return { waiting: true, bet: amount, roomCode: queued.roomCode ?? undefined };

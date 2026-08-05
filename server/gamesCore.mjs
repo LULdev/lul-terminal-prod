@@ -961,7 +961,9 @@ async function joinMatchQueueInner({
     const sameBet = queued.bet === amount;
     const sameRoom = (queued.roomCode ?? undefined) === code;
     if (sameBet && sameRoom) {
-      queued.at = Date.now();
+      const now = Date.now();
+      queued.at = now;
+      queued.heartbeatAt = now;
       return { waiting: true, bet: queued.bet, roomCode: queued.roomCode ?? undefined };
     }
     if (queued.bet !== amount && expireMeta) {
@@ -979,7 +981,11 @@ async function joinMatchQueueInner({
     } else {
       delete queued.roomCode;
     }
-    queued.at = Date.now();
+    {
+      const now = Date.now();
+      queued.at = now;
+      queued.heartbeatAt = now;
+    }
     user.updatedAt = Date.now();
     await saveUsersDb(db);
     return { waiting: true, bet: amount, roomCode: queued.roomCode ?? undefined };
