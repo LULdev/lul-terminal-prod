@@ -77,10 +77,12 @@ export function ensureGamesBootstrapped() {
       try {
         await import('./gameRegistry.mjs');
         const { hydrateAllMatchmakers } = await import('./gamesMatchmakerStore.mjs');
-        const nMm = await hydrateAllMatchmakers();
+        // hard: fail closed on partial hydrate so boot refund cannot mint over live disk sessions
+        const nMm = await hydrateAllMatchmakers({ hard: true });
         if (nMm > 0) console.log(`[games] Hydrated ${nMm} durable matchmaker(s)`);
       } catch (e) {
-        console.error('[games] Matchmaker hydrate failed', e);
+        console.error('[games] Matchmaker hydrate failed — skipping boot escrow refund', e);
+        // Still mark ready below so API can serve; residual refunds retry on logout/lifecycle
       }
       try {
         const n = await refundAllEscrowsOnBoot();

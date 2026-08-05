@@ -23,6 +23,18 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '3.62.0',
+    title: 'P0 escrow refund: hold all matchmaker locks during residual credit (no free money)',
+    date: 'Aug 5, 2026',
+    highlight: true,
+    items: [
+      { priority: 'P0', text: 'P0 — refundUserEscrows holds all matchmaker locks through coin credit (blocks multi-worker join TOCTOU mint).' },
+      { priority: 'P0', text: 'P0 — refundAllEscrowsOnBoot same withAllMatchmakersHeld pattern; skip if no matchmakers registered.' },
+      { priority: 'P0', text: 'P0 — boot hydrateAllMatchmakers({ hard: true }) — partial hydrate no longer silent free-money path.' },
+      { priority: 'P9', text: 'P9 — Version 3.62.0; full P0-only audit Server+Client (client: no verified P0).' },
+    ],
+  },
+  {
     version: '3.61.1',
     title: 'P0 lifecycle: revoke→leave→hard refund before delete/deactivate/bot; queue heartbeat',
     date: 'Aug 5, 2026',

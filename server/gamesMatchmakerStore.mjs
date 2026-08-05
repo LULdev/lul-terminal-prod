@@ -212,14 +212,37 @@ export async function hydrateMatchmaker(gameId) {
 }
 
 /** Hydrate every registered matchmaker (import game modules first). Sorted lock order. */
-export async function hydrateAllMatchmakers() {
+export async function hydrateAllMatchmakers({ hard = false } = {}) {
   const ids = listRegisteredMatchmakerGameIds().sort();
+  const failed = [];
   for (const id of ids) {
-    await hydrateMatchmaker(id).catch((e) => {
+    try {
+      await hydrateMatchmaker(id);
+    } catch (e) {
       console.error('[games] matchmaker hydrate failed', id, e);
-    });
+      failed.push(id);
+    }
+  }
+  if (hard && failed.length) {
+    throw new Error(`Matchmaker hydrate failed: ${failed.join(', ')}`);
   }
   return ids.length;
+}
+
+/**
+ * Hold every registered matchmaker lock (read/hydrate, no writeDisk) in sorted order,
+ * then run task. Used for residual escrow refund so concurrent join/leave cannot
+ * mutate durable MM between "no session" check and coin credit (P0 free-money race).
+ * Lock order: all matchmakers outer → task may take users/coin inner.
+ * Never call while already holding withUsersWrite.
+ */
+export async function withAllMatchmakersHeld(task) {
+  const ids = listRegisteredMatchmakerGameIds().sort();
+  const walk = (i) => {
+    if (i >= ids.length) return Promise.resolve().then(() => task());
+    return withMatchmakerAccess(ids[i], () => walk(i + 1), { write: false });
+  };
+  return walk(0);
 }
 
 /**

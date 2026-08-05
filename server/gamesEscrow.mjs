@@ -113,77 +113,93 @@ export function releaseAnyGameEscrow(user, amount, opts = {}) {
 
 /**
  * Refund persisted escrows after restart for users NOT in a live matchmaker session.
- * Matchmaker is durable (data/games/matchmaker/) — hydrate before calling.
+ * Holds ALL matchmaker locks while crediting so concurrent join cannot mint free money.
  */
 export async function refundAllEscrowsOnBoot() {
-  const { userInAnyMatchmakerSession } = await import('./gamesMatchmakerStore.mjs');
-  return runCoinTransaction(async () => {
-  const db = await loadUsersDb();
-  let refunded = 0;
-  for (const user of db.users) {
-    if (user.role === 'bot' || !user.gameEscrows?.length) continue;
-    // Keep stakes for users still in queue/match after durable hydrate
-    if (userInAnyMatchmakerSession(user.id)) continue;
-    for (const e of user.gameEscrows) {
-      logQueueRefund(user, {
-        gameId: e.gameId,
-        chatLabel: e.chatLabel,
-        bet: e.amount,
-        amount: e.amount,
-      });
-      user.updatedAt = Date.now();
-      refunded += 1;
-    }
-    user.gameEscrows = [];
+  const {
+    withAllMatchmakersHeld,
+    userInAnyMatchmakerSession,
+    listRegisteredMatchmakerGameIds,
+  } = await import('./gamesMatchmakerStore.mjs');
+  const ids = listRegisteredMatchmakerGameIds();
+  if (!ids.length) {
+    console.warn('[games] Boot escrow refund skipped — no matchmakers registered');
+    return 0;
   }
-  if (refunded > 0) await saveUsersDb(db);
-  return refunded;
-  });
+  // All MM locks outer → coin lock inner (blocks concurrent join mid-refund)
+  return withAllMatchmakersHeld(async () => runCoinTransaction(async () => {
+    const db = await loadUsersDb();
+    let refunded = 0;
+    for (const user of db.users) {
+      if (user.role === 'bot' || !user.gameEscrows?.length) continue;
+      // Fresh hydrate under held locks — keep stakes for live queue/match
+      if (userInAnyMatchmakerSession(user.id)) continue;
+      for (const e of user.gameEscrows) {
+        logQueueRefund(user, {
+          gameId: e.gameId,
+          chatLabel: e.chatLabel,
+          bet: e.amount,
+          amount: e.amount,
+        });
+        user.updatedAt = Date.now();
+        refunded += 1;
+      }
+      user.gameEscrows = [];
+    }
+    if (refunded > 0) await saveUsersDb(db);
+    return refunded;
+  }));
 }
 
 /** Refund persisted escrows for one user when arcade cleanup cannot complete. */
 export async function refundUserEscrows(userId) {
   if (!userId) return 0;
-  // Hydrate OUTSIDE coin lock (matchmaker outer). Under users write only check memory.
+  // P0: hold all matchmaker locks through coin credit so multi-worker join cannot
+  // insert a durable session between "no session" check and refund mint.
+  // Never call under withUsersWrite (lock order: matchmaker outer, users inner).
   try {
-    const { hydrateAllMatchmakers, userInAnyMatchmakerSession } = await import('./gamesMatchmakerStore.mjs');
-    await hydrateAllMatchmakers().catch(() => {});
-    if (userInAnyMatchmakerSession(userId)) {
-      console.warn('[games] refundUserEscrows skipped — live matchmaker session', { userId });
+    const {
+      withAllMatchmakersHeld,
+      userInAnyMatchmakerSession,
+      listRegisteredMatchmakerGameIds,
+    } = await import('./gamesMatchmakerStore.mjs');
+    if (!listRegisteredMatchmakerGameIds().length) {
+      // Game modules not registered — refuse mint (safer than blind refund)
+      console.warn('[games] refundUserEscrows aborted — no matchmakers registered', { userId });
       return 0;
     }
-  } catch (e) {
-    console.warn('[games] refundUserEscrows pre-check failed — abort refund', userId, e);
-    return 0;
-  }
-  return runCoinTransaction(async () => {
-    // Memory-only re-check under coin lock (never getUserSlice / matchmaker write here)
-    try {
-      const { userInAnyMatchmakerSession } = await import('./gamesMatchmakerStore.mjs');
+    return await withAllMatchmakersHeld(async () => {
       if (userInAnyMatchmakerSession(userId)) {
-        console.warn('[games] refundUserEscrows skipped — live arcade session under coin lock', { userId });
+        console.warn('[games] refundUserEscrows skipped — live matchmaker session', { userId });
         return 0;
       }
-    } catch (e) {
-      console.warn('[games] refundUserEscrows live-session check failed — abort refund', userId, e);
-      return 0;
-    }
-    const db = await loadUsersDb();
-    const user = db.users.find((u) => u.id === userId);
-    if (!user || user.role === 'bot' || !user.gameEscrows?.length) return 0;
-    let refunded = 0;
-    for (const e of user.gameEscrows) {
-      logQueueRefund(user, {
-        gameId: e.gameId,
-        chatLabel: e.chatLabel,
-        bet: e.amount,
-        amount: e.amount,
+      return runCoinTransaction(async () => {
+        // Re-check under coin lock while still holding all MM locks
+        if (userInAnyMatchmakerSession(userId)) {
+          console.warn('[games] refundUserEscrows skipped — live arcade session under coin lock', { userId });
+          return 0;
+        }
+        const db = await loadUsersDb();
+        const user = db.users.find((u) => u.id === userId);
+        if (!user || user.role === 'bot' || !user.gameEscrows?.length) return 0;
+        let refunded = 0;
+        for (const e of user.gameEscrows) {
+          logQueueRefund(user, {
+            gameId: e.gameId,
+            chatLabel: e.chatLabel,
+            bet: e.amount,
+            amount: e.amount,
+          });
+          refunded += 1;
+        }
+        user.gameEscrows = [];
+        user.updatedAt = Date.now();
+        await saveUsersDb(db);
+        return refunded;
       });
-      refunded += 1;
-    }
-    user.gameEscrows = [];
-    user.updatedAt = Date.now();
-    await saveUsersDb(db);
-    return refunded;
-  });
+    });
+  } catch (e) {
+    console.warn('[games] refundUserEscrows failed — abort refund (no mint)', userId, e);
+    return 0;
+  }
 }
