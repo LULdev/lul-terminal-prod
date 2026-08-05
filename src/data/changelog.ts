@@ -23,6 +23,20 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '3.59.0',
+    title: 'P0 lock-order fix: no matchmaker under users write; coin merge; shoutbox busyRef',
+    date: 'Aug 4, 2026',
+    highlight: true,
+    items: [
+      { priority: 'P0', text: 'P0 — userHasActiveArcadeSession / session guards never getUserSlice (no users→matchmaker deadlock).' },
+      { priority: 'P0', text: 'P0 — refundUserEscrows hydrates matchmakers OUTSIDE coin lock; under lock memory-only check.' },
+      { priority: 'P1', text: 'P1 — withMatchmakerRead (no writeDisk thrash); buildUserSlice write only when user in queue/match.' },
+      { priority: 'P1', text: 'P1 — AuthContext.refresh + terminal achievement + Profile claim merge-protect lulCoins.' },
+      { priority: 'P2', text: 'P2 — Shoutbox delete/bulk/clear/broadcast actingRef; UserBar balance NaN-safe.' },
+      { priority: 'P9', text: 'P9 — Version 3.59.0 residual after 3.58.0 audit findings.' },
+    ],
+  },
+  {
     version: '3.58.0',
     title: '25-round full audit Server+Client P0–P9: matchmaker slice persist, settle mm, admin busyRefs',
     date: 'Aug 4, 2026',

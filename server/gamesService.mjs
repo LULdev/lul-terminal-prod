@@ -146,17 +146,23 @@ export async function leaveAllGameQueues(userId) {
 }
 
 /**
- * True when user still has an in-memory queue entry or **playing** match.
+ * True when user still has a queue entry or **playing** match (durable matchmaker).
  * Done matches kept for UI polling (MATCH_DONE_TTL) must NOT block escrow refunds.
+ *
+ * Must NOT call getUserSlice (would take matchmaker locks / mutate under users write).
+ * Hydrates from disk only when NOT inside withUsersWrite (lock order: matchmaker outer).
  */
 export async function userHasActiveArcadeSession(userId) {
   if (!userId) return false;
-  const slices = await Promise.all(GAME_IDS.map((id) => GAME_REGISTRY[id].getUserSlice(userId)));
-  return slices.some((slice) => {
-    if (slice?.inQueue) return true;
-    const m = slice?.activeMatch;
-    return Boolean(m && m.status === 'playing');
-  });
+  const { isInsideUsersWrite } = await import('./auth/authStore.mjs');
+  const {
+    hydrateAllMatchmakers,
+    userInAnyMatchmakerSession,
+  } = await import('./gamesMatchmakerStore.mjs');
+  if (!isInsideUsersWrite()) {
+    await hydrateAllMatchmakers().catch(() => {});
+  }
+  return userInAnyMatchmakerSession(userId);
 }
 
 export async function getCoinFeed(userId, limit = 40) {

@@ -144,12 +144,23 @@ export async function refundAllEscrowsOnBoot() {
 /** Refund persisted escrows for one user when arcade cleanup cannot complete. */
 export async function refundUserEscrows(userId) {
   if (!userId) return 0;
+  // Hydrate OUTSIDE coin lock (matchmaker outer). Under users write only check memory.
+  try {
+    const { hydrateAllMatchmakers, userInAnyMatchmakerSession } = await import('./gamesMatchmakerStore.mjs');
+    await hydrateAllMatchmakers().catch(() => {});
+    if (userInAnyMatchmakerSession(userId)) {
+      console.warn('[games] refundUserEscrows skipped — live matchmaker session', { userId });
+      return 0;
+    }
+  } catch (e) {
+    console.warn('[games] refundUserEscrows pre-check failed — abort refund', userId, e);
+    return 0;
+  }
   return runCoinTransaction(async () => {
-    // Re-check under coin lock so a concurrent join cannot be stripped after it escrowed
-    // (leaveAll then refund without lock was TOCTOU free-stake / double-pay risk).
+    // Memory-only re-check under coin lock (never getUserSlice / matchmaker write here)
     try {
-      const { userHasActiveArcadeSession } = await import('./gamesService.mjs');
-      if (await userHasActiveArcadeSession(userId)) {
+      const { userInAnyMatchmakerSession } = await import('./gamesMatchmakerStore.mjs');
+      if (userInAnyMatchmakerSession(userId)) {
         console.warn('[games] refundUserEscrows skipped — live arcade session under coin lock', { userId });
         return 0;
       }

@@ -841,8 +841,19 @@ export function buildUserSlice({ statKey, queue, activeMatches, publicMatch, ext
         activeMatch: resolveActiveMatchForSlice({ queue, activeMatches, userId, publicMatch }),
       };
     };
-    // Persist heartbeat + stale sweeps for durable multi-worker matchmaker
-    if (mm?.gameId) return withMatchmakerWrite(mm, run);
+    // Heartbeat/sweep need write; pure status can still hydrate via write path when in queue
+    if (mm?.gameId) {
+      const needsWrite = Boolean(userId && (
+        queue.some((q) => q.userId === userId)
+        || [...activeMatches.values()].some(
+          (m) => m.status !== 'done'
+            && (m.player1?.userId === userId || m.player2?.userId === userId),
+        )
+      ));
+      return needsWrite
+        ? withMatchmakerWrite(mm, run)
+        : withMatchmakerRead(mm, run);
+    }
     return run();
   };
 }
@@ -875,8 +886,13 @@ export async function buildLeaderboard(statKey) {
   };
 }
 
-export { createMatchmaker, withMatchmakerWrite, hydrateMatchmaker } from './gamesMatchmakerStore.mjs';
-import { withMatchmakerWrite } from './gamesMatchmakerStore.mjs';
+export {
+  createMatchmaker,
+  withMatchmakerWrite,
+  withMatchmakerRead,
+  hydrateMatchmaker,
+} from './gamesMatchmakerStore.mjs';
+import { withMatchmakerWrite, withMatchmakerRead } from './gamesMatchmakerStore.mjs';
 
 export async function joinMatchQueue(params) {
   const mm = params.mm;

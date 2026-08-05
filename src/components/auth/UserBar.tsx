@@ -149,7 +149,7 @@ export function UserBar({ onNavigate }: UserBarProps) {
     }
   };
 
-  const balance = user!.lulCoins ?? 0;
+  const balance = Number.isFinite(Number(user!.lulCoins)) ? Number(user!.lulCoins) : 0;
 
   return (
     <div className="userbar-shell userbar-shell--authed shrink-0">

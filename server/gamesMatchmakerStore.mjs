@@ -152,8 +152,18 @@ export function isInsideMatchmakerWrite() {
 /**
  * Serialize matchmaker mutations for one game across processes.
  * Reloads disk → task(mm) → persists. Re-entrant for nested settle/expire.
+ * Never call while holding withUsersWrite (lock order: matchmaker outer, users inner).
  */
 export function withMatchmakerWrite(mmOrGameId, task) {
+  return withMatchmakerAccess(mmOrGameId, task, { write: true });
+}
+
+/**
+ * Lock + reload from disk + run task. Writes only when `opts.write` is true
+ * (default true for withMatchmakerWrite). Use write:false for session checks /
+ * polls that must not thrash disk or nest under users write incorrectly.
+ */
+export function withMatchmakerAccess(mmOrGameId, task, { write = true } = {}) {
   const gameId = typeof mmOrGameId === 'string'
     ? String(mmOrGameId)
     : String(mmOrGameId?.gameId ?? '');
@@ -163,13 +173,10 @@ export function withMatchmakerWrite(mmOrGameId, task) {
 
   const store = mmWriteAls.getStore();
   if (store?.gameId === gameId) {
-    // Nested under same game lock — run inline on already-hydrated mm
     const mm = store.mm ?? createMatchmaker(gameId);
     return Promise.resolve().then(() => task(mm));
   }
 
-  // Nested under a different game's matchmaker write — still take this game's lock
-  // (rare; avoid holding two forever by sequential lock acquisition).
   const mm = createMatchmaker(gameId);
   let chain = writeChainByGame.get(gameId) ?? Promise.resolve();
   const run = chain.then(() =>
@@ -180,7 +187,7 @@ export function withMatchmakerWrite(mmOrGameId, task) {
         if (disk) applyDiskToMm(mm, disk);
         return mmWriteAls.run({ gameId, mm }, async () => {
           const result = await task(mm);
-          await writeDisk(gameId, mm);
+          if (write) await writeDisk(gameId, mm);
           return result;
         });
       },
@@ -194,14 +201,19 @@ export function withMatchmakerWrite(mmOrGameId, task) {
   return run;
 }
 
-/** Hydrate from disk under lock (no-op mutate). Call before session checks / boot. */
-export async function hydrateMatchmaker(gameId) {
-  return withMatchmakerWrite(gameId, async (mm) => mm);
+/** Read-only hydrate (no writeDisk). Safe for multi-worker refresh without thrash. */
+export function withMatchmakerRead(mmOrGameId, task) {
+  return withMatchmakerAccess(mmOrGameId, task, { write: false });
 }
 
-/** Hydrate every registered matchmaker (import game modules first). */
+/** Hydrate from disk under lock (no-op mutate). Call before session checks / boot. */
+export async function hydrateMatchmaker(gameId) {
+  return withMatchmakerRead(gameId, async (mm) => mm);
+}
+
+/** Hydrate every registered matchmaker (import game modules first). Sorted lock order. */
 export async function hydrateAllMatchmakers() {
-  const ids = listRegisteredMatchmakerGameIds();
+  const ids = listRegisteredMatchmakerGameIds().sort();
   for (const id of ids) {
     await hydrateMatchmaker(id).catch((e) => {
       console.error('[games] matchmaker hydrate failed', id, e);
@@ -212,11 +224,27 @@ export async function hydrateAllMatchmakers() {
 
 /**
  * True if user is in any registered matchmaker queue or non-done match.
- * Call after hydrateAllMatchmakers (or per-game hydrate).
+ * In-memory only — call after hydrateAllMatchmakers when freshness matters.
+ * Safe under users write lock (no matchmaker acquisition).
  */
 export function userInAnyMatchmakerSession(userId) {
   if (!userId) return false;
   for (const mm of mmByGameId.values()) {
+    if (mm.queue.some((q) => q.userId === userId)) return true;
+    for (const m of mm.activeMatches.values()) {
+      if (m.status === 'done') continue;
+      if (m.player1?.userId === userId || m.player2?.userId === userId) return true;
+    }
+  }
+  return false;
+}
+
+/** In-memory: queue or playing match on a game other than exceptGameId. */
+export function userInOtherMatchmakerSession(userId, exceptGameId) {
+  if (!userId) return false;
+  const except = exceptGameId ? String(exceptGameId) : null;
+  for (const [id, mm] of mmByGameId.entries()) {
+    if (except && id === except) continue;
     if (mm.queue.some((q) => q.userId === userId)) return true;
     for (const m of mm.activeMatches.values()) {
       if (m.status === 'done') continue;

@@ -131,7 +131,20 @@ export const TerminalDiagnosticsPane = memo(function TerminalDiagnosticsPane({
     authApi.recordTerminalCommand(command, proof)
       .then((data) => {
         handleUnlocks(data.newUnlocks ?? [], data.unlockRewards);
-        if (data.user) patchUser(data.user);
+        if (data.user) {
+          patchUser((prev) => {
+            if (!prev) return data.user!;
+            const incoming = data.user!;
+            const prevCoins = Number(prev.lulCoins);
+            const incCoins = Number(incoming.lulCoins);
+            const keepLocal =
+              Number.isFinite(prevCoins)
+              && Number.isFinite(incCoins)
+              && prevCoins !== incCoins
+              && (Number(incoming.updatedAt) || 0) <= (Number(prev.updatedAt) || 0);
+            return { ...prev, ...incoming, ...(keepLocal ? { lulCoins: prev.lulCoins } : {}) };
+          });
+        }
       })
       .catch((e) => {
         requestAchievementProofRemint();

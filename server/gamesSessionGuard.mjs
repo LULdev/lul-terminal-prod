@@ -3,36 +3,56 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-async function getGamesStateForUser(userId) {
-  const { GAME_IDS, GAME_REGISTRY } = await import('./gameRegistry.mjs');
-  const slices = await Promise.all(GAME_IDS.map((id) => GAME_REGISTRY[id].getUserSlice(userId)));
-  const games = {};
-  GAME_IDS.forEach((id, i) => {
-    games[id] = slices[i];
-  });
-  return { games };
+/**
+ * Session asserts use durable matchmaker memory (hydrate first when safe).
+ * Never call getUserSlice here — that acquires matchmaker write under users lock (deadlock).
+ */
+async function ensureArcadeSessionView() {
+  const { isInsideUsersWrite } = await import('./auth/authStore.mjs');
+  const { hydrateAllMatchmakers } = await import('./gamesMatchmakerStore.mjs');
+  if (!isInsideUsersWrite()) {
+    await hydrateAllMatchmakers().catch(() => {});
+  }
 }
 
 export async function assertNoPlayingMatchAnywhere(userId) {
   if (!userId) return;
-  const state = await getGamesStateForUser(userId);
-  for (const slice of Object.values(state.games)) {
-    if (slice?.activeMatch?.status === 'playing') {
-      throw new Error('Finish your active match first');
+  await ensureArcadeSessionView();
+  const { userInAnyMatchmakerSession } = await import('./gamesMatchmakerStore.mjs');
+  if (userInAnyMatchmakerSession(userId)) {
+    // May include queue — narrow to playing matches only
+    const { listRegisteredMatchmakerGameIds, getMatchmaker } = await import('./gamesMatchmakerStore.mjs');
+    for (const id of listRegisteredMatchmakerGameIds()) {
+      const mm = getMatchmaker(id);
+      if (!mm) continue;
+      for (const m of mm.activeMatches.values()) {
+        if (m.status !== 'playing') continue;
+        if (m.player1?.userId === userId || m.player2?.userId === userId) {
+          throw new Error('Finish your active match first');
+        }
+      }
     }
   }
 }
 
 export async function assertNoOtherArcadeSession(userId, exceptGameId) {
   if (!userId) return;
-  const state = await getGamesStateForUser(userId);
-  for (const [id, slice] of Object.entries(state.games)) {
-    if (id === exceptGameId) continue;
-    if (slice?.activeMatch?.status === 'playing') {
-      throw new Error('Finish your active match before joining another game');
-    }
-    if (slice?.inQueue) {
+  await ensureArcadeSessionView();
+  const { userInOtherMatchmakerSession, listRegisteredMatchmakerGameIds, getMatchmaker } =
+    await import('./gamesMatchmakerStore.mjs');
+  if (!userInOtherMatchmakerSession(userId, exceptGameId)) return;
+  for (const id of listRegisteredMatchmakerGameIds()) {
+    if (exceptGameId && id === exceptGameId) continue;
+    const mm = getMatchmaker(id);
+    if (!mm) continue;
+    if (mm.queue.some((q) => q.userId === userId)) {
       throw new Error('Leave your other game queue before joining');
+    }
+    for (const m of mm.activeMatches.values()) {
+      if (m.status !== 'playing') continue;
+      if (m.player1?.userId === userId || m.player2?.userId === userId) {
+        throw new Error('Finish your active match before joining another game');
+      }
     }
   }
 }

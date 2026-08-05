@@ -181,10 +181,12 @@ export function AdminShoutboxPanel() {
   }, [success]);
 
   const flash = (msg: string) => setSuccess(msg);
+  const actingRef = useRef(false);
 
   const handleDelete = async (msg: ShoutboxMessage) => {
-    if (acting || broadcasting) return;
+    if (actingRef.current || acting || broadcasting) return;
     if (!confirm(`Delete message from @${msg.username}?`)) return;
+    actingRef.current = true;
     setActing(msg.id);
     try {
       await adminDeleteShoutboxMessage(msg.id);
@@ -194,15 +196,17 @@ export function AdminShoutboxPanel() {
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Delete failed');
     } finally {
+      actingRef.current = false;
       setActing(null);
     }
   };
 
   const handleBulkDelete = async () => {
-    if (acting || broadcasting) return;
+    if (actingRef.current || acting || broadcasting) return;
     const ids = [...selected];
     if (!ids.length) return;
     if (!confirm(`Delete ${ids.length} selected message(s)?`)) return;
+    actingRef.current = true;
     setActing('bulk');
     try {
       const r = await adminBulkDeleteShoutboxMessages(ids);
@@ -212,13 +216,15 @@ export function AdminShoutboxPanel() {
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Bulk delete failed');
     } finally {
+      actingRef.current = false;
       setActing(null);
     }
   };
 
   const handleClear = async () => {
-    if (acting || broadcasting) return;
+    if (actingRef.current || acting || broadcasting) return;
     if (!confirm('Clear the entire shoutbox lobby? A system notice will be posted.')) return;
+    actingRef.current = true;
     setActing('clear');
     try {
       const r = await adminClearShoutbox();
@@ -228,14 +234,16 @@ export function AdminShoutboxPanel() {
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Clear failed');
     } finally {
+      actingRef.current = false;
       setActing(null);
     }
   };
 
   const handleBroadcast = async () => {
-    if (acting || broadcasting) return;
+    if (actingRef.current || acting || broadcasting) return;
     const text = broadcast.trim();
     if (!text) return;
+    actingRef.current = true;
     setBroadcasting(true);
     try {
       await adminBroadcastShoutbox(text);
@@ -245,6 +253,7 @@ export function AdminShoutboxPanel() {
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Broadcast failed');
     } finally {
+      actingRef.current = false;
       setBroadcasting(false);
     }
   };
@@ -257,7 +266,6 @@ export function AdminShoutboxPanel() {
     return msg?.role;
   }, [data]);
 
-  const actingRef = useRef(false);
   const runMod = async (username: string, action: 'ban' | 'unban' | 'mute' | 'unmute', minutes?: number) => {
     if (actingRef.current || acting || broadcasting) return;
     if ((action === 'ban' || action === 'mute') && isProtectedModTarget(resolveModRole(username))) {

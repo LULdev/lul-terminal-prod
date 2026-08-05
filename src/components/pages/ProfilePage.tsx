@@ -350,6 +350,8 @@ export function ProfilePage({ routeUsername, profileTabReadyTick = 0, onNavigate
                 bonus={dailyBonus}
                 compact
                 onClaimed={(coins, amount) => {
+                  const c = Math.floor(Number(coins) || 0);
+                  patchUser((u) => (u ? { ...u, lulCoins: c } : u));
                   void refresh();
                   setCoinFeedTick((t) => t + 1);
                   flashSuccess(

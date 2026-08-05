@@ -159,7 +159,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const data = await authApi.fetchMe();
       if (gen !== refreshGenRef.current) return;
       if (data.user) {
-        setUser(data.user);
+        // Merge: protect fresher arcade-patched lulCoins from stale /me snapshots
+        setUser((prev) => {
+          const incoming = data.user!;
+          if (!prev) return incoming;
+          const prevCoins = Number(prev.lulCoins);
+          const incCoins = Number(incoming.lulCoins);
+          const keepLocalCoins =
+            Number.isFinite(prevCoins)
+            && Number.isFinite(incCoins)
+            && prevCoins !== incCoins
+            && (Number(incoming.updatedAt) || 0) <= (Number(prev.updatedAt) || 0);
+          return {
+            ...prev,
+            ...incoming,
+            ...(keepLocalCoins ? { lulCoins: prev.lulCoins } : {}),
+          };
+        });
         setPermissions(data.permissions ?? defaultPermissions);
         setAccountsSubmitted(data.stats?.accountsSubmitted ?? 0);
         resetSessionInvalidation();
