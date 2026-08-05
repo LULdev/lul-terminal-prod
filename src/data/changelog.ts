@@ -23,6 +23,19 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '3.60.0',
+    title: '25-round full audit Server+Client P0–P9: scrypt off lock, admin purge/xml/gallery busyRefs',
+    date: 'Aug 4, 2026',
+    highlight: true,
+    items: [
+      { priority: 'P1', text: 'P1 — registerUser: password hash outside withUsersWrite (scrypt no longer blocks coin RMW).' },
+      { priority: 'P1', text: 'P1 — updateProfile: verify+hash scrypt outside runCoinTransaction; assign hash under lock only.' },
+      { priority: 'P2', text: 'P2 — Admin Pastes delete savingRef; Events purge busyRef; Analytics purge purgeRef.' },
+      { priority: 'P2', text: 'P2 — XML crawl/saveCrawl/saveXml busyRefs + mounted guards; image favorite + paste pin busyRefs.' },
+      { priority: 'P9', text: 'P9 — Version 3.60.0; every fix listed (full system audit after 3.59).' },
+    ],
+  },
+  {
     version: '3.59.0',
     title: 'P0 lock-order fix: no matchmaker under users write; coin merge; shoutbox busyRef',
     date: 'Aug 4, 2026',

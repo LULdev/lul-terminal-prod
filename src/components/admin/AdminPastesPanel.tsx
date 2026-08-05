@@ -213,7 +213,9 @@ export function AdminPastesPanel() {
   };
 
   const remove = async (id: string, title: string) => {
+    if (savingRef.current) return;
     if (!confirm(`Delete paste "${title}"? This cannot be undone.`)) return;
+    savingRef.current = true;
     setActing(id);
     setError('');
     try {
@@ -225,6 +227,7 @@ export function AdminPastesPanel() {
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Delete failed');
     } finally {
+      savingRef.current = false;
       setActing(null);
     }
   };

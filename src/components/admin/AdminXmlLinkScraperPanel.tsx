@@ -127,6 +127,7 @@ export function AdminXmlLinkScraperPanel() {
   const [startUrl, setStartUrl] = useState('');
   const [crawlResult, setCrawlResult] = useState<WebsiteCrawlResult | null>(null);
   const [crawlBusy, setCrawlBusy] = useState(false);
+  const crawlBusyRef = useRef(false);
   const [crawlMsg, setCrawlMsg] = useState('');
   const [crawlLogs, setCrawlLogs] = useState<string[]>([]);
   const [crawlProgress, setCrawlProgress] = useState({
@@ -147,6 +148,7 @@ export function AdminXmlLinkScraperPanel() {
   const [scraperSkills, setScraperSkills] = useState<WebsiteFeature[]>([]);
   const [colonDbStats, setColonDbStats] = useState<ColonDbStats | null>(null);
   const [dbSaving, setDbSaving] = useState(false);
+  const dbSavingRef = useRef(false);
   const [dbMsg, setDbMsg] = useState('');
   const [schemeFilter, setSchemeFilter] = useState('');
   const [crawlView, setCrawlView] = useState<'atlas' | 'pages' | 'depth'>('atlas');
@@ -344,11 +346,13 @@ export function AdminXmlLinkScraperPanel() {
   };
 
   const runCrawl = async () => {
+    if (crawlBusyRef.current) return;
     const norm = normalizeStartUrl(startUrl);
     if (!norm) {
       setCrawlMsg('Enter a valid URL');
       return;
     }
+    crawlBusyRef.current = true;
     setStartUrl(norm);
     saveCrawlSettings();
     setCrawlBusy(true);
@@ -382,6 +386,7 @@ export function AdminXmlLinkScraperPanel() {
         setCrawlProgress({ ...j.progress, currentUrl: j.progress.currentUrl ?? '' });
         if (j.logs?.length) setCrawlLogs(j.logs.slice(-12));
       }, 700, { signal: abort.signal });
+      if (!mountedRef.current) return;
       if (job.result) {
         setCrawlResult(job.result);
         const msg = job.status === 'cancelled'
@@ -404,46 +409,57 @@ export function AdminXmlLinkScraperPanel() {
       }
     } catch (e) {
       if (e instanceof DOMException && e.name === 'AbortError') return;
-      setCrawlMsg(e instanceof Error ? e.message : 'Crawl failed');
+      if (mountedRef.current) setCrawlMsg(e instanceof Error ? e.message : 'Crawl failed');
     } finally {
-      setCrawlBusy(false);
+      crawlBusyRef.current = false;
+      if (mountedRef.current) setCrawlBusy(false);
       activeJobRef.current = null;
     }
   };
 
   const saveCrawlToDb = async () => {
+    if (dbSavingRef.current) return;
     if (!filteredAtlas.length) {
       setDbMsg('Nothing to save');
       return;
     }
+    dbSavingRef.current = true;
     setDbSaving(true);
     setDbMsg('Saving to database…');
     try {
       const r = await saveColonAtlasToDatabase(filteredAtlas, crawlResult?.siteName);
       await refreshDbStats();
-      setDbMsg(`DB: +${r.added} new · ${r.updated} updated · ${r.skipped} skipped · ${r.total} total`);
+      if (mountedRef.current) {
+        setDbMsg(`DB: +${r.added} new · ${r.updated} updated · ${r.skipped} skipped · ${r.total} total`);
+      }
     } catch (e) {
-      setDbMsg(e instanceof Error ? e.message : 'Save failed');
+      if (mountedRef.current) setDbMsg(e instanceof Error ? e.message : 'Save failed');
     } finally {
-      setDbSaving(false);
+      dbSavingRef.current = false;
+      if (mountedRef.current) setDbSaving(false);
     }
   };
 
   const saveXmlToDb = async () => {
+    if (dbSavingRef.current) return;
     if (!filtered.length) {
       setDbMsg('No matches to save');
       return;
     }
+    dbSavingRef.current = true;
     setDbSaving(true);
     setDbMsg('Saving XML matches…');
     try {
       const r = await saveXmlMatchesToDatabase(filtered, fileName || 'xml-scan');
       await refreshDbStats();
-      setDbMsg(`DB: +${r.added} new · ${r.updated} updated · ${r.total} total`);
+      if (mountedRef.current) {
+        setDbMsg(`DB: +${r.added} new · ${r.updated} updated · ${r.total} total`);
+      }
     } catch (e) {
-      setDbMsg(e instanceof Error ? e.message : 'Save failed');
+      if (mountedRef.current) setDbMsg(e instanceof Error ? e.message : 'Save failed');
     } finally {
-      setDbSaving(false);
+      dbSavingRef.current = false;
+      if (mountedRef.current) setDbSaving(false);
     }
   };
 

@@ -129,13 +129,17 @@ export function MyImageGallery({ refreshKey = 0, onSelectImage }: MyImageGallery
     });
   };
 
+  const favBusyRef = useRef(false);
   const toggleFavorite = async (img: HostedImageMeta) => {
+    if (favBusyRef.current || busyRef.current) return;
+    favBusyRef.current = true;
     try {
       const updated = await updateHostedImage(img.id, { favorite: !img.favorite });
       setImages((prev) => prev.map((i) => (i.id === img.id ? updated : i)));
       if (detail?.id === img.id) setDetail(updated);
       load().catch(() => {});
     } catch { /* ignore */ }
+    finally { favBusyRef.current = false; }
   };
 
   const handleDelete = async (id: string) => {

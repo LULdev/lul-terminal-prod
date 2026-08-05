@@ -140,12 +140,16 @@ export function MyPasteGallery({ refreshKey = 0, onDeleted, onFork }: Props) {
     }
   };
 
+  const pinBusyRef = useRef(false);
   const onTogglePin = async (p: PasteMeta) => {
+    if (pinBusyRef.current || deletingRef.current) return;
+    pinBusyRef.current = true;
     try {
       const updated = await updatePasteMeta(p.id, { pinned: !p.pinned });
       setPastes((prev) => prev.map((x) => (x.id === p.id ? { ...x, pinned: updated.pinned } : x)));
       load().catch(() => {});
     } catch { /* ignore */ }
+    finally { pinBusyRef.current = false; }
   };
 
   const forkingRef = useRef(false);

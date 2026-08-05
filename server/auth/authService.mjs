@@ -99,6 +99,9 @@ export async function registerUser(payload, req) {
   const { canonicalEmail: canonEmail } = await import('./emailCanonical.mjs');
   const registrationSignals = extractRegistrationSignals({ ...payload, email }, req);
 
+  // Hash outside users write lock (scrypt must not block coin/auth RMW)
+  const passwordHash = await hashPassword(password);
+
   return withUsersWrite(async () => {
   const db = await loadUsersDb();
   await assertRegistrationAllowed({ ...payload, email }, registrationSignals, db, req);
@@ -123,7 +126,7 @@ export async function registerUser(payload, req) {
     id: newUserId(),
     username,
     email,
-    passwordHash: await hashPassword(password),
+    passwordHash,
     role: 'user',
     active: true,
     displayName,
@@ -408,6 +411,41 @@ export async function revokeUserSessions(userId, { keepToken = null } = {}) {
 
 export async function updateProfile(userId, payload, { keepToken = null } = {}) {
   let passwordChanged = false;
+
+  // scrypt OUTSIDE coin/users lock — only assign precomputed hash inside
+  let verifiedCurrentForEmail = false;
+  let verifiedCurrentForPassword = false;
+  let newPasswordHash = null;
+  const needsCurrent =
+    (payload.password != null && String(payload.password).length > 0)
+    || (payload.email != null);
+  if (needsCurrent || payload.password) {
+    const snap = await loadUsersDb();
+    const snapUser = snap.users.find((u) => u.id === userId);
+    if (!snapUser) throw new Error('User not found');
+    if (payload.email != null) {
+      const email = normalizeEmail(payload.email);
+      if (!email.includes('@')) throw new Error('Invalid email');
+      if (email !== normalizeEmail(snapUser.email)) {
+        const current = String(payload.currentPassword ?? '');
+        if (!current || !(await verifyPassword(current, snapUser.passwordHash))) {
+          throw new Error('Current password required to change email');
+        }
+        verifiedCurrentForEmail = true;
+      }
+    }
+    if (payload.password) {
+      const current = String(payload.currentPassword ?? '');
+      if (!current || !(await verifyPassword(current, snapUser.passwordHash))) {
+        throw new Error('Current password required to change password');
+      }
+      verifiedCurrentForPassword = true;
+      const pw = String(payload.password);
+      if (pw.length < 6) throw new Error('Password min. 6 characters');
+      newPasswordHash = await hashPassword(pw);
+    }
+  }
+
   const result = await runCoinTransaction(async () => {
     const db = await loadUsersDb();
     const user = db.users.find((u) => u.id === userId);
@@ -432,23 +470,26 @@ export async function updateProfile(userId, payload, { keepToken = null } = {}) 
       const email = normalizeEmail(payload.email);
       if (!email.includes('@')) throw new Error('Invalid email');
       if (email !== normalizeEmail(user.email)) {
-        const current = String(payload.currentPassword ?? '');
-        if (!current || !(await verifyPassword(current, user.passwordHash))) {
-          throw new Error('Current password required to change email');
+        // Must have verified outside; re-check hash only if race changed password
+        if (!verifiedCurrentForEmail) {
+          const current = String(payload.currentPassword ?? '');
+          if (!current || !(await verifyPassword(current, user.passwordHash))) {
+            throw new Error('Current password required to change email');
+          }
         }
       }
       if (db.users.some((u) => u.id !== userId && u.email === email)) throw new Error('Email taken');
       user.email = email;
     }
 
-    if (payload.password) {
-      const current = String(payload.currentPassword ?? '');
-      if (!current || !(await verifyPassword(current, user.passwordHash))) {
-        throw new Error('Current password required to change password');
+    if (payload.password && newPasswordHash) {
+      if (!verifiedCurrentForPassword) {
+        const current = String(payload.currentPassword ?? '');
+        if (!current || !(await verifyPassword(current, user.passwordHash))) {
+          throw new Error('Current password required to change password');
+        }
       }
-      const pw = String(payload.password);
-      if (pw.length < 6) throw new Error('Password min. 6 characters');
-      user.passwordHash = await hashPassword(pw);
+      user.passwordHash = newPasswordHash;
       passwordChanged = true;
     }
 

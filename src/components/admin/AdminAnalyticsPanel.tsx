@@ -447,6 +447,7 @@ export function AdminAnalyticsPanel() {
   const [msg, setMsg] = useState('');
   const loadGenRef = useRef(0);
   const detailGenRef = useRef(0);
+  const purgeRef = useRef(false);
   const mountedRef = useRef(true);
 
   useEffect(() => {
@@ -523,13 +524,17 @@ export function AdminAnalyticsPanel() {
   };
 
   const doPurge = async () => {
+    if (purgeRef.current) return;
     if (!confirm('Trim old events to 2000?')) return;
+    purgeRef.current = true;
     try {
       const r = await purgeAnalyticsEvents(2000);
       setMsg(`${r.removed} events removed (${r.before} → ${r.after})`);
       await load();
     } catch (e) {
       setMsg(e instanceof Error ? e.message : 'Purge failed');
+    } finally {
+      purgeRef.current = false;
     }
   };
 

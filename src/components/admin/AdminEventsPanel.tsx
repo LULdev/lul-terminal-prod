@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useMountedLoad } from '../../hooks/useMountedLoad';
 import { Download, RefreshCw, Trash2 } from 'lucide-react';
 import { adminExportEvents, adminPurgeEvents, fetchAdminEvents, type EventsOpsData } from '../../lib/adminModules';
@@ -15,6 +15,7 @@ export function AdminEventsPanel() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const busyRef = useRef(false);
   const { mountedRef, loadGenRef } = useMountedLoad();
 
   const load = useCallback(async () => {
@@ -35,12 +36,15 @@ export function AdminEventsPanel() {
   useEffect(() => { void load(); }, [load]);
 
   const purge = async () => {
+    if (busyRef.current) return;
     if (!confirm('Trim old events (keep 2000)?')) return;
+    busyRef.current = true;
     try {
       const r = await adminPurgeEvents(2000);
       setSuccess(`Removed ${r.removed} events`);
       await load();
     } catch (e) { setError(e instanceof Error ? e.message : 'Purge failed'); }
+    finally { busyRef.current = false; }
   };
 
   const exportJson = async () => {
