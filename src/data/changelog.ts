@@ -23,6 +23,18 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '3.63.0',
+    title: 'P1 multi-worker dual-session: hold all MMs through join assert+deduct',
+    date: 'Aug 6, 2026',
+    highlight: true,
+    items: [
+      { priority: 'P1', text: 'P1 — withMatchmakersHeldForJoin: all MM locks (current write, others read) through session assert + stake deduct.' },
+      { priority: 'P1', text: 'P1 — joinMatchQueue / RPS joinQueue / TTT joinTttQueue use held multi-MM (no TOCTOU dual-game stakes).' },
+      { priority: 'P1', text: 'P1 — Connect4/Nim/instant joins inherit via joinMatchQueue wrapper.' },
+      { priority: 'P9', text: 'P9 — Version 3.63.0 multi-worker dual-session harden after 3.62 escrow P0.' },
+    ],
+  },
+  {
     version: '3.62.0',
     title: 'P0 escrow refund: hold all matchmaker locks during residual credit (no free money)',
     date: 'Aug 5, 2026',

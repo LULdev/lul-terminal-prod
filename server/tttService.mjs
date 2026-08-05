@@ -32,7 +32,7 @@ import {
   touchQueueHeartbeat,
   withMatchmakerWrite,
   withMatchmakerRead,
-  hydrateOtherMatchmakers,
+  withMatchmakersHeldForJoin,
 } from './gamesCore.mjs';
 import { runCoinTransaction } from './gamesCoinLock.mjs';
 import { assertNoOtherArcadeSession, assertPvpPairReady } from './gamesSessionGuard.mjs';
@@ -578,8 +578,10 @@ export async function getTttUserSlice(userId) {
 }
 
 export async function joinTttQueue(userId, opts = {}) {
-  await hydrateOtherMatchmakers('ttt');
-  return withMatchmakerWrite(mm, () => runCoinTransaction(() => joinTttQueueInner(userId, opts)));
+  // Hold all MMs (ttt write, others read) through assert + deduct — multi-worker dual-session harden
+  return withMatchmakersHeldForJoin('ttt', () =>
+    runCoinTransaction(() => joinTttQueueInner(userId, opts)),
+  );
 }
 
 async function joinTttQueueInner(userId, { bet, mode = 'pvp', botDifficulty = 'normal', roomCode } = {}) {

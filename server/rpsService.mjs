@@ -34,7 +34,7 @@ import {
   touchQueueHeartbeat,
   withMatchmakerWrite,
   withMatchmakerRead,
-  hydrateOtherMatchmakers,
+  withMatchmakersHeldForJoin,
 } from './gamesCore.mjs';
 import { runCoinTransaction } from './gamesCoinLock.mjs';
 import { assertNoOtherArcadeSession, assertPvpPairReady } from './gamesSessionGuard.mjs';
@@ -671,8 +671,10 @@ export async function claimDailyBonus(userId) {
 }
 
 export async function joinQueue(userId, opts = {}) {
-  await hydrateOtherMatchmakers('rps');
-  return withMatchmakerWrite(mm, () => runCoinTransaction(() => joinQueueInner(userId, opts)));
+  // Hold all MMs (rps write, others read) through assert + deduct — multi-worker dual-session harden
+  return withMatchmakersHeldForJoin('rps', () =>
+    runCoinTransaction(() => joinQueueInner(userId, opts)),
+  );
 }
 
 async function joinQueueInner(userId, { bet, mode = 'pvp', botDifficulty = 'normal', roomCode, seriesType } = {}) {

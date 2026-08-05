@@ -246,9 +246,36 @@ export async function withAllMatchmakersHeld(task) {
 }
 
 /**
+ * Hold all matchmakers for a join: other games read-hydrate, current game write.
+ * Keeps locks through task so multi-worker cannot insert dual-game sessions
+ * between session assert and stake deduct (P1 dual-session race).
+ * Sorted lock order globally. Never call under withUsersWrite.
+ *
+ * @param {string} currentGameId
+ * @param {() => Promise<any>|any} task
+ */
+export async function withMatchmakersHeldForJoin(currentGameId, task) {
+  const current = String(currentGameId ?? '');
+  if (!current) {
+    return withAllMatchmakersHeld(task);
+  }
+  const ids = listRegisteredMatchmakerGameIds().sort();
+  if (!ids.length) {
+    return Promise.resolve().then(() => task());
+  }
+  const walk = (i) => {
+    if (i >= ids.length) return Promise.resolve().then(() => task());
+    const id = ids[i];
+    // Write only the game being joined (queue/match mutations); others read-only hydrate
+    return withMatchmakerAccess(id, () => walk(i + 1), { write: id === current });
+  };
+  return walk(0);
+}
+
+/**
  * Hydrate all matchmakers except one game (sorted lock order).
- * Call BEFORE withMatchmakerWrite(thisGame) + coin lock so multi-worker
- * session guards see durable queues/matches on other games (no nest under users write).
+ * Prefer withMatchmakersHeldForJoin for join paths (holds locks through assert+deduct).
+ * Call BEFORE withMatchmakerWrite(thisGame) when only a pre-check is needed.
  */
 export async function hydrateOtherMatchmakers(exceptGameId) {
   const except = String(exceptGameId ?? '');

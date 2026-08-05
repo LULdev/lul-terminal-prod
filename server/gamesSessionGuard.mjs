@@ -6,10 +6,13 @@
 /**
  * Session asserts use durable matchmaker memory (hydrate first when safe).
  * Never call getUserSlice here — that acquires matchmaker write under users lock (deadlock).
+ * Join paths should use withMatchmakersHeldForJoin so memory is fresh under held MM locks
+ * while runCoinTransaction makes isInsideUsersWrite true (hydrate correctly skipped).
  */
 async function ensureArcadeSessionView() {
   const { isInsideUsersWrite } = await import('./auth/authStore.mjs');
   const { hydrateAllMatchmakers } = await import('./gamesMatchmakerStore.mjs');
+  // Under users write: never take matchmaker locks (deadlock). Callers must hold/hydrate MM outer.
   if (!isInsideUsersWrite()) {
     await hydrateAllMatchmakers().catch(() => {});
   }

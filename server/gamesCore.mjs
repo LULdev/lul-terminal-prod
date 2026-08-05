@@ -892,21 +892,24 @@ export {
   withMatchmakerRead,
   hydrateMatchmaker,
   hydrateOtherMatchmakers,
+  withMatchmakersHeldForJoin,
+  withAllMatchmakersHeld,
 } from './gamesMatchmakerStore.mjs';
 import {
   withMatchmakerWrite,
   withMatchmakerRead,
-  hydrateOtherMatchmakers,
+  withMatchmakersHeldForJoin,
   hydrateAllMatchmakers,
 } from './gamesMatchmakerStore.mjs';
 
 export async function joinMatchQueue(params) {
   const mm = params.mm;
-  // Matchmaker lock outer — coin lock inner (never reverse)
+  // All MM locks outer (others read, current write) → coin lock inner.
+  // Holds multi-game view through assertNoOtherArcadeSession + deduct (no dual-session race).
   if (mm?.gameId) {
-    // Multi-worker: refresh other games before session assert under coin lock
-    await hydrateOtherMatchmakers(mm.gameId);
-    return withMatchmakerWrite(mm, () => runCoinTransaction(() => joinMatchQueueInner(params)));
+    return withMatchmakersHeldForJoin(mm.gameId, () =>
+      runCoinTransaction(() => joinMatchQueueInner(params)),
+    );
   }
   await hydrateAllMatchmakers().catch(() => {});
   return runCoinTransaction(() => joinMatchQueueInner(params));
