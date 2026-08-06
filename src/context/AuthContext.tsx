@@ -15,6 +15,7 @@ import { clearViewDedupSessionKeys } from '../lib/viewDedup';
 import {
   bumpSessionEpoch,
   getSessionEpoch,
+  invalidateSession,
   onSessionInvalidated,
   resetSessionInvalidation,
 } from '../lib/sessionEvents';
@@ -184,31 +185,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // (guest boot must not spam DELETE all game queues)
         const hadLocalUser = Boolean(userRef.current);
         if (hadLocalUser) {
-          const epochAtClear = bumpSessionEpoch();
-          void (async () => {
-            if (getSessionEpoch() !== epochAtClear) return;
-            try {
-              const m = await import('../lib/arcadeCleanup');
-              await m.leaveAllArcadeQueuesBestEffort();
-            } catch { /* best-effort */ }
-          })();
+          // P1: same path as hard 401 — single-flight session bus for multi-tab
+          invalidateSession({ epoch: getSessionEpoch() });
         }
-        clearLocalSession();
       }
     } catch (e) {
       if (gen !== refreshGenRef.current) return;
       const status = (e as { status?: number })?.status;
-      // Network blips must not wipe session; hard 401 does full local cleanup
+      // Network blips must not wipe session; hard 401 uses global invalidation bus
       if (status === 401) {
-        const epochAtClear = bumpSessionEpoch();
-        void (async () => {
-          if (getSessionEpoch() !== epochAtClear) return;
-          try {
-            const m = await import('../lib/arcadeCleanup');
-            await m.leaveAllArcadeQueuesBestEffort();
-          } catch { /* best-effort */ }
-        })();
-        clearLocalSession();
+        invalidateSession({ epoch: getSessionEpoch() });
       }
     }
   }, [clearLocalSession]);
@@ -275,11 +261,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // New session cookie is live — advance epoch so stale 401s cannot wipe this login
       bumpSessionEpoch();
       resetSessionInvalidation();
-      if (loginGen !== refreshGenRef.current) {
-        // Cookie set but UI gen advanced — reconcile via /me so we don't orphan cookie-only state
-        void refresh();
-        throw new Error('Sign-in interrupted — please try again');
-      }
+      // Always apply login payload (cookie is already set — never throw "interrupted")
       setUser(data.user);
       if (data.permissions) setPermissions(data.permissions);
       if (data.stats?.accountsSubmitted != null) {
@@ -289,6 +271,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setAuthModal(null);
       clearViewDedupSessionKeys();
       setAuthSuccessTick((t) => t + 1);
+      // Soft reconcile /me; if gen advanced, still refresh in background
+      if (loginGen !== refreshGenRef.current) {
+        void refresh();
+        return;
+      }
       try {
         const me = await authApi.fetchMe();
         if (loginGen !== refreshGenRef.current) return;

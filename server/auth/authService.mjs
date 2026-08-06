@@ -749,7 +749,9 @@ export async function recordAchievementEvent(userId, event, proofNonce) {
   if (!ACHIEVEMENT_EVENT_FLAGS.has(flag)) {
     throw new Error('Unknown achievement event');
   }
-  return runCoinTransaction(async () => {
+  // P1: vault meta outside coin lock; lobby extras after unlock
+  const preAccounts = await countAccountsByCreator(userId).catch(() => 0);
+  const unlockPayload = await runCoinTransaction(async () => {
     const db = await loadUsersDb();
     const user = db.users.find((u) => u.id === userId);
     if (!user) throw new Error('User not found');
@@ -774,18 +776,26 @@ export async function recordAchievementEvent(userId, event, proofNonce) {
       const daily = Number(act.flags[clawKey]) || 0;
       act.flags[clawKey] = daily + 1;
     }
-    const { accountsSubmitted, reportedNotWorkingAccounts, profileStats } = await profileExtrasForUser(user);
-    const newUnlocks = await syncAchievementsOnLoadedUser(user, db, { flag });
+    const newUnlocks = syncAchievements(user, { flag, accountsSubmitted: preAccounts });
     user.updatedAt = Date.now();
     await saveUsersDb(db);
     if (newUnlocks.length) {
       notifyBotAchievements(user.username, newUnlocks).catch(() => {});
     }
-    return {
-      user: enrichUserForClient(user, accountsSubmitted, reportedNotWorkingAccounts, profileStats),
-      ...buildUnlockPayload(newUnlocks),
-    };
+    return { userRow: user, ...buildUnlockPayload(newUnlocks) };
   });
+  const extras = await profileExtrasForUser(unlockPayload.userRow);
+  return {
+    user: enrichUserForClient(
+      unlockPayload.userRow,
+      extras.accountsSubmitted,
+      extras.reportedNotWorkingAccounts,
+      extras.profileStats,
+    ),
+    newUnlocks: unlockPayload.newUnlocks,
+    unlockRewards: unlockPayload.unlockRewards,
+    unlockCoinsTotal: unlockPayload.unlockCoinsTotal,
+  };
 }
 
 const TERMINAL_CATALOG_COMMANDS = new Set(['help', 'commands', 'cmds', 'befehle', 'liste']);
@@ -799,20 +809,33 @@ export async function recordTerminalCommand(userId, command, proofNonce, session
   const cmd = String(command ?? '').trim().toLowerCase().slice(0, 48);
   if (!cmd) throw new Error('Command required');
   if (!RECOGNIZED_TERMINAL_COMMANDS.has(cmd)) throw new Error('Unrecognized command');
-  return runCoinTransaction(async () => {
+
+  // Catalog commands: pure read — never hold coin lock
+  if (TERMINAL_CATALOG_COMMANDS.has(cmd)) {
     const db = await loadUsersDb();
     const user = db.users.find((u) => u.id === userId);
     if (!user) throw new Error('User not found');
-    if (TERMINAL_CATALOG_COMMANDS.has(cmd)) {
-      const { accountsSubmitted, reportedNotWorkingAccounts, profileStats } = await profileExtrasForUser(user);
-      return {
-        user: enrichUserForClient(user, accountsSubmitted, reportedNotWorkingAccounts, profileStats),
-        ...buildUnlockPayload([]),
-      };
-    }
-    if (String(sessionTab ?? '') !== 'dashboard') {
-      throw new Error('Achievement proof invalid for this action');
-    }
+    const extras = await profileExtrasForUser(user);
+    return {
+      user: enrichUserForClient(
+        user,
+        extras.accountsSubmitted,
+        extras.reportedNotWorkingAccounts,
+        extras.profileStats,
+      ),
+      ...buildUnlockPayload([]),
+    };
+  }
+
+  if (String(sessionTab ?? '') !== 'dashboard') {
+    throw new Error('Achievement proof invalid for this action');
+  }
+
+  const preAccounts = await countAccountsByCreator(userId).catch(() => 0);
+  const unlockPayload = await runCoinTransaction(async () => {
+    const db = await loadUsersDb();
+    const user = db.users.find((u) => u.id === userId);
+    if (!user) throw new Error('User not found');
     const act = ensureActivity(user);
     const now = Date.now();
     const lastAt = Number(act.flags?.lastTerminalCommandAt) || 0;
@@ -833,8 +856,8 @@ export async function recordTerminalCommand(userId, command, proofNonce, session
       : cmd === 'self-destruct' || cmd === 'reboot self-destruct'
         ? 'self_destruct'
         : undefined;
-    const { accountsSubmitted, reportedNotWorkingAccounts, profileStats } = await profileExtrasForUser(user);
-    const newUnlocks = await syncAchievementsOnLoadedUser(user, db, {
+    const newUnlocks = syncAchievements(user, {
+      accountsSubmitted: preAccounts,
       incrementCommands: true,
       ...(flag ? { flag } : {}),
     });
@@ -843,19 +866,31 @@ export async function recordTerminalCommand(userId, command, proofNonce, session
     if (newUnlocks.length) {
       notifyBotAchievements(user.username, newUnlocks).catch(() => {});
     }
-    const { recordEvent } = await import('../analyticsService.mjs');
-    await recordEvent({
-      type: 'command_run',
-      userId: user.id,
-      username: user.username,
-      tab: 'dashboard',
-      meta: { cmd },
-    }).catch(() => {});
-    return {
-      user: enrichUserForClient(user, accountsSubmitted, reportedNotWorkingAccounts, profileStats),
-      ...buildUnlockPayload(newUnlocks),
-    };
+    return { userRow: user, cmd, ...buildUnlockPayload(newUnlocks) };
   });
+
+  // Analytics after coin lock released
+  const { recordEvent } = await import('../analyticsService.mjs');
+  await recordEvent({
+    type: 'command_run',
+    userId: unlockPayload.userRow.id,
+    username: unlockPayload.userRow.username,
+    tab: 'dashboard',
+    meta: { cmd: unlockPayload.cmd },
+  }).catch(() => {});
+
+  const extras = await profileExtrasForUser(unlockPayload.userRow);
+  return {
+    user: enrichUserForClient(
+      unlockPayload.userRow,
+      extras.accountsSubmitted,
+      extras.reportedNotWorkingAccounts,
+      extras.profileStats,
+    ),
+    newUnlocks: unlockPayload.newUnlocks,
+    unlockRewards: unlockPayload.unlockRewards,
+    unlockCoinsTotal: unlockPayload.unlockCoinsTotal,
+  };
 }
 
 export async function getPublicProfileByUsername(username) {
@@ -994,6 +1029,8 @@ export async function syncAchievementsOnLoadedUser(user, db, ctx = {}) {
 
 export async function recordUserShoutboxSend(userId) {
   if (!userId) return [];
+  // P1: pre-count outside coin lock (every chat send is hot)
+  const preAccounts = await countAccountsByCreator(userId).catch(() => 0);
   return runCoinTransaction(async () => {
     const db = await loadUsersDb();
     const user = db.users.find((u) => u.id === userId);
@@ -1002,8 +1039,7 @@ export async function recordUserShoutboxSend(userId) {
     const act = ensureActivity(user);
     act.shoutboxSent = Math.max(0, Number(act.shoutboxSent) || 0) + 1;
 
-    const accountsSubmitted = await countAccountsByCreator(user.id);
-    const newUnlocks = syncAchievements(user, { accountsSubmitted });
+    const newUnlocks = syncAchievements(user, { accountsSubmitted: preAccounts });
     user.updatedAt = Date.now();
     await saveUsersDb(db);
     if (newUnlocks.length) {
@@ -1015,13 +1051,14 @@ export async function recordUserShoutboxSend(userId) {
 
 export async function incrementUserImageUpload(userId) {
   if (!userId) return [];
+  const preAccounts = await countAccountsByCreator(userId).catch(() => 0);
   return runCoinTransaction(async () => {
     const db = await loadUsersDb();
     const user = db.users.find((u) => u.id === userId);
     if (!user || user.role === 'bot') return [];
     user.imagesUploaded = (Number(user.imagesUploaded) || 0) + 1;
     ensureActivity(user).flags.image_host = true;
-    const newUnlocks = await syncAchievementsOnLoadedUser(user, db);
+    const newUnlocks = await syncAchievementsOnLoadedUser(user, db, { accountsSubmitted: preAccounts });
     user.updatedAt = Date.now();
     await saveUsersDb(db);
     return newUnlocks;
@@ -1030,13 +1067,14 @@ export async function incrementUserImageUpload(userId) {
 
 export async function incrementUserPasteCount(userId) {
   if (!userId) return [];
+  const preAccounts = await countAccountsByCreator(userId).catch(() => 0);
   return runCoinTransaction(async () => {
     const db = await loadUsersDb();
     const user = db.users.find((u) => u.id === userId);
     if (!user || user.role === 'bot') return [];
     user.pastesCreated = (Number(user.pastesCreated) || 0) + 1;
     ensureActivity(user).flags.paste_create = true;
-    const newUnlocks = await syncAchievementsOnLoadedUser(user, db);
+    const newUnlocks = await syncAchievementsOnLoadedUser(user, db, { accountsSubmitted: preAccounts });
     user.updatedAt = Date.now();
     await saveUsersDb(db);
     return newUnlocks;
@@ -1046,6 +1084,7 @@ export async function incrementUserPasteCount(userId) {
 export async function incrementUserPasteViews(userId, { viewerId, pasteId } = {}) {
   if (!userId || !viewerId || !pasteId) return [];
   if (String(viewerId) === String(userId)) return [];
+  const preAccounts = await countAccountsByCreator(userId).catch(() => 0);
   return runCoinTransaction(async () => {
     const db = await loadUsersDb();
     const viewer = db.users.find((u) => u.id === viewerId);
@@ -1062,7 +1101,7 @@ export async function incrementUserPasteViews(userId, { viewerId, pasteId } = {}
       return [];
     }
     user.pasteViewsTotal = (Number(user.pasteViewsTotal) || 0) + 1;
-    const newUnlocks = await syncAchievementsOnLoadedUser(user, db);
+    const newUnlocks = await syncAchievementsOnLoadedUser(user, db, { accountsSubmitted: preAccounts });
     user.updatedAt = Date.now();
     await saveUsersDb(db);
     return newUnlocks;
@@ -1071,6 +1110,7 @@ export async function incrementUserPasteViews(userId, { viewerId, pasteId } = {}
 
 export async function incrementUserMemeCreated(userId, memeImageId = '') {
   if (!userId) return [];
+  const preAccounts = await countAccountsByCreator(userId).catch(() => 0);
   return runCoinTransaction(async () => {
     const db = await loadUsersDb();
     const user = db.users.find((u) => u.id === userId);
@@ -1083,7 +1123,7 @@ export async function incrementUserMemeCreated(userId, memeImageId = '') {
       act.flags[statKey] = true;
     }
     user.memesCreated = (Number(user.memesCreated) || 0) + 1;
-    const newUnlocks = await syncAchievementsOnLoadedUser(user, db);
+    const newUnlocks = await syncAchievementsOnLoadedUser(user, db, { accountsSubmitted: preAccounts });
     user.updatedAt = Date.now();
     await saveUsersDb(db);
     return newUnlocks;

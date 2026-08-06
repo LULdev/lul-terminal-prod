@@ -43,6 +43,7 @@ export function ProxyScraperPage() {
   const [sources, setSources] = useState<ProxySource[]>([]);
   const [checked, setChecked] = useState<CheckedProxy[]>([]);
   const [busy, setBusy] = useState(false);
+  const busyRef = useRef(false);
   const [jobMsg, setJobMsg] = useState('');
   const [jobProgress, setJobProgress] = useState(0);
   const [logs, setLogs] = useState<string[]>([]);
@@ -84,6 +85,9 @@ export function ProxyScraperPage() {
   useVisibilityAwarePoll(() => { void refresh(); }, 12_000);
 
   const runJob = async (kind: 'scrape' | 'check' | 'scrape-and-check') => {
+    // busyRef: block double-start before React re-renders disabled buttons
+    if (busyRef.current) return;
+    busyRef.current = true;
     jobAbortRef.current?.abort();
     const abort = new AbortController();
     jobAbortRef.current = abort;
@@ -123,6 +127,7 @@ export function ProxyScraperPage() {
       if (e instanceof DOMException && e.name === 'AbortError') return;
       if (mountedRef.current) setJobMsg(e instanceof Error ? e.message : 'Error');
     } finally {
+      busyRef.current = false;
       if (mountedRef.current) setBusy(false);
     }
   };

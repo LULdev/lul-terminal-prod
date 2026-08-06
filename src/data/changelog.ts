@@ -23,6 +23,21 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '3.66.0',
+    title: '25-round P1 audit Server+Client: hot-path coin-lock I/O, session bus, login interrupt',
+    date: 'Aug 6, 2026',
+    highlight: true,
+    items: [
+      { priority: 'P1', text: 'P1 — recordAchievementEvent: vault count outside lock; lobby extras after unlock.' },
+      { priority: 'P1', text: 'P1 — recordTerminalCommand: catalog is read-only (no coin lock); analytics after unlock.' },
+      { priority: 'P1', text: 'P1 — recordUserShoutboxSend + image/paste/meme increments: preAccounts outside coin lock.' },
+      { priority: 'P1', text: 'P1 — AuthContext soft /me empty + hard 401 use invalidateSession (multi-tab single-flight).' },
+      { priority: 'P1', text: 'P1 — login never throws after cookie set (gen interrupt → soft refresh only).' },
+      { priority: 'P2', text: 'P2 — ProxyScraper runJob busyRef (no double job before re-render).' },
+      { priority: 'P9', text: 'P9 — Version 3.66.0; 25-round residual P1 after 3.65 (every fix listed).' },
+    ],
+  },
+  {
     version: '3.65.0',
     title: 'P1 residual: vault meta (no decrypt) under coin lock; extras/analytics after unlock',
     date: 'Aug 6, 2026',
