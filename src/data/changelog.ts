@@ -23,6 +23,20 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '3.64.0',
+    title: 'Full P1 audit Server+Client: boot refund retry, logout truth, leave escrow, coin-lock I/O',
+    date: 'Aug 6, 2026',
+    highlight: true,
+    items: [
+      { priority: 'P1', text: 'P1 — gamesBoot: retry hydrate+orphan refund (5×) + residual scheduler if incomplete.' },
+      { priority: 'P1', text: 'P1 — logoutUser: retry leaveAll, residual refund when arcade clear; login refunds orphan escrows.' },
+      { priority: 'P1', text: 'P1 — leaveMatchQueue/RPS/TTT leaveQueueEntry: assertQueueBetCleared (no silent drop with held escrow).' },
+      { priority: 'P1', text: 'P1 — settle/RPS/TTT skipVaultCount under coin lock; login profileExtras outside runCoinTransaction.' },
+      { priority: 'P1', text: 'P1 — client logout succeeds only after POST /logout OK (no false signed-out UI).' },
+      { priority: 'P9', text: 'P9 — Version 3.64.0 full P1 module audit after 3.63 dual-session hold.' },
+    ],
+  },
+  {
     version: '3.63.0',
     title: 'P1 multi-worker dual-session: hold all MMs through join assert+deduct',
     date: 'Aug 6, 2026',

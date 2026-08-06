@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Terminal Boot · LUL Terminal Guest Index 01/20</title>
+  <meta name="description" content="Self-hosted community hub: tools, paste, image host, arcade and pulse stats. Browse as guest — save progress when you sign in." />
+  <link rel="stylesheet" href="../css/lul-landing.css" />
+  <style>
+    :root {
+      --primary: #22d3ee;
+      --primary-2: #a78bfa;
+      --accent: #34d399;
+      --glow: rgba(34,211,238,.3);
+    }
+  </style>
+</head>
+<body class="">
+  <div class="bg-glow" aria-hidden="true"></div>
+  <div class="bg-grid" aria-hidden="true"></div>
+  <div class="scanlines" aria-hidden="true"></div>
+
+  <header class="nav">
+    <a class="brand" href="../index.html">
+      <span class="brand-dot" aria-hidden="true"></span>
+      LUL Terminal
+    </a>
+    <div class="nav-meta">
+      <span>guest index · 01/20</span>
+      <span>Klassischer System-Boot</span>
+    </div>
+    <div class="nav-actions">
+      <a class="btn btn-ghost" href="#cta">Sign in</a>
+      <a class="btn btn-primary" href="#cta">Create free account</a>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="wrap hero-grid">
+        <div class="reveal">
+          <div class="kicker">guest session · read-only</div>
+          <h1>Welcome to <span class="grad">LUL Terminal</span></h1>
+          <p class="lead">Self-hosted community hub: tools, paste, image host, arcade and pulse stats. Browse as guest — save progress when you sign in.</p>
+          <div class="cta-row">
+            <a class="btn btn-primary btn-lg" href="#cta">Create free account</a>
+            <a class="btn btn-ghost btn-lg" href="#modules">Browse public tools</a>
+          </div>
+          <div class="trust">
+            <span><b>Guests welcome</b> — browse first</span>
+            <span><b>Register</b> — save, play, create</span>
+          </div>
+          <div class="chips">
+            <span class="chip on">Guest-safe</span>
+            <span class="chip">Auth optional to explore</span>
+            <span class="chip">Self-hosted</span>
+          </div>
+        </div>
+        <div class="reveal d2">
+          <div class="term">
+            <div class="term-bar">
+              <i></i><i></i><i></i>
+              <span style="margin-left:0.5rem">guest@lul-terminal ~ 01-terminal-boot</span>
+            </div>
+            <div class="term-body">
+              <div><span class="dim">$</span> <span class="hi">lul-terminal</span> --guest</div><div><span class="ok">✓</span> modules: paste · image · tools · games</div><div><span class="ok">✓</span> session: guest (no write persistence)</div><div><span class="warn">→</span> register to unlock coins, profile & queues</div>
+              <div class="lock"><b>After register:</b> Profiles, LULcoins, matchmaking and private pastes need an account.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="wrap">
+        <div class="stats reveal">
+          <div class="stat"><b>Live</b><span>pulse</span></div><div class="stat"><b>Arcade</b><span>ready</span></div><div class="stat"><b>Tools</b><span>online</span></div><div class="stat"><b>Auth</b><span>optional</span></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="modules">
+      <div class="wrap">
+        <div class="section-h reveal">
+          <h2>What you can explore</h2>
+          <p>Clear modules from the real LUL Terminal map — labeled for guests vs members.</p>
+        </div>
+        <div class="grid g2 g4">
+          
+          <article class="card reveal d1">
+            <div class="ico">📋</div>
+            <h3>Paste</h3>
+            <p>Share snippets with expiry & password options.</p>
+            <span class="guest-tag">Guest: public reads</span>
+          </article>
+          <article class="card reveal d2">
+            <div class="ico">☁️</div>
+            <h3>Image Host</h3>
+            <p>Upload & gallery when signed in.</p>
+            <span class="guest-tag">Preview UI</span>
+          </article>
+          <article class="card reveal d3">
+            <div class="ico">🎲</div>
+            <h3>Arcade</h3>
+            <p>RPS, dice, jackpot with LULcoins.</p>
+            <span class="guest-tag">Login to play</span>
+          </article>
+          <article class="card reveal d1">
+            <div class="ico">🛠️</div>
+            <h3>Labs</h3>
+            <p>Net toolkit, text lab, identity forge.</p>
+            <span class="guest-tag">Many guest-safe</span>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="cta">
+      <div class="wrap">
+        <div class="cta reveal">
+          <h2>Ready to enter the full terminal?</h2>
+          <p>Create a free account to play, paste, host and keep progress — or sign in if you already have a session.</p>
+          <div class="cta-row" style="justify-content:center">
+            <a class="btn btn-primary btn-lg" href="#">Create free account</a>
+            <a class="btn btn-ghost btn-lg" href="#">Sign in</a>
+          </div>
+          <p style="margin:1rem 0 0;font-family:var(--mono);font-size:0.7rem;color:var(--muted)">
+            Demo CTAs — wire to your AuthModal /api/auth in production.
+          </p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="wrap footer-row">
+      <span>LUL Terminal · Guest index variant <b style="color:var(--text)">Terminal Boot</b> (01/20)</span>
+      <span>
+        <a href="../index.html">All variants</a>
+        · <a href="../BESCHREIBUNGEN.md">Descriptions (DE)</a>
+      </span>
+    </div>
+  </footer>
+  <script src="../js/reveal.js"></script>
+</body>
+</html>

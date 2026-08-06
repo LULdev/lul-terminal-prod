@@ -350,11 +350,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       await authApi.logout();
     } catch (e) {
-      const msg = e instanceof Error ? e.message : '';
-      if (msg.includes('Cannot sign out') || msg.includes('arcade cleanup')) {
-        return false;
-      }
-      /* clear local session even when server logout fails for other reasons */
+      // P1: never report success / wipe UI if cookie may still be live (shared device)
+      return false;
     }
     clearLocalSession();
     resetSessionInvalidation();

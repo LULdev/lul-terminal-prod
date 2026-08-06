@@ -216,6 +216,9 @@ export async function loginUser({ email, password, remember }) {
   const token = newSessionToken();
   const maxAgeSec = remember ? SESSION_REMEMBER_SEC : SESSION_SHORT_SEC;
 
+  // P1: vault/lobby I/O outside coin lock (avoids auth-users timeouts under concurrent arcade)
+  const preExtras = await profileExtrasForUser(user);
+
   const loginResult = await runCoinTransaction(async () => {
     const freshDb = await loadUsersDb();
     const freshUser = freshDb.users.find((u) => u.id === user.id);
@@ -231,7 +234,7 @@ export async function loginUser({ email, password, remember }) {
     freshUser.updatedAt = Date.now();
     ensureUniqueReferralCode(freshDb, freshUser);
 
-    const { accountsSubmitted, reportedNotWorkingAccounts, profileStats } = await profileExtrasForUser(freshUser);
+    const { accountsSubmitted, reportedNotWorkingAccounts, profileStats } = preExtras;
     const loginHour = new Date().getHours();
     const more = syncAchievements(freshUser, {
       accountsSubmitted,
@@ -297,8 +300,34 @@ export async function loginUser({ email, password, remember }) {
   const { touchUserLastSeen } = await import('../chatStats.mjs');
   await touchUserLastSeen(user.id, { force: true });
 
+  // P1: residual orphan escrow refund after login if no live arcade session
+  let userForClient = loginResult.user;
+  try {
+    const snap = await loadUsersDb();
+    const u = snap.users.find((x) => x.id === user.id);
+    if ((u?.gameEscrows?.length ?? 0) > 0) {
+      const { userHasActiveArcadeSession } = await import('../gamesService.mjs');
+      const live = await userHasActiveArcadeSession(user.id).catch(() => true);
+      if (!live) {
+        await refundUserEscrows(user.id);
+        const snap2 = await loadUsersDb();
+        const u2 = snap2.users.find((x) => x.id === user.id);
+        if (u2) {
+          userForClient = enrichUserForClient(
+            u2,
+            preExtras.accountsSubmitted,
+            preExtras.reportedNotWorkingAccounts,
+            preExtras.profileStats,
+          );
+        }
+      }
+    }
+  } catch (e) {
+    console.warn('[auth] login residual escrow refund failed', user.id, e);
+  }
+
   return {
-    user: loginResult.user,
+    user: userForClient,
     token,
     maxAgeSec,
     newUnlocks: loginResult.newUnlocks,
@@ -436,13 +465,37 @@ export async function logoutUser(token) {
   });
 
   if (userId) {
-    const { leaveAllGameQueues } = await import('../gamesService.mjs');
-    const cleanup = await leaveAllGameQueues(userId);
-    // refundUserEscrows re-checks live arcade under coin lock (no unlocked TOCTOU)
-    await refundOrphanEscrowsAfterCleanup(userId, cleanup);
-    await refundUserEscrows(userId).catch((e) => {
-      console.warn('[auth] logout residual escrow refund failed', userId, e);
-    });
+    const { leaveAllGameQueues, userHasActiveArcadeSession } = await import('../gamesService.mjs');
+    let cleanup = await leaveAllGameQueues(userId);
+    if (!cleanup.ok) {
+      // One retry — lock timeouts during multi-game leave are common under load
+      cleanup = await leaveAllGameQueues(userId).catch(() => cleanup);
+    }
+    if (!cleanup.ok) {
+      console.warn('[auth] logout arcade cleanup incomplete', {
+        userId,
+        errors: cleanup.errors,
+      });
+    }
+    await refundOrphanEscrowsAfterCleanup(userId, cleanup, { hard: false });
+
+    // When arcade is clear, hard residual refund (withAllMatchmakersHeld) — do not soft-skip silently
+    const stillLive = await userHasActiveArcadeSession(userId).catch(() => true);
+    if (!stillLive) {
+      try {
+        await refundUserEscrows(userId);
+        const after = await loadUsersDb();
+        const u = after.users.find((x) => x.id === userId);
+        if ((u?.gameEscrows?.length ?? 0) > 0) {
+          await refundUserEscrows(userId);
+        }
+      } catch (e) {
+        console.warn('[auth] logout residual escrow refund failed', userId, e);
+      }
+    } else {
+      console.warn('[auth] logout left live arcade session — residual escrow deferred', { userId });
+    }
+
     await withUsersWrite(async () => {
       const db = await loadUsersDb();
       const user = db.users.find((u) => u.id === userId);
@@ -873,7 +926,13 @@ export async function getReferralInfo(userId, req) {
 
 export async function syncAchievementsOnLoadedUser(user, db, ctx = {}) {
   if (!user || user.role === 'bot') return [];
-  const accountsSubmitted = await countAccountsByCreator(user.id);
+  // skipVaultCount: settle/expire under coin lock must not await vault decrypt I/O
+  let accountsSubmitted = ctx.accountsSubmitted;
+  if (accountsSubmitted == null) {
+    accountsSubmitted = ctx.skipVaultCount
+      ? 0
+      : await countAccountsByCreator(user.id);
+  }
   const newUnlocks = syncAchievements(user, { ...ctx, accountsSubmitted });
   if (newUnlocks.length) {
     notifyBotAchievements(user.username, newUnlocks).catch(() => {});

@@ -27,6 +27,7 @@ import {
   queueStatusForUser,
   refundJoinEscrow,
   releaseOrRecoverQueueBet,
+  assertQueueBetCleared,
   resolveActiveMatchForSlice,
   tombstoneRoom,
   sweepExpiredMatchesForUser,
@@ -85,7 +86,8 @@ async function leaveQueueEntry(db, user, userId, entry) {
   const idx = queue.findIndex((q) => q.userId === userId);
   if (idx < 0) return;
   if (user && entry?.bet) {
-    releaseOrRecoverQueueBet(user, 'rps', 'RPS', entry.bet);
+    const recovered = releaseOrRecoverQueueBet(user, 'rps', 'RPS', entry.bet);
+    assertQueueBetCleared(user, 'rps', entry.bet, recovered);
     user.updatedAt = Date.now();
   }
   queue.splice(idx, 1);
@@ -442,11 +444,11 @@ async function finalizeMatch(m) {
       const p2u = getUser(db, m.player2.userId);
       if (p2u) {
         p2u.updatedAt = Date.now();
-        await syncAchievementsOnLoadedUser(p2u, db, { flag: 'rps_played' });
+        await syncAchievementsOnLoadedUser(p2u, db, { flag: 'rps_played', skipVaultCount: true });
       }
     }
 
-    const unlocks = await syncAchievementsOnLoadedUser(p1, db, { flag: 'rps_played' });
+    const unlocks = await syncAchievementsOnLoadedUser(p1, db, { flag: 'rps_played', skipVaultCount: true });
     await saveUsersDb(db);
 
     m.status = 'done';

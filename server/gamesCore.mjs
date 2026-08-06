@@ -130,6 +130,27 @@ export function releaseOrRecoverQueueBet(user, gameId, chatLabel, bet) {
   return 0;
 }
 
+/** True if user still has same-game escrow rows (leave must not drop queue silently). */
+export function userHoldsGameEscrow(user, gameId) {
+  const gid = gameId ?? 'arcade';
+  return (user?.gameEscrows ?? []).some(
+    (e) => (e.gameId ?? 'arcade') === gid && Math.floor(Number(e.amount) || 0) > 0,
+  );
+}
+
+/**
+ * After releaseOrRecoverQueueBet: refuse leave if bet was unpaid and escrow still held.
+ * (No trail + no escrow rows → OK to drop; partial trail with remaining escrow → hard fail.)
+ */
+export function assertQueueBetCleared(user, gameId, bet, recovered) {
+  const amt = Math.floor(Number(bet) || 0);
+  if (amt <= 0) return;
+  if (recovered >= amt) return;
+  if (userHoldsGameEscrow(user, gameId)) {
+    throw new Error('Could not refund queue bet — try again');
+  }
+}
+
 function refundBetOnExpire(user, { gameId, chatLabel, matchId, bet, amount }, { forceCredit = false } = {}) {
   if (!user) return;
   const amt = Math.floor(Number(amount) || 0);
@@ -541,10 +562,11 @@ export async function settleMatch({
     const p2u = getUser(db, m.player2.userId);
     if (p2u) {
       p2u.updatedAt = Date.now();
-      await syncAchievementsOnLoadedUser(p2u, db, { flag: achievementFlag });
+      // skipVaultCount: never load premium vault under coin lock (lock timeout P1)
+      await syncAchievementsOnLoadedUser(p2u, db, { flag: achievementFlag, skipVaultCount: true });
     }
   }
-  const unlocks = await syncAchievementsOnLoadedUser(p1, db, { flag: achievementFlag });
+  const unlocks = await syncAchievementsOnLoadedUser(p1, db, { flag: achievementFlag, skipVaultCount: true });
 
   // Prepare result fields but do NOT mark done until user balances are durable
   const resultPayload = {
@@ -748,7 +770,13 @@ async function leaveQueueEntry(mm, db, user, userId, entry, expireMeta) {
   const idx = mm.queue.findIndex((q) => q.userId === userId);
   if (idx < 0) return;
   if (user && entry?.bet && expireMeta) {
-    releaseOrRecoverQueueBet(user, expireMeta.gameId, expireMeta.chatLabel, entry.bet);
+    const recovered = releaseOrRecoverQueueBet(
+      user,
+      expireMeta.gameId,
+      expireMeta.chatLabel,
+      entry.bet,
+    );
+    assertQueueBetCleared(user, expireMeta.gameId, entry.bet, recovered);
     user.updatedAt = Date.now();
   }
   mm.queue.splice(idx, 1);
@@ -1095,7 +1123,10 @@ export async function leaveMatchQueue(mm, userId, { gameId = 'arcade', chatLabel
       if (idx < 0) break;
       const entry = mm.queue[idx];
       if (user && entry?.bet) {
-        refunded += releaseOrRecoverQueueBet(user, gameId, chatLabel, entry.bet);
+        const recovered = releaseOrRecoverQueueBet(user, gameId, chatLabel, entry.bet);
+        // P1: never drop a paid queue row while same-game escrow still held
+        assertQueueBetCleared(user, gameId, entry.bet, recovered);
+        refunded += recovered;
         user.updatedAt = Date.now();
       }
       mm.queue.splice(idx, 1);

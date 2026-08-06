@@ -15,10 +15,21 @@ import { hasJackpotPendingCredited, logJackpotCredit } from './coinLedger.mjs';
 
 let ready = false;
 let bootPromise = null;
+/** True only after hydrate+orphan refund completed (not merely attempted). */
+let bootMoneyOk = false;
 
-/** True after boot escrow refund has finished (success or failure). */
+/** True after games boot finished enough to accept traffic. */
 export function isGamesBootReady() {
   return ready;
+}
+
+/** True when orphan escrow refund at boot succeeded (ops/metrics). */
+export function isGamesBootMoneyOk() {
+  return bootMoneyOk;
+}
+
+function sleep(ms) {
+  return new Promise((r) => setTimeout(r, ms));
 }
 
 async function settlePendingJackpotOnBoot(pending) {
@@ -68,28 +79,41 @@ export async function recoverJackpotPendingLive() {
 /**
  * Refund persisted escrows once, recover incomplete jackpot payouts, start sweep.
  * Safe to call multiple times — single-flight.
+ * P1: retries hydrate+orphan refund before marking ready; schedules background residual if still failed.
  */
 export function ensureGamesBootstrapped() {
   if (ready) return Promise.resolve();
   if (!bootPromise) {
     bootPromise = (async () => {
-      // Register all matchmakers then hydrate durable queue/match state BEFORE escrow refund
+      bootMoneyOk = false;
       try {
         await import('./gameRegistry.mjs');
-        const { hydrateAllMatchmakers } = await import('./gamesMatchmakerStore.mjs');
-        // hard: fail closed on partial hydrate so boot refund cannot mint over live disk sessions
-        const nMm = await hydrateAllMatchmakers({ hard: true });
-        if (nMm > 0) console.log(`[games] Hydrated ${nMm} durable matchmaker(s)`);
       } catch (e) {
-        console.error('[games] Matchmaker hydrate failed — skipping boot escrow refund', e);
-        // Still mark ready below so API can serve; residual refunds retry on logout/lifecycle
+        console.error('[games] gameRegistry import failed', e);
       }
-      try {
-        const n = await refundAllEscrowsOnBoot();
-        if (n > 0) console.log(`[games] Refunded ${n} orphan escrow(s) after restart`);
-      } catch (e) {
-        console.error('[games] Boot escrow refund failed', e);
+
+      // Retry hydrate + orphan refund (multi-worker lock contention at restart)
+      const maxAttempts = 5;
+      for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+        try {
+          const { hydrateAllMatchmakers } = await import('./gamesMatchmakerStore.mjs');
+          const nMm = await hydrateAllMatchmakers({ hard: true });
+          if (nMm > 0 && attempt === 1) {
+            console.log(`[games] Hydrated ${nMm} durable matchmaker(s)`);
+          }
+          const n = await refundAllEscrowsOnBoot();
+          if (n > 0) console.log(`[games] Refunded ${n} orphan escrow(s) after restart`);
+          bootMoneyOk = true;
+          break;
+        } catch (e) {
+          console.error(`[games] Boot hydrate/refund attempt ${attempt}/${maxAttempts} failed`, e);
+          if (attempt < maxAttempts) await sleep(500 * attempt);
+        }
       }
+      if (!bootMoneyOk) {
+        console.error('[games] CRITICAL: orphan escrow refund incomplete after retries — scheduling residual');
+      }
+
       try {
         const rec = await recoverJackpotPendingOnBoot(settlePendingJackpotOnBoot);
         if (rec) {
@@ -97,11 +121,37 @@ export function ensureGamesBootstrapped() {
         }
       } catch (e) {
         console.error('[games] Jackpot pending recovery failed', e);
-      } finally {
-        ready = true;
-        startMatchExpirySweep();
       }
-    })();
+
+      // Open traffic after best-effort money path (retries exhausted); residual keeps running if needed
+      ready = true;
+      startMatchExpirySweep();
+
+      if (!bootMoneyOk) {
+        // Background residual: re-try orphan refund every 30s for ~10 minutes
+        let residualAttempts = 0;
+        const residual = async () => {
+          if (bootMoneyOk || residualAttempts >= 20) return;
+          residualAttempts += 1;
+          try {
+            const { hydrateAllMatchmakers } = await import('./gamesMatchmakerStore.mjs');
+            await hydrateAllMatchmakers({ hard: true });
+            const n = await refundAllEscrowsOnBoot();
+            if (n > 0) console.log(`[games] Residual boot refunded ${n} orphan escrow(s)`);
+            bootMoneyOk = true;
+            console.log('[games] Residual orphan escrow path OK');
+          } catch (e) {
+            console.warn('[games] Residual boot refund attempt failed', e);
+            setTimeout(residual, 30_000);
+          }
+        };
+        setTimeout(residual, 5_000);
+      }
+    })().catch((e) => {
+      console.error('[games] Boot crashed', e);
+      ready = true;
+      startMatchExpirySweep();
+    });
   }
   return bootPromise;
 }
