@@ -55,7 +55,8 @@ export async function touchUserLastSeen(userId, { force = false } = {}) {
     user.updatedAt = now;
     if (user.onlineMinutes !== prevMinutes && user.role !== 'bot') {
       const { syncAchievementsOnLoadedUser } = await import('./auth/authService.mjs');
-      await syncAchievementsOnLoadedUser(user, db);
+      // skipVaultCount: touch is on every authed request — never hold coin lock on vault I/O
+      await syncAchievementsOnLoadedUser(user, db, { skipVaultCount: true });
     }
     await saveUsersDb(db);
   });

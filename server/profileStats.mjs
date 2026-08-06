@@ -4,7 +4,6 @@
  */
 
 import { loadLobbyDb, LOBBY_ID } from './chatStore.mjs';
-import { loadAccountsDb } from './premiumAccountsStore.mjs';
 
 export const ONLINE_WINDOW_MS = 5 * 60 * 1000;
 
@@ -29,7 +28,9 @@ export function isUserOnline(user) {
 
 export async function countAccountsByCreatorBreakdown(userId) {
   if (!userId) return { premium: 0, free: 0 };
-  const db = await loadAccountsDb();
+  // Meta load: no password decrypt
+  const { loadAccountsDbMeta } = await import('./premiumAccountsStore.mjs');
+  const db = await loadAccountsDbMeta();
   const mine = db.accounts.filter((a) => a.createdByUserId === userId);
   const premium = mine.filter((a) => a.status === 'working').length;
   const free = mine.filter((a) => a.status === 'working_free').length;

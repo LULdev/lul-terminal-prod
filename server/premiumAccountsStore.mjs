@@ -70,6 +70,44 @@ function sealAccount(account) {
   };
 }
 
+/**
+ * Read vault JSON WITHOUT decrypting passwords.
+ * Use for counts / ownership maps under coin lock (P1: avoid full vault decrypt on hot paths).
+ */
+export async function loadAccountsDbMeta() {
+  await ensureStore();
+  try {
+    const raw = await fs.readFile(DB_FILE, 'utf8');
+    const data = JSON.parse(raw);
+    const accounts = Array.isArray(data.accounts)
+      ? data.accounts.map((a) => ({
+          id: a?.id,
+          createdByUserId: a?.createdByUserId ?? null,
+          status: a?.status ?? null,
+          service: a?.service ?? null,
+          category: a?.category ?? null,
+          email: a?.email ?? null,
+          views: a?.views ?? 0,
+        }))
+      : [];
+    return {
+      ...EMPTY_DB,
+      ...data,
+      accounts,
+    };
+  } catch (e) {
+    try {
+      await fs.access(DB_FILE);
+      throw new Error('Corrupt premium accounts database');
+    } catch (accessErr) {
+      if (accessErr instanceof Error && accessErr.message === 'Corrupt premium accounts database') {
+        throw accessErr;
+      }
+      return structuredClone(EMPTY_DB);
+    }
+  }
+}
+
 export async function loadAccountsDb() {
   await ensureStore();
   try {

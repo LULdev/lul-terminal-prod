@@ -183,32 +183,43 @@ export async function handlePremiumAccountsRequest(req, res) {
       await checkRateLimit(`premium-view:${req.auth.user.id}`, { max: 60, windowMs: 60_000 });
       const accountId = viewMatch[1];
       const viewerId = req.auth.user.id;
-      const result = await runCoinTransaction(async () => {
+      // P1: do not load/decrypt full vault under coin lock — flag under lock, vault after unlock
+      const coinPhase = await runCoinTransaction(async () => {
         const db = await loadUsersDb();
         const viewer = db.users.find((u) => u.id === viewerId);
         if (!viewer) throw new Error('User not found');
         const flagKey = `vault_view_${accountId.slice(0, 24)}`;
         const act = ensureActivity(viewer);
         if (act.flags[flagKey]) {
-          const { loadAccountsDb } = await import('./premiumAccountsStore.mjs');
-          const accountsDb = await loadAccountsDb();
-          const account = accountsDb.accounts.find((a) => a.id === accountId);
-          if (!account) throw new Error('Account not found');
-          return { views: account.views ?? 0, deduped: true };
+          return { already: true };
         }
         act.flags[flagKey] = true;
         viewer.updatedAt = Date.now();
         await saveUsersDb(db);
-        try {
-          return await incrementAccountView(accountId);
-        } catch (e) {
-          delete act.flags[flagKey];
+        return { already: false, flagKey };
+      });
+      if (coinPhase.already) {
+        const { loadAccountsDbMeta } = await import('./premiumAccountsStore.mjs');
+        const accountsDb = await loadAccountsDbMeta();
+        const account = accountsDb.accounts.find((a) => a.id === accountId);
+        if (!account) throw new Error('Account not found');
+        return sendJson(res, 200, { views: account.views ?? 0, deduped: true });
+      }
+      try {
+        const result = await incrementAccountView(accountId);
+        return sendJson(res, 200, result);
+      } catch (e) {
+        await runCoinTransaction(async () => {
+          const db = await loadUsersDb();
+          const viewer = db.users.find((u) => u.id === viewerId);
+          if (!viewer) return;
+          const act = ensureActivity(viewer);
+          delete act.flags[coinPhase.flagKey];
           viewer.updatedAt = Date.now();
           await saveUsersDb(db);
-          throw e;
-        }
-      });
-      return sendJson(res, 200, result);
+        });
+        throw e;
+      }
     }
 
     const accountIdMatch = pathname.match(/^\/api\/premium-accounts\/accounts\/([a-f0-9]+)$/);

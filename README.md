@@ -1,6 +1,6 @@
 # LUL Terminal
 
-[![Version](https://img.shields.io/badge/version-3.64.0-blue)](./package.json)
+[![Version](https://img.shields.io/badge/version-3.65.0-blue)](./package.json)
 [![Node](https://img.shields.io/badge/node-%3E%3D18-green)](./package.json)
 [![License](https://img.shields.io/badge/license-Apache--2.0-orange)](./LICENSE)
 
@@ -10,7 +10,7 @@
 |---|---|
 | **Stack** | React 19 · Vite · Express · SQLite (auth) · JSON file stores · optional Redis · Docker |
 | **Repo** | [github.com/LULdev/lul-terminal-prod](https://github.com/LULdev/lul-terminal-prod) |
-| **App version** | **3.64.0** (`package.json` / `src/config/version.ts`) |
+| **App version** | **3.65.0** (`package.json` / `src/config/version.ts`) |
 | **License** | Apache-2.0 |
 
 ---

@@ -8,7 +8,6 @@ import { sanitizeAvatarUrl } from './auth/safeMediaUrl.mjs';
 import { loadUsersDb, saveUsersDb } from './auth/authStore.mjs';
 import { normalizeProfileCustomization } from './profileCustomization.mjs';
 import { ensureActivity, tryGrantAchievement, userAchievementIds } from './auth/achievements.mjs';
-import { loadAccountsDb } from './premiumAccountsStore.mjs';
 import { notifyBotLeaderboardAwards } from './chatBot.mjs';
 import { readLastSync, writeLastSync, SYNC_INTERVAL_MS } from './leaderboardStore.mjs';
 
@@ -226,7 +225,9 @@ function buildTop3(users, def, ctx = {}) {
 }
 
 async function vaultCountByUser() {
-  const db = await loadAccountsDb();
+  // Meta load: no password decrypt (safe before/under coin lock)
+  const { loadAccountsDbMeta } = await import('./premiumAccountsStore.mjs');
+  const db = await loadAccountsDbMeta();
   const map = new Map();
   for (const a of db.accounts) {
     const uid = a.createdByUserId;
@@ -257,10 +258,11 @@ export async function syncLeaderboardAwards(force = false) {
     return { synced: false, grants: [] };
   }
 
+  // P1: vault counts OUTSIDE coin lock (meta read only)
+  const vaultByUser = await vaultCountByUser();
   const { runCoinTransaction } = await import('./gamesCoinLock.mjs');
   return runCoinTransaction(async () => {
   const db = await loadUsersDb();
-  const vaultByUser = await vaultCountByUser();
   const ctx = { vaultByUser };
   const grants = [];
 

@@ -69,7 +69,9 @@ function findAccount(db, accountId) {
 
 export async function getAcceptedNotWorkingForCreator(userId) {
   if (!userId) return [];
-  const [accountsDb, reportsDb] = await Promise.all([loadAccountsDb(), loadReportsDb()]);
+  // Meta load for ownership/service fields only (no vault decrypt)
+  const { loadAccountsDbMeta } = await import('./premiumAccountsStore.mjs');
+  const [accountsDb, reportsDb] = await Promise.all([loadAccountsDbMeta(), loadReportsDb()]);
   const acceptedByAccount = new Map();
   for (const r of reportsDb.reports) {
     if (r.status === 'accepted') acceptedByAccount.set(r.accountId, r);

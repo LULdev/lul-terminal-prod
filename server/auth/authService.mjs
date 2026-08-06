@@ -555,7 +555,10 @@ export async function updateProfile(userId, payload, { keepToken = null } = {}) 
     }
   }
 
-  const result = await runCoinTransaction(async () => {
+  // P1: vault meta counts outside coin lock (lobby extras also outside after save)
+  const preAccounts = await countAccountsByCreator(userId);
+
+  const unlockPayload = await runCoinTransaction(async () => {
     const db = await loadUsersDb();
     const user = db.users.find((u) => u.id === userId);
     if (!user) throw new Error('User not found');
@@ -603,45 +606,66 @@ export async function updateProfile(userId, payload, { keepToken = null } = {}) 
     }
 
     user.updatedAt = Date.now();
-    const { accountsSubmitted, reportedNotWorkingAccounts, profileStats } = await profileExtrasForUser(user);
-    const newUnlocks = syncAchievements(user, { accountsSubmitted });
+    const newUnlocks = syncAchievements(user, { accountsSubmitted: preAccounts });
     await saveUsersDb(db);
     notifyBotAchievements(user.username, newUnlocks).catch(() => {});
     return {
-      user: enrichUserForClient(user, accountsSubmitted, reportedNotWorkingAccounts, profileStats),
+      userRow: user,
       ...buildUnlockPayload(newUnlocks),
     };
   });
   if (passwordChanged) {
     await revokeUserSessions(userId, { keepToken });
   }
-  return result;
+  const extras = await profileExtrasForUser(unlockPayload.userRow);
+  return {
+    user: enrichUserForClient(
+      unlockPayload.userRow,
+      extras.accountsSubmitted,
+      extras.reportedNotWorkingAccounts,
+      extras.profileStats,
+    ),
+    newUnlocks: unlockPayload.newUnlocks,
+    unlockRewards: unlockPayload.unlockRewards,
+    unlockCoinsTotal: unlockPayload.unlockCoinsTotal,
+  };
 }
 
 export async function uploadUserAvatar(userId, { mime, buffer }) {
   const avatarUrl = await saveUserAvatar(userId, { mime, buffer });
-  return runCoinTransaction(async () => {
+  const preAccounts = await countAccountsByCreator(userId);
+  const unlockPayload = await runCoinTransaction(async () => {
     const db = await loadUsersDb();
     const user = db.users.find((u) => u.id === userId);
     if (!user) throw new Error('User not found');
     user.avatarUrl = avatarUrl;
     user.updatedAt = Date.now();
-    const { accountsSubmitted, reportedNotWorkingAccounts, profileStats } = await profileExtrasForUser(user);
-    const newUnlocks = syncAchievements(user, { accountsSubmitted });
+    const newUnlocks = syncAchievements(user, { accountsSubmitted: preAccounts });
     await saveUsersDb(db);
     notifyBotAchievements(user.username, newUnlocks).catch(() => {});
-    return {
-      user: enrichUserForClient(user, accountsSubmitted, reportedNotWorkingAccounts, profileStats),
-      ...buildUnlockPayload(newUnlocks),
-    };
+    return { userRow: user, ...buildUnlockPayload(newUnlocks) };
   });
+  const extras = await profileExtrasForUser(unlockPayload.userRow);
+  return {
+    user: enrichUserForClient(
+      unlockPayload.userRow,
+      extras.accountsSubmitted,
+      extras.reportedNotWorkingAccounts,
+      extras.profileStats,
+    ),
+    newUnlocks: unlockPayload.newUnlocks,
+    unlockRewards: unlockPayload.unlockRewards,
+    unlockCoinsTotal: unlockPayload.unlockCoinsTotal,
+  };
 }
 
 /** Server-only tab visit recording (analytics tab_visit pipeline; activity tallies only). */
 export async function recordTabVisitFromAnalytics(userId, tab, { forceRemint = false } = {}) {
   const safeTab = String(tab ?? '').slice(0, 24);
   if (!ALL_MANAGEABLE_TAB_IDS.includes(safeTab)) return null;
-  return runCoinTransaction(async () => {
+  // Meta count outside coin lock (cheap); full lobby extras after unlock
+  const preAccounts = await countAccountsByCreator(userId).catch(() => 0);
+  const inner = await runCoinTransaction(async () => {
     const db = await loadUsersDb();
     const user = db.users.find((u) => u.id === userId);
     if (!user || user.role === 'bot') return null;
@@ -661,8 +685,7 @@ export async function recordTabVisitFromAnalytics(userId, tab, { forceRemint = f
     let newUnlocks = [];
     if (touched) {
       user.updatedAt = Date.now();
-      const accountsSubmitted = await countAccountsByCreator(user.id);
-      newUnlocks = syncAchievements(user, { accountsSubmitted });
+      newUnlocks = syncAchievements(user, { accountsSubmitted: preAccounts });
       if (newUnlocks.length) {
         notifyBotAchievements(user.username, newUnlocks).catch(() => {});
       }
@@ -670,35 +693,53 @@ export async function recordTabVisitFromAnalytics(userId, tab, { forceRemint = f
     if (touched || proof) {
       await saveUsersDb(db);
     }
-    const { accountsSubmitted, reportedNotWorkingAccounts, profileStats } = await profileExtrasForUser(user);
-    return {
-      user: enrichUserForClient(user, accountsSubmitted, reportedNotWorkingAccounts, profileStats),
-      newUnlocks,
-      proof,
-    };
+    return { userRow: user, newUnlocks, proof };
   });
+  if (!inner) return null;
+  const extras = await profileExtrasForUser(inner.userRow);
+  return {
+    user: enrichUserForClient(
+      inner.userRow,
+      extras.accountsSubmitted,
+      extras.reportedNotWorkingAccounts,
+      extras.profileStats,
+    ),
+    newUnlocks: inner.newUnlocks,
+    proof: inner.proof,
+  };
 }
 
 export async function syncUserAchievements(userId, ctx = {}) {
-  return runCoinTransaction(async () => {
+  // P1: vault meta count outside coin lock; full extras after save
+  const preAccounts = await countAccountsByCreator(userId);
+
+  const unlockPayload = await runCoinTransaction(async () => {
     const db = await loadUsersDb();
     const user = db.users.find((u) => u.id === userId);
     if (!user) throw new Error('User not found');
     const safeCtx = { ...ctx };
     delete safeCtx.visitedTab;
     delete safeCtx.visitedProfile;
-    const { accountsSubmitted, reportedNotWorkingAccounts, profileStats } = await profileExtrasForUser(user);
-    const newUnlocks = syncAchievements(user, { ...safeCtx, accountsSubmitted });
+    const newUnlocks = syncAchievements(user, { ...safeCtx, accountsSubmitted: preAccounts });
     if (newUnlocks.length) {
       user.updatedAt = Date.now();
       await saveUsersDb(db);
       notifyBotAchievements(user.username, newUnlocks).catch(() => {});
     }
-    return {
-      user: enrichUserForClient(user, accountsSubmitted, reportedNotWorkingAccounts, profileStats),
-      ...buildUnlockPayload(newUnlocks),
-    };
+    return { userRow: user, ...buildUnlockPayload(newUnlocks) };
   });
+  const extras = await profileExtrasForUser(unlockPayload.userRow);
+  return {
+    user: enrichUserForClient(
+      unlockPayload.userRow,
+      extras.accountsSubmitted,
+      extras.reportedNotWorkingAccounts,
+      extras.profileStats,
+    ),
+    newUnlocks: unlockPayload.newUnlocks,
+    unlockRewards: unlockPayload.unlockRewards,
+    unlockCoinsTotal: unlockPayload.unlockCoinsTotal,
+  };
 }
 
 const ACHIEVEMENT_EVENT_FLAGS = new Set(['claw_victim']);
@@ -844,7 +885,13 @@ export async function incrementProfileView(username, { viewer = null, clientIp: 
   const { claimIpView } = await import('../viewDedup.mjs');
   const mayCount = await claimIpView('profile', ip, uname);
 
-  return runCoinTransaction(async () => {
+  // P1: meta vault counts outside coin lock; analytics + lobby extras after unlock
+  const targetAccounts = await countAccountsByCreator(targetPeek.id).catch(() => 0);
+  const viewerAccounts = viewer?.id
+    ? await countAccountsByCreator(viewer.id).catch(() => 0)
+    : 0;
+
+  const inner = await runCoinTransaction(async () => {
     const db = await loadUsersDb();
     const user = findUserByUsername(db.users, username);
     if (!user || !isEffectivelyActive(user)) throw new Error('User not found');
@@ -857,7 +904,7 @@ export async function incrementProfileView(username, { viewer = null, clientIp: 
       user.updatedAt = Date.now();
       dirty = true;
       credited = true;
-      syncAchievements(user, { accountsSubmitted: await countAccountsByCreator(user.id) });
+      syncAchievements(user, { accountsSubmitted: targetAccounts });
     }
 
     // Optional achievement side-effects for logged-in viewers (does not gate the counter)
@@ -867,33 +914,38 @@ export async function incrementProfileView(username, { viewer = null, clientIp: 
         const ctx = { visitedProfile: uname };
         if (user.role === 'admin') ctx.flag = 'visited_admin_profile';
         applyActivityCtx(viewerUser, ctx);
-        const viewerSubmitted = await countAccountsByCreator(viewerUser.id);
-        syncAchievements(viewerUser, { ...ctx, accountsSubmitted: viewerSubmitted });
+        syncAchievements(viewerUser, { ...ctx, accountsSubmitted: viewerAccounts });
         viewerUser.updatedAt = Date.now();
         dirty = true;
       }
     }
 
-    const { accountsSubmitted, reportedNotWorkingAccounts, profileStats } = await profileExtrasForUser(user);
     if (dirty) await saveUsersDb(db);
-
-    if (credited) {
-      const { recordEvent } = await import('../analyticsService.mjs');
-      await recordEvent({
-        type: 'profile_view',
-        userId: viewer?.id ?? null,
-        username: viewer?.username ?? null,
-        tab: 'profile',
-        meta: { target: uname, ip: ip === 'unknown' ? undefined : ip },
-      }).catch(() => {});
-    }
-
-    return {
-      user: publicProfileView(user, accountsSubmitted, reportedNotWorkingAccounts, profileStats),
-      credited,
-      deduped: !credited,
-    };
+    return { userRow: user, credited };
   });
+
+  if (inner.credited) {
+    const { recordEvent } = await import('../analyticsService.mjs');
+    await recordEvent({
+      type: 'profile_view',
+      userId: viewer?.id ?? null,
+      username: viewer?.username ?? null,
+      tab: 'profile',
+      meta: { target: uname, ip: ip === 'unknown' ? undefined : ip },
+    }).catch(() => {});
+  }
+
+  const extras = await profileExtrasForUser(inner.userRow);
+  return {
+    user: publicProfileView(
+      inner.userRow,
+      extras.accountsSubmitted,
+      extras.reportedNotWorkingAccounts,
+      extras.profileStats,
+    ),
+    credited: inner.credited,
+    deduped: !inner.credited,
+  };
 }
 
 export async function getReferralInfo(userId, req) {

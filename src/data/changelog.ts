@@ -23,6 +23,21 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '3.65.0',
+    title: 'P1 residual: vault meta (no decrypt) under coin lock; extras/analytics after unlock',
+    date: 'Aug 6, 2026',
+    highlight: true,
+    items: [
+      { priority: 'P1', text: 'P1 — loadAccountsDbMeta: count/ownership without password decrypt (hot path safe).' },
+      { priority: 'P1', text: 'P1 — countAccountsByCreator / profile breakdown / reports / leaderboard vault maps use meta load.' },
+      { priority: 'P1', text: 'P1 — updateProfile/avatar/tabVisit/syncAchievements: vault counts + lobby extras outside coin lock.' },
+      { priority: 'P1', text: 'P1 — incrementProfileView: no vault/analytics under coin lock; touchUserLastSeen skipVaultCount.' },
+      { priority: 'P1', text: 'P1 — premium vault view: flag under coin lock, vault increment after unlock (meta on dedupe).' },
+      { priority: 'P1', text: 'P1 — syncLeaderboardAwards: vaultCountByUser before runCoinTransaction.' },
+      { priority: 'P9', text: 'P9 — Version 3.65.0 residual P1 after 3.64 full audit (client: no open P1).' },
+    ],
+  },
+  {
     version: '3.64.0',
     title: 'Full P1 audit Server+Client: boot refund retry, logout truth, leave escrow, coin-lock I/O',
     date: 'Aug 6, 2026',

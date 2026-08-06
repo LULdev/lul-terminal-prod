@@ -109,7 +109,9 @@ export function computeStats(accounts, { isAdmin = false } = {}) {
 }
 
 export async function countAccountsByCreator(userId) {
-  const db = await loadAccountsDb();
+  // Meta load: no password decrypt (safe under coin lock / hot achievement paths)
+  const { loadAccountsDbMeta } = await import('./premiumAccountsStore.mjs');
+  const db = await loadAccountsDbMeta();
   return db.accounts.filter((a) => a.createdByUserId === userId).length;
 }
 
