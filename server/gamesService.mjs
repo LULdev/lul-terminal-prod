@@ -61,7 +61,12 @@ export async function getGamesState(userId) {
       lastWonAt: jackpot.lastWonAt,
       chancePercent: JACKPOT_CHANCE * 100,
     },
-    myCoins: user?.lulCoins ?? null,
+    myCoins: user
+      ? (() => {
+          const c = Math.floor(Number(user.lulCoins));
+          return Number.isFinite(c) ? Math.max(0, c) : 0;
+        })()
+      : null,
     minBet: MIN_BET,
     maxBet: MAX_BET,
     dailyBonus: buildDailyBonusPayload(user),

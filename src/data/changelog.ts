@@ -23,6 +23,24 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '3.69.0',
+    title: 'Full P0–P9 audit Server+Client: deductCoins NaN harden, balance floor, timers, EN copy',
+    date: 'Aug 7, 2026',
+    highlight: true,
+    items: [
+      { priority: 'P0', text: 'P0 — deductCoins rejects non-positive/NaN amount (Core/RPS/TTT); bare -= NaN/undefined no longer corrupts lulCoins.' },
+      { priority: 'P0', text: 'P0 — ensureCoins/creditCoins floor integer balances (no float/NaN drift on credit path).' },
+      { priority: 'P1', text: 'P1 — creditUserCoins floors base balance before add; publicUser/publicProfile floor lulCoins (keep legitimate 0).' },
+      { priority: 'P1', text: 'P1 — games /state myCoins floored non-negative integer; achievement coin checks use floor.' },
+      { priority: 'P2', text: 'P2 — RPS/TTT deduct/credit paths use floored amt for escrow release + ledger (parity with Core).' },
+      { priority: 'P3', text: 'P3 — Copy timer cleanup: ProfileHero, FreePremium CopyField+export, Proxy scraper/DB, MyPasteGallery.' },
+      { priority: 'P3', text: 'P3 — formatViews/formatCount NaN-safe; ProxyScraper StatCard finite-safe.' },
+      { priority: 'P4', text: 'P4 — Admin setup install checklist labels English; README pointer English.' },
+      { priority: 'P5', text: 'P5 — INSTALLATION_STEPS + AdminSetupNotesPanel DE→EN (Install checklist).' },
+      { priority: 'P9', text: 'P9 — Version 3.69.0; full system P0–P9 audit after 3.68 (every fix listed).' },
+    ],
+  },
+  {
     version: '3.68.0',
     title: 'Full P3 audit Server+Client: streak hint precision, NaN formats, timer/busy UX',
     date: 'Aug 7, 2026',

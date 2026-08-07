@@ -217,19 +217,23 @@ export function getUser(db, userId) {
 
 export function ensureCoins(user) {
   if (user.lulCoins == null) user.lulCoins = STARTING_LULCOINS;
-  user.lulCoins = Math.max(0, Number(user.lulCoins) || 0);
+  // Floor — never allow float/NaN balances (corrupt deduct with bad amount)
+  user.lulCoins = Math.max(0, Math.floor(Number(user.lulCoins) || 0));
 }
 
 export function deductCoins(user, amount, escrowMeta) {
   ensureCoins(user);
-  if (user.lulCoins < amount) throw new Error('Not enough LULcoins');
-  user.lulCoins -= amount;
-  if (escrowMeta) addGameEscrow(user, { ...escrowMeta, amount });
+  const amt = Math.floor(Number(amount) || 0);
+  // Reject NaN/non-positive — bare `-= amount` with NaN/undefined corrupts lulCoins
+  if (amt <= 0) throw new Error('Invalid bet amount');
+  if (user.lulCoins < amt) throw new Error('Not enough LULcoins');
+  user.lulCoins -= amt;
+  if (escrowMeta) addGameEscrow(user, { ...escrowMeta, amount: amt });
 }
 
 export function creditCoins(user, amount) {
   ensureCoins(user);
-  user.lulCoins += Math.max(0, Number(amount) || 0);
+  user.lulCoins += Math.max(0, Math.floor(Number(amount) || 0));
 }
 
 export function calcStreakBonus(bet, streak) {

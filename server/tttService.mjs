@@ -121,32 +121,35 @@ function getUser(db, userId) {
 
 function ensureCoins(user) {
   if (user.lulCoins == null) user.lulCoins = STARTING_LULCOINS;
-  user.lulCoins = Math.max(0, Number(user.lulCoins) || 0);
+  user.lulCoins = Math.max(0, Math.floor(Number(user.lulCoins) || 0));
 }
 
 const TTT_ESCROW = { gameId: 'ttt', chatLabel: 'Tic-Tac-Toe', mm };
 
 function deductCoins(user, amount) {
   ensureCoins(user);
-  if (user.lulCoins < amount) throw new Error('Not enough LULcoins');
-  user.lulCoins -= amount;
-  addGameEscrow(user, { ...TTT_ESCROW, amount });
+  const amt = Math.floor(Number(amount) || 0);
+  if (amt <= 0) throw new Error('Invalid bet amount');
+  if (user.lulCoins < amt) throw new Error('Not enough LULcoins');
+  user.lulCoins -= amt;
+  addGameEscrow(user, { ...TTT_ESCROW, amount: amt });
 }
 
 function creditCoins(user, amount, ledgerFn, ledgerArgs) {
+  const amt = Math.max(0, Math.floor(Number(amount) || 0));
   if (ledgerFn && ledgerArgs) {
     if (ledgerFn === logQueueRefund) {
-      const released = releaseGameEscrow(user, { gameId: ledgerArgs.gameId ?? 'ttt', amount })
-        || releaseAnyGameEscrow(user, amount, { preferGameId: ledgerArgs.gameId ?? 'ttt' });
+      const released = releaseGameEscrow(user, { gameId: ledgerArgs.gameId ?? 'ttt', amount: amt })
+        || releaseAnyGameEscrow(user, amt, { preferGameId: ledgerArgs.gameId ?? 'ttt' });
       if (!released) {
         throw new Error('Escrow mismatch — queue refund failed');
       }
     }
-    ledgerFn(user, { ...ledgerArgs, amount });
+    ledgerFn(user, { ...ledgerArgs, amount: amt });
     return;
   }
   ensureCoins(user);
-  user.lulCoins += Math.max(0, Number(amount) || 0);
+  user.lulCoins += amt;
 }
 
 function checkBoardState(board) {

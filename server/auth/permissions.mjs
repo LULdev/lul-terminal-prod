@@ -109,7 +109,12 @@ export function publicUser(user) {
     id, username, email, role, active, verified, displayName, bio, website,
     avatarUrl, coverUrl, profileViews, referralsCount, imagesUploaded, memesCreated,
     pastesCreated, pasteViewsTotal,
-    lulCoins: lulCoins ?? 1000,
+    // Floor — never emit NaN/float; keep legitimate 0 (do not || 1000 after floor)
+    lulCoins: (() => {
+      if (lulCoins == null) return 1000;
+      const c = Math.floor(Number(lulCoins));
+      return Number.isFinite(c) ? Math.max(0, c) : 1000;
+    })(),
     ...extractPublicGameStats(u),
     gameJackpotsWon: gameJackpotsWon ?? 0,
     gameTotalWon: gameTotalWon ?? 0,
@@ -201,7 +206,13 @@ export function publicProfileView(user, accountsSubmitted = 0, reportedNotWorkin
       pasteViewsTotal: 0,
       accountsSubmitted: 0,
     }),
-    ...(showCoins ? { lulCoins: lulCoins ?? 1000 } : {}),
+    ...(showCoins ? {
+      lulCoins: (() => {
+        if (lulCoins == null) return 1000;
+        const c = Math.floor(Number(lulCoins));
+        return Number.isFinite(c) ? Math.max(0, c) : 1000;
+      })(),
+    } : {}),
     ...(showActivity ? extractPublicGameStats(u) : zeroGameStats()),
     ...(showCoins ? {
       gameJackpotsWon: gameJackpotsWon ?? 0,

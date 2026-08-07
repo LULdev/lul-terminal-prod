@@ -707,7 +707,7 @@ export function syncAchievements(user, ctx = {}) {
   unlocked.push(...syncStandardArcadeAchievements(user, act, now, grant));
   const jackpots = Math.max(0, Number(user.gameJackpotsWon) || 0);
   if (jackpots >= 1 && grant(user, 'jackpot_hunter', now)) unlocked.push('jackpot_hunter');
-  const coins = Math.max(0, Number(user.lulCoins) || 0);
+  const coins = Math.max(0, Math.floor(Number(user.lulCoins) || 0));
   if (coins >= 5000 && grant(user, 'lul_coins_5000', now)) unlocked.push('lul_coins_5000');
   if (act.flags.image_host && grant(user, 'image_host', now)) unlocked.push('image_host');
   if (act.flags.paste_create && grant(user, 'paste_pioneer', now)) unlocked.push('paste_pioneer');

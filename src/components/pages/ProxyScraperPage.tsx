@@ -32,7 +32,11 @@ function StatCard({ label, value, sub, accent }: { label: string; value: string 
   return (
     <div className={`rounded-xl border px-3 py-3 flex flex-col gap-0.5 ${accent}`}>
       <span className="text-[8px] font-mono uppercase tracking-widest opacity-70">{label}</span>
-      <span className="text-xl font-mono font-bold tabular-nums leading-none">{typeof value === 'number' ? value.toLocaleString('en-US') : value}</span>
+      <span className="text-xl font-mono font-bold tabular-nums leading-none">
+        {typeof value === 'number'
+          ? (Number.isFinite(value) ? value.toLocaleString('en-US') : '—')
+          : value}
+      </span>
       {sub && <span className="text-[8px] font-mono opacity-60">{sub}</span>}
     </div>
   );
@@ -55,6 +59,10 @@ export function ProxyScraperPage() {
   const [concurrency, setConcurrency] = useState(50);
   const [checkLimit, setCheckLimit] = useState(600);
   const [copied, setCopied] = useState(false);
+  const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => {
+    if (copyTimerRef.current != null) clearTimeout(copyTimerRef.current);
+  }, []);
   const loadGenRef = useRef(0);
   const mountedRef = useRef(true);
   const jobAbortRef = useRef<AbortController | null>(null);
@@ -146,7 +154,11 @@ export function ProxyScraperPage() {
     const txt = exportTxt(checked, true);
     await navigator.clipboard.writeText(txt);
     setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    if (copyTimerRef.current != null) clearTimeout(copyTimerRef.current);
+    copyTimerRef.current = setTimeout(() => {
+      setCopied(false);
+      copyTimerRef.current = null;
+    }, 2000);
   };
 
   const downloadTxt = (alive: boolean) => {

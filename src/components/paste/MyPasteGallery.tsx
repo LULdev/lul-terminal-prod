@@ -166,10 +166,18 @@ export function MyPasteGallery({ refreshKey = 0, onDeleted, onFork }: Props) {
     }
   };
 
+  const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => {
+    if (copyTimerRef.current != null) clearTimeout(copyTimerRef.current);
+  }, []);
   const onCopyLink = async (p: PasteMeta) => {
     if (await copyToClipboard(buildPasteUrl(p.id))) {
       setCopied(p.id);
-      setTimeout(() => setCopied(null), 1800);
+      if (copyTimerRef.current != null) clearTimeout(copyTimerRef.current);
+      copyTimerRef.current = setTimeout(() => {
+        setCopied(null);
+        copyTimerRef.current = null;
+      }, 1800);
     }
   };
 

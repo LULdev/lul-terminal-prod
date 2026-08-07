@@ -53,12 +53,12 @@ export function AdminSetupNotesPanel() {
     <div className="space-y-4">
       <p className="text-[9px] font-mono text-slate-500 max-w-2xl leading-relaxed">
         Operator notes for self-hosted and production deployments. Keep these settings aligned with your reverse proxy and hosting stack.
-        Full guide: <span className="text-cyan-400/90">README.md</span> → Installationsanleitung.
+        Full guide: <span className="text-cyan-400/90">README.md</span> → Install guide.
       </p>
 
       <section className="rounded-2xl border border-slate-800/80 bg-black/25 p-4">
         <h3 className="text-[10px] font-mono font-bold text-slate-200 mb-3 uppercase tracking-wider">
-          Installationsanleitung (Kurz)
+          Install checklist (short)
         </h3>
         <ol className="space-y-3">
           {INSTALLATION_STEPS.map((s) => (

@@ -12,7 +12,9 @@ import { safeHostedImageUrl } from '../../lib/safeHostedImageUrl';
 type Props = { id: string };
 
 function formatViews(n: number) {
-  return n.toLocaleString('en-US');
+  const v = Number(n);
+  if (!Number.isFinite(v) || v < 0) return '—';
+  return Math.floor(v).toLocaleString('en-US');
 }
 
 export function ImageHostViewer({ id }: Props) {

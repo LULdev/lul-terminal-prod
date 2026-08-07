@@ -48,7 +48,8 @@ export function creditUserCoins(user, amount, ledgerEntry) {
   const n = Math.max(0, Math.floor(Number(amount) || 0));
   if (n <= 0) return 0;
   if (user.lulCoins == null) user.lulCoins = 1000;
-  user.lulCoins = Math.max(0, Number(user.lulCoins) || 0) + n;
+  // Floor base balance — never let NaN/float drift poison credits
+  user.lulCoins = Math.max(0, Math.floor(Number(user.lulCoins) || 0)) + n;
   if (ledgerEntry) appendCoinEntry(user, { ...ledgerEntry, amount: n });
   return n;
 }

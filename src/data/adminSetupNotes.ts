@@ -12,15 +12,15 @@ export type AdminSetupNote = {
   highlight?: boolean;
 };
 
-/** Quick install checklist — mirrored in README.md (Installationsanleitung). */
+/** Quick install checklist — mirrored in README.md (Install guide). */
 export const INSTALLATION_STEPS = [
-  { step: 1, title: 'Repository klonen', command: 'git clone https://github.com/LULdev/lul-terminal.git && cd lul-terminal' },
-  { step: 2, title: 'Node.js 18+ prüfen', command: 'node -v' },
-  { step: 3, title: 'Abhängigkeiten installieren', command: 'npm install' },
-  { step: 4, title: 'Umgebung konfigurieren', command: 'copy .env.example .env   # Windows\n# cp .env.example .env   # Linux/macOS' },
-  { step: 5, title: 'Optional: Seed-Daten', command: 'npm run seed:auth && npm run seed:persona-db && npm run seed:proxy-sources && npm run seed:news' },
-  { step: 6, title: 'Entwicklung starten', command: 'npm run dev' },
-  { step: 7, title: 'Produktion bauen & starten', command: 'npm run build && npm start' },
+  { step: 1, title: 'Clone repository', command: 'git clone https://github.com/LULdev/lul-terminal.git && cd lul-terminal' },
+  { step: 2, title: 'Check Node.js 18+', command: 'node -v' },
+  { step: 3, title: 'Install dependencies', command: 'npm install' },
+  { step: 4, title: 'Configure environment', command: 'copy .env.example .env   # Windows\n# cp .env.example .env   # Linux/macOS' },
+  { step: 5, title: 'Optional: seed data', command: 'npm run seed:auth && npm run seed:persona-db && npm run seed:proxy-sources && npm run seed:news' },
+  { step: 6, title: 'Start development', command: 'npm run dev' },
+  { step: 7, title: 'Build & start production', command: 'npm run build && npm start' },
 ] as const;
 
 export const ADMIN_SETUP_NOTES: AdminSetupNote[] = [
@@ -71,6 +71,6 @@ export const ADMIN_SETUP_NOTES: AdminSetupNote[] = [
     id: 'github-readme',
     title: 'Full install guide',
     category: 'general',
-    body: 'See README.md in the repository root for the complete step-by-step Installationsanleitung (DE), environment table, nginx example, and GitHub deployment notes.',
+    body: 'See README.md in the repository root for the complete step-by-step install guide, environment table, nginx example, and GitHub deployment notes.',
   },
 ];

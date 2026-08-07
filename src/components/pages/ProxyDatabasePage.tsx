@@ -67,12 +67,16 @@ export function ProxyDatabasePage() {
   const busyRef = useRef(false);
   const [msg, setMsg] = useState('');
   const [copied, setCopied] = useState(false);
+  const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const loadGenRef = useRef(0);
   const mountedRef = useRef(true);
 
   useEffect(() => {
     mountedRef.current = true;
-    return () => { mountedRef.current = false; };
+    return () => {
+      mountedRef.current = false;
+      if (copyTimerRef.current != null) clearTimeout(copyTimerRef.current);
+    };
   }, []);
 
   const refresh = useCallback(async () => {
@@ -132,7 +136,11 @@ export function ProxyDatabasePage() {
     const all = TYPES.flatMap((t) => lists[t] ?? []);
     await navigator.clipboard.writeText(exportDbTxt(all, true));
     setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    if (copyTimerRef.current != null) clearTimeout(copyTimerRef.current);
+    copyTimerRef.current = setTimeout(() => {
+      setCopied(false);
+      copyTimerRef.current = null;
+    }, 2000);
   };
 
   const downloadTxt = () => {
