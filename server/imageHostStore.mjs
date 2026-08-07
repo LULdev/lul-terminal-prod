@@ -130,7 +130,8 @@ export async function saveImage({ name, mime, size, width, height, buffer, userI
     await fs.rename(metaTmp, metaPath);
 
     const stats = await readStats();
-    stats.imagesHosted += 1;
+    stats.imagesHosted = finiteNonNeg(stats.imagesHosted) + 1;
+    stats.imageViewsTotal = finiteNonNeg(stats.imageViewsTotal);
     await writeStats(stats);
 
     return meta;
@@ -171,14 +172,16 @@ export async function recordView(id) {
     const meta = await getMeta(id);
     if (!meta) return null;
 
-    meta.views = (meta.views ?? 0) + 1;
+    // P1: floor + finite — corrupt/string views must not NaN or concat ("5"+1 → "51")
+    meta.views = finiteNonNeg(meta.views) + 1;
     const metaPath = path.join(META_DIR, `${id}.json`);
     const tmp = `${metaPath}.tmp`;
     await fs.writeFile(tmp, JSON.stringify(meta, null, 2), 'utf8');
     await fs.rename(tmp, metaPath);
 
     const stats = await readStats();
-    stats.imageViewsTotal += 1;
+    stats.imageViewsTotal = finiteNonNeg(stats.imageViewsTotal) + 1;
+    stats.imagesHosted = finiteNonNeg(stats.imagesHosted);
     await writeStats(stats);
 
     return { views: meta.views, imageViewsTotal: stats.imageViewsTotal };
@@ -300,7 +303,8 @@ async function removeImageFiles(id, meta) {
   }
 
   const stats = await readStats();
-  stats.imagesHosted = Math.max(0, (stats.imagesHosted ?? 0) - 1);
+  stats.imagesHosted = Math.max(0, finiteNonNeg(stats.imagesHosted) - 1);
+  stats.imageViewsTotal = finiteNonNeg(stats.imageViewsTotal);
   await writeStats(stats);
 
   return { ok: true, id };

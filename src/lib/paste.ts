@@ -249,10 +249,12 @@ export async function fetchPasteMeta(id: string, { credentialed = false } = {}):
 }
 
 export async function unlockPaste(id: string, password: string): Promise<PasteRecord> {
-  const res = await sessionFetch(`${API}/${id}/unlock`, {
-    method: 'POST',
-    body: JSON.stringify({ password }),
-  });
+  // soft401: protected paste unlock is password-gated — stale cookie 401 must not wipe session
+  const res = await sessionFetch(
+    `${API}/${id}/unlock`,
+    { method: 'POST', body: JSON.stringify({ password }) },
+    { soft401: true },
+  );
   if (!res.ok) throw new Error(await parseError(res));
   return res.json();
 }

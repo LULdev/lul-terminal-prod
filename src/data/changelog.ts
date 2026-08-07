@@ -23,6 +23,19 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '3.79.0',
+    title: 'Full P1 audit Server+Client: match participant gate, view counter integrity, paste unlock soft401',
+    date: 'Aug 7, 2026',
+    highlight: true,
+    items: [
+      { priority: 'P1', text: 'P1 — getMatchWithExpiry participant-only (mode-agnostic): empty userId / unknown mode no longer skip ownership gate.' },
+      { priority: 'P1', text: 'P1 — imageHostStore recordView/save/delete: finiteNonNeg views + stats (no NaN/string-concat corruption).' },
+      { priority: 'P1', text: 'P1 — pasteStore recordView + create: finiteNonNeg views/pastesCreated/pasteViewsTotal counters.' },
+      { priority: 'P1', text: 'P1 — paste unlockPaste soft401 (password gate; stale 401 must not wipe global session).' },
+      { priority: 'P9', text: 'P9 — Version 3.79.0; full P1 module audit after 3.78 (every fix listed).' },
+    ],
+  },
+  {
     version: '3.78.0',
     title: 'Full residual P3 audit Server+Client: paste status field, gallery/paste stats, EN labels',
     date: 'Aug 7, 2026',

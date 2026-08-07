@@ -306,7 +306,8 @@ export async function savePaste({
     await writeMetaAtomic(id, meta);
 
     const stats = await readStats();
-    stats.pastesCreated += 1;
+    stats.pastesCreated = finiteNonNeg(stats.pastesCreated) + 1;
+    stats.pasteViewsTotal = finiteNonNeg(stats.pasteViewsTotal);
     stats.activePastes = await countActivePastes();
     await writeStats(stats);
 
@@ -324,11 +325,14 @@ export async function recordView(id, { consumeBurn = true } = {}) {
       content = await fs.readFile(path.join(CONTENT_DIR, `${id}.txt`), 'utf8');
     } catch { /* content may already be gone */ }
 
-    meta.views = (meta.views ?? 0) + 1;
+    // P1: floor + finite — corrupt/string views must not NaN or concat
+    meta.views = finiteNonNeg(meta.views) + 1;
     meta.updatedAt = Date.now();
 
     const stats = await readStats();
-    stats.pasteViewsTotal += 1;
+    stats.pasteViewsTotal = finiteNonNeg(stats.pasteViewsTotal) + 1;
+    stats.pastesCreated = finiteNonNeg(stats.pastesCreated);
+    stats.activePastes = finiteNonNeg(stats.activePastes);
 
     if (meta.burnAfterRead && consumeBurn) {
       await deletePasteFiles(id);

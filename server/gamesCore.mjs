@@ -832,8 +832,12 @@ export async function forceExpireMatchesForUser(activeMatches, userId, expireMet
 export async function getMatchWithExpiry(activeMatches, matchId, userId, expireMeta, publicMatch) {
   const m = activeMatches.get(matchId);
   if (!m) return null;
-  if (m.mode === 'pvp' && (!userId || (m.player1.userId !== userId && m.player2?.userId !== userId))) return null;
-  if (m.mode === 'bot' && userId && m.player1.userId !== userId) return null;
+  // P1: participant-only (mode-agnostic). Prior bot check used `userId && …` so empty userId
+  // skipped the gate; unknown/corrupt modes had no participant check at all.
+  if (!userId) return null;
+  const isP1 = m.player1?.userId === userId;
+  const isP2 = m.mode !== 'bot' && m.player2?.userId === userId;
+  if (!isP1 && !isP2) return null;
   if (m.status !== 'done' && Date.now() > m.expiresAt) {
     if (m.player1?.move != null && m.player2?.move != null && expireMeta?.finalizeDualSubmit) {
       // One-shot — share flag with expireMatchWithRefund (avoid double finalize races)
