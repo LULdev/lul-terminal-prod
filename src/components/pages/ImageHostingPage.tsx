@@ -321,9 +321,10 @@ export function ImageHostingPage() {
                 <div className="flex items-center gap-3 px-1 py-2 rounded-xl border border-violet-500/20 bg-violet-500/5">
                   <span className="text-xl">👁️</span>
                   <div>
-                    <p className="text-[9px] font-mono text-violet-400/80 uppercase tracking-wide">View-Counter aktiv</p>
+                    <p className="text-[9px] font-mono text-violet-400/80 uppercase tracking-wide">View counter active</p>
                     <p className="text-[13px] font-mono font-bold text-violet-200 tabular-nums">
-                      {liveViews.toLocaleString('en-US')} {liveViews === 1 ? 'view' : 'views'} on share URL
+                      {(Number.isFinite(Number(liveViews)) ? Math.max(0, Math.floor(Number(liveViews))) : 0).toLocaleString('en-US')}{' '}
+                      {(Number.isFinite(Number(liveViews)) ? Math.floor(Number(liveViews)) : 0) === 1 ? 'view' : 'views'} on share URL
                     </p>
                   </div>
                 </div>

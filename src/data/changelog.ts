@@ -23,6 +23,21 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '3.71.0',
+    title: 'Full residual audit Server+Client: shared readJsonBody 400, copy timers, EN/NaN UI',
+    date: 'Aug 7, 2026',
+    highlight: true,
+    items: [
+      { priority: 'P2', text: 'P2 — Shared readJsonBody: Invalid JSON → 400, Payload too large → 413 (was bare JSON.parse 500).' },
+      { priority: 'P2', text: 'P2 — asyncMiddleware statusForError honors err.statusCode + Invalid JSON / Payload too large.' },
+      { priority: 'P2', text: 'P2 — All API modules import shared readJsonBody (auth, games, paste, image, chat, admin, proxy, analytics, …).' },
+      { priority: 'P3', text: 'P3 — Admin XML scraper + Proxy Checker copy timer cleanup on unmount.' },
+      { priority: 'P3', text: 'P3 — NaN-safe: TerminalHeader ONLINE, MyPasteGallery views, FreePremium views, Games total matches, AdminAnalytics pool/minutes, ImageHosting live views.' },
+      { priority: 'P5', text: 'P5 — ImageHosting “View-Counter aktiv” → “View counter active” (EN).' },
+      { priority: 'P9', text: 'P9 — Version 3.71.0; full residual system audit after 3.70 (every fix listed).' },
+    ],
+  },
+  {
     version: '3.70.0',
     title: 'Full P0–P9 audit Server+Client: escrow release NaN harden, cooldown UX, view NaN sweep',
     date: 'Aug 7, 2026',

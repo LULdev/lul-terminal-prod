@@ -5,6 +5,7 @@
 
 import { attachAuth, requireAuth, requireRole } from './auth/authApi.mjs';
 import { wrapAsyncHandler } from './asyncMiddleware.mjs';
+import { readJsonBody } from './readJsonBody.mjs';
 import { resolvePublicOrigin } from './resolvePublicOrigin.mjs';
 import { checkRateLimit, clientIp, isRateLimitError } from './rateLimit.mjs';
 import { claimGuestView } from './viewDedup.mjs';
@@ -41,19 +42,6 @@ function sendJson(res, status, body) {
   res.statusCode = status;
   res.setHeader('Content-Type', 'application/json; charset=utf-8');
   res.end(JSON.stringify(body));
-}
-
-async function readJsonBody(req, limit = 512 * 1024) {
-  const chunks = [];
-  let size = 0;
-  for await (const chunk of req) {
-    size += chunk.length;
-    if (size > limit) throw new Error('Payload too large');
-    chunks.push(chunk);
-  }
-  const raw = Buffer.concat(chunks).toString('utf8');
-  if (!raw.trim()) return {};
-  return JSON.parse(raw);
 }
 
 function originFromReq(req) {

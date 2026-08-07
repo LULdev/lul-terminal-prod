@@ -18,6 +18,7 @@ import {
 import { checkRateLimit, clientIp, isRateLimitError } from './rateLimit.mjs';
 import { pruneJobMap } from './jobPrune.mjs';
 import { wrapAsyncHandler } from './asyncMiddleware.mjs';
+import { readJsonBody } from './readJsonBody.mjs';
 
 const MAX_XML_BYTES = 10 * 1024 * 1024;
 const crawlJobs = new Map();
@@ -26,18 +27,6 @@ function sendJson(res, status, body) {
   res.statusCode = status;
   res.setHeader('Content-Type', 'application/json; charset=utf-8');
   res.end(JSON.stringify(body));
-}
-
-async function readJsonBody(req, limit = MAX_XML_BYTES) {
-  const chunks = [];
-  let size = 0;
-  for await (const chunk of req) {
-    size += chunk.length;
-    if (size > limit) throw new Error('Payload too large (max 10 MB)');
-    chunks.push(chunk);
-  }
-  if (!chunks.length) return {};
-  return JSON.parse(Buffer.concat(chunks).toString('utf8'));
 }
 
 async function requireAdmin(req) {
@@ -132,7 +121,7 @@ export async function handleXmlLinkScraperRequest(req, res) {
 
     if (req.method === 'POST' && pathname === '/api/xml-scraper/scan') {
       await checkRateLimit(adminActKey, { max: 30, windowMs: 60_000 });
-      const body = await readJsonBody(req);
+      const body = await readJsonBody(req, MAX_XML_BYTES);
       const xml = String(body.xml ?? '');
       const pattern = String(body.pattern ?? '*:*');
       const mode = ['smart', 'urls', 'raw'].includes(body.mode) ? body.mode : 'smart';

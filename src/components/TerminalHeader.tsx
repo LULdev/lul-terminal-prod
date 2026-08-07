@@ -63,7 +63,9 @@ export const TerminalHeader = memo(function TerminalHeader() {
   };
 
   const formatNumber = (val: number) => {
-    return val.toLocaleString('en-US');
+    const n = Number(val);
+    if (!Number.isFinite(n)) return '—';
+    return Math.max(0, Math.floor(n)).toLocaleString('en-US');
   };
 
   return (

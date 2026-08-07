@@ -6,6 +6,7 @@
 import fs from 'fs/promises';
 import { attachAuth, requireAuth } from './auth/authApi.mjs';
 import { wrapAsyncHandler } from './asyncMiddleware.mjs';
+import { readJsonBody } from './readJsonBody.mjs';
 import { resolvePublicOrigin } from './resolvePublicOrigin.mjs';
 import { checkRateLimit, clientIp, isRateLimitError } from './rateLimit.mjs';
 import { claimGuestView } from './viewDedup.mjs';
@@ -37,19 +38,6 @@ function decodeImageUploadData(data) {
   const estBytes = Math.floor((b64.length * 3) / 4);
   if (estBytes > MAX_IMAGE_BYTES) throw new Error('File too large (max 10 MB)');
   return Buffer.from(b64, 'base64');
-}
-
-async function readJsonBody(req, limit = 14 * 1024 * 1024) {
-  const chunks = [];
-  let size = 0;
-  for await (const chunk of req) {
-    size += chunk.length;
-    if (size > limit) throw new Error('Payload too large');
-    chunks.push(chunk);
-  }
-  const raw = Buffer.concat(chunks).toString('utf8');
-  if (!raw.trim()) return {};
-  return JSON.parse(raw);
 }
 
 export async function handleImageHostRequest(req, res) {

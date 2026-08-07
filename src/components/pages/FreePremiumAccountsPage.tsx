@@ -343,7 +343,11 @@ const PremiumAccountCard: React.FC<{
         </div>
         <div className="flex flex-col items-end gap-1 shrink-0">
           <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded border text-[7px] font-mono text-slate-400 border-slate-700/60 bg-black/30">
-            <Eye size={9} /> {(views || account.views || 0).toLocaleString('en-US')}
+            <Eye size={9} /> {(
+              Number.isFinite(Number(views ?? account.views))
+                ? Math.max(0, Math.floor(Number(views ?? account.views)))
+                : 0
+            ).toLocaleString('en-US')}
           </span>
           {account.vip && (
             <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded border text-[7px] font-mono uppercase border-amber-500/35 bg-amber-500/10 text-amber-300">

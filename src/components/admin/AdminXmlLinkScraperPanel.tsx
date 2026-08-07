@@ -121,9 +121,14 @@ export function AdminXmlLinkScraperPanel() {
   const scanBusyRef = useRef(false);
   const [msg, setMsg] = useState('');
   const [copied, setCopied] = useState('');
+  const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [dragOver, setDragOver] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => () => {
+    if (copyTimerRef.current != null) clearTimeout(copyTimerRef.current);
+  }, []);
 
   const [startUrl, setStartUrl] = useState('');
   const [crawlResult, setCrawlResult] = useState<WebsiteCrawlResult | null>(null);
@@ -331,17 +336,24 @@ export function AdminXmlLinkScraperPanel() {
     return [...map.entries()].sort((a, b) => b[1].length - a[1].length);
   }, [filtered, groupDomain]);
 
+  const flashCopied = (id: string) => {
+    setCopied(id);
+    if (copyTimerRef.current != null) clearTimeout(copyTimerRef.current);
+    copyTimerRef.current = setTimeout(() => {
+      setCopied((c) => (c === id ? '' : c));
+      copyTimerRef.current = null;
+    }, 1500);
+  };
+
   const copyValue = async (value: string, id: string) => {
     await navigator.clipboard.writeText(value);
-    setCopied(id);
-    setTimeout(() => setCopied((c) => (c === id ? '' : c)), 1500);
+    flashCopied(id);
   };
 
   const copyAll = async () => {
     if (!filtered.length) return;
     await navigator.clipboard.writeText(exportMatchesTxt(filtered));
-    setCopied('all');
-    setTimeout(() => setCopied(''), 1500);
+    flashCopied('all');
   };
 
   const stopCrawl = async () => {
@@ -473,8 +485,7 @@ export function AdminXmlLinkScraperPanel() {
   const copyAllColons = async () => {
     if (!filteredAtlas.length) return;
     await navigator.clipboard.writeText(exportColonValuesOnly(filteredAtlas));
-    setCopied('colons-all');
-    setTimeout(() => setCopied(''), 1500);
+    flashCopied('colons-all');
   };
 
   const toggleRow = (value: string) => {

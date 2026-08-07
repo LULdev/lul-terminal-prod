@@ -4,9 +4,13 @@
  */
 
 function statusForError(e) {
+  const code = Number(e?.statusCode);
+  if (Number.isFinite(code) && code >= 400 && code < 600) return code;
   const msg = e instanceof Error ? e.message : 'Server error';
   if (msg === 'Permission denied') return 403;
   if (msg === 'Not logged in') return 401;
+  if (msg === 'Invalid JSON') return 400;
+  if (msg === 'Payload too large') return 413;
   return 500;
 }
 

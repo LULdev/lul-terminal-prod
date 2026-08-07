@@ -583,10 +583,10 @@ export function AdminAnalyticsPanel() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
             <ToolCard title="System-Health" icon="🖥️" accent="cyan">
               <div className="space-y-2 text-[9px] font-mono">
-                <div className="flex justify-between text-slate-400"><span>Proxy pool</span><span className="text-teal-300">{overview.system.proxyPool.toLocaleString('en-US')}</span></div>
+                <div className="flex justify-between text-slate-400"><span>Proxy pool</span><span className="text-teal-300">{Number.isFinite(Number(overview.system.proxyPool)) ? Number(overview.system.proxyPool).toLocaleString('en-US') : '—'}</span></div>
                 <div className="flex justify-between text-slate-400"><span>Sources OK/Fail</span><span>{overview.system.proxySourcesOk} / {overview.system.proxySourcesFailed}</span></div>
                 <div className="flex justify-between text-slate-400"><span>Checker alive</span><span className="text-emerald-300">{overview.system.proxyAlive}</span></div>
-                <div className="flex justify-between text-slate-400"><span>Online minutes Σ</span><span>{overview.engagement.totalOnlineMinutes.toLocaleString('en-US')}</span></div>
+                <div className="flex justify-between text-slate-400"><span>Online minutes Σ</span><span>{Number.isFinite(Number(overview.engagement.totalOnlineMinutes)) ? Number(overview.engagement.totalOnlineMinutes).toLocaleString('en-US') : '—'}</span></div>
                 <div className="flex justify-between text-slate-400"><span>Shoutbox Σ</span><span>{overview.engagement.totalShoutbox}</span></div>
                 <div className="flex justify-between text-slate-400"><span>Changelog/News Views</span><span>{overview.engagement.changelogViews} / {overview.engagement.newsViews}</span></div>
               </div>

@@ -126,6 +126,10 @@ export function AdminProxyCheckerPanel({ onGoToScraper }: AdminProxyCheckerPanel
   const [sortBy, setSortBy] = useState<SortKey>('latency');
   const [search, setSearch] = useState('');
   const [copied, setCopied] = useState('');
+  const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => {
+    if (copyTimerRef.current != null) clearTimeout(copyTimerRef.current);
+  }, []);
 
   const applyProfile = (key: keyof typeof PROFILES) => {
     const p = PROFILES[key];
@@ -279,7 +283,11 @@ export function AdminProxyCheckerPanel({ onGoToScraper }: AdminProxyCheckerPanel
     try {
       await navigator.clipboard.writeText(raw);
       setCopied(raw);
-      setTimeout(() => setCopied(''), 1500);
+      if (copyTimerRef.current != null) clearTimeout(copyTimerRef.current);
+      copyTimerRef.current = setTimeout(() => {
+        setCopied('');
+        copyTimerRef.current = null;
+      }, 1500);
     } catch { /* ignore */ }
   };
 

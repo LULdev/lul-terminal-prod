@@ -132,7 +132,7 @@ function ArcadeVarietyCard({ state }: { state: GamesState | null }) {
         </span>
       </div>
       <p className="text-[8px] font-mono text-slate-600">
-        {total.toLocaleString('en-US')} total matches · per-game Debut / Victor / Fighter achievements on every title
+        {(Number.isFinite(Number(total)) ? Math.max(0, Math.floor(Number(total))) : 0).toLocaleString('en-US')} total matches · per-game Debut / Victor / Fighter achievements on every title
       </p>
     </div>
   );

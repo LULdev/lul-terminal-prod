@@ -224,7 +224,13 @@ export function MyPasteGallery({ refreshKey = 0, onDeleted, onFork }: Props) {
       {stats && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
           <QuickStat label="Total" value={String(stats.count)} icon="📋" />
-          <QuickStat label="Views" value={stats.totalViews.toLocaleString('en-US')} icon="👁️" />
+          <QuickStat
+            label="Views"
+            value={(Number.isFinite(Number(stats.totalViews))
+              ? Math.max(0, Math.floor(Number(stats.totalViews)))
+              : 0).toLocaleString('en-US')}
+            icon="👁️"
+          />
           <QuickStat label="Pinned" value={String(stats.pinned)} icon="📌" />
           <QuickStat label="Protected" value={String(stats.protectedCount)} icon="🔑" />
         </div>

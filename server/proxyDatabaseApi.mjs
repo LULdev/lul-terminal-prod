@@ -12,24 +12,13 @@ import {
   runDailyCheck,
 } from './proxyDatabaseService.mjs';
 import { wrapAsyncHandler } from './asyncMiddleware.mjs';
+import { readJsonBody } from './readJsonBody.mjs';
 import { checkRateLimit, clientIp, isRateLimitError } from './rateLimit.mjs';
 
 function sendJson(res, status, body) {
   res.statusCode = status;
   res.setHeader('Content-Type', 'application/json; charset=utf-8');
   res.end(JSON.stringify(body));
-}
-
-async function readJsonBody(req, limit = 256 * 1024) {
-  const chunks = [];
-  let size = 0;
-  for await (const chunk of req) {
-    size += chunk.length;
-    if (size > limit) throw new Error('Payload too large');
-    chunks.push(chunk);
-  }
-  if (!chunks.length) return {};
-  return JSON.parse(Buffer.concat(chunks).toString('utf8'));
 }
 
 export async function handleProxyDatabaseRequest(req, res) {
