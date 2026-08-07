@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { wrapAsyncHandler } from './asyncMiddleware.mjs';
+import { statusForError, wrapAsyncHandler } from './asyncMiddleware.mjs';
 import { readJsonBody } from './readJsonBody.mjs';
 import { attachAuth, requireRole } from './auth/authApi.mjs';
 import { canAccessAdmin } from './auth/permissions.mjs';
@@ -335,15 +335,17 @@ export async function handleAdminRequest(req, res) {
     return sendJson(res, 404, { error: 'Not found' });
   } catch (e) {
     const msg = e instanceof Error ? e.message : 'Server error';
-    const status = isRateLimitError(e) ? 429
-      : e instanceof SyntaxError ? 400
+    let status = statusForError(e);
+    if (status === 500) {
+      status = isRateLimitError(e) ? 429
         : msg === 'Not logged in' ? 401
-        : msg.includes('Forbidden') || msg.includes('Admin') || msg === 'Permission denied'
-          ? 403
-          : msg.includes('not found') || msg.includes('required') || msg.includes('Invalid')
-            || msg.includes('exists') || msg.includes('allowed') || msg.includes('max')
-            ? 400
-            : 500;
+          : msg.includes('Forbidden') || msg.includes('Admin') || msg === 'Permission denied'
+            ? 403
+            : msg.includes('not found') || msg.includes('required') || msg.includes('Invalid')
+              || msg.includes('exists') || msg.includes('allowed') || msg.includes('max')
+              ? 400
+              : 500;
+    }
     return sendJson(res, status, { error: msg });
   }
 }

@@ -144,9 +144,9 @@ export function AdminProxyScraperPanel({ onScrapeSuccess, onGoToChecker, scrapeR
 
         <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 mb-4">
           <MiniStat label="Sources" value={String(sources.length)} />
-          <MiniStat label="Total pool" value={poolCount.toLocaleString('en-US')} accent="text-teal-300" />
-          <MiniStat label="Scraped" value={scrapedCount.toLocaleString('en-US')} />
-          <MiniStat label="Custom" value={customCount.toLocaleString('en-US')} accent="text-emerald-300" />
+          <MiniStat label="Total pool" value={(Number.isFinite(Number(poolCount)) ? Number(poolCount) : 0).toLocaleString('en-US')} accent="text-teal-300" />
+          <MiniStat label="Scraped" value={(Number.isFinite(Number(scrapedCount)) ? Number(scrapedCount) : 0).toLocaleString('en-US')} />
+          <MiniStat label="Custom" value={(Number.isFinite(Number(customCount)) ? Number(customCount) : 0).toLocaleString('en-US')} accent="text-emerald-300" />
           <MiniStat label="OK / Fail" value={`${stats?.sourcesOk ?? 0} / ${stats?.sourcesFailed ?? 0}`} />
         </div>
 
@@ -207,7 +207,7 @@ export function AdminProxyScraperPanel({ onScrapeSuccess, onGoToChecker, scrapeR
                 <div key={s.id} className="flex items-center justify-between gap-2 px-2 py-1 rounded-lg bg-black/25 border border-slate-800/60">
                   <span className="text-[8px] font-mono text-slate-400 truncate">{s.name}</span>
                   <span className="text-[8px] font-mono text-teal-300 shrink-0">
-                    {s.count.toLocaleString('en-US')}
+                    {(Number.isFinite(Number(s.count)) ? Number(s.count) : 0).toLocaleString('en-US')}
                     {s.format ? ` · ${s.format}` : ''}
                     {s.discovered ? ` · +${s.discovered}` : ''}
                   </span>

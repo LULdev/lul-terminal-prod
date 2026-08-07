@@ -5,7 +5,7 @@
 
 import fs from 'fs/promises';
 import { attachAuth, requireAuth } from './auth/authApi.mjs';
-import { wrapAsyncHandler } from './asyncMiddleware.mjs';
+import { statusForError, wrapAsyncHandler } from './asyncMiddleware.mjs';
 import { readJsonBody } from './readJsonBody.mjs';
 import { resolvePublicOrigin } from './resolvePublicOrigin.mjs';
 import { checkRateLimit, clientIp, isRateLimitError } from './rateLimit.mjs';
@@ -199,12 +199,7 @@ export async function handleImageHostRequest(req, res) {
   } catch (e) {
     if (isRateLimitError(e)) return sendJson(res, 429, { error: 'Too many requests' });
     const msg = e instanceof Error ? e.message : 'Server error';
-    const status =
-      msg === 'Permission denied' ? 403
-        : msg === 'Not logged in' ? 401
-          : e instanceof SyntaxError ? 400
-            : 500;
-    sendJson(res, status, { error: msg });
+    sendJson(res, statusForError(e), { error: msg });
   }
 }
 
@@ -218,7 +213,7 @@ function sortGallery(images, sort) {
     case 'size':
       return list.sort((a, b) => (b.size ?? 0) - (a.size ?? 0));
     case 'name':
-      return list.sort((a, b) => String(a.name).localeCompare(String(b.name), 'de'));
+      return list.sort((a, b) => String(a.name).localeCompare(String(b.name), 'en-US'));
     case 'favorites':
       return list.sort((a, b) => Number(b.favorite) - Number(a.favorite) || (b.createdAt ?? 0) - (a.createdAt ?? 0));
     case 'newest':

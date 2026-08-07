@@ -34,7 +34,7 @@ import {
   rejectReport,
   reportAccountNotWorking,
 } from './premiumAccountsReports.mjs';
-import { wrapAsyncHandler } from './asyncMiddleware.mjs';
+import { statusForError, wrapAsyncHandler } from './asyncMiddleware.mjs';
 import { readJsonBody } from './readJsonBody.mjs';
 import { checkRateLimit, clientIp, isRateLimitError } from './rateLimit.mjs';
 
@@ -277,13 +277,16 @@ export async function handlePremiumAccountsRequest(req, res) {
   } catch (e) {
     const msg = e instanceof Error ? e.message : 'Server error';
     const lower = msg.toLowerCase();
-    const status = isRateLimitError(e) ? 429
-      : msg === 'Not logged in'
-        ? 401
-        : msg === 'Permission denied' || lower.includes('vip') || lower.includes('permission')
-          || lower.includes('verification') || lower.includes('admin')
-          ? 403
-          : 400;
+    let status = statusForError(e);
+    if (status === 500) {
+      status = isRateLimitError(e) ? 429
+        : msg === 'Not logged in'
+          ? 401
+          : msg === 'Permission denied' || lower.includes('vip') || lower.includes('permission')
+            || lower.includes('verification') || lower.includes('admin')
+            ? 403
+            : 400;
+    }
     sendJson(res, status, { error: msg });
   }
 }

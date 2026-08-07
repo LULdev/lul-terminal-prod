@@ -62,7 +62,9 @@ export function RpsGlobalMeta({
         <div className="text-[8px] font-mono uppercase text-indigo-400/80">Community meta</div>
         <div className="text-[10px] font-mono text-slate-300">
           Most played: <span className={fav?.color}>{fav?.label ?? '—'}</span>
-          <span className="text-slate-600 ml-1">({total.toLocaleString('en-US')} picks)</span>
+          <span className="text-slate-600 ml-1">
+            ({(Number.isFinite(Number(total)) ? Math.max(0, Math.floor(Number(total))) : 0).toLocaleString('en-US')} picks)
+          </span>
         </div>
       </div>
     </div>

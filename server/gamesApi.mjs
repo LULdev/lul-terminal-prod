@@ -4,7 +4,7 @@
  */
 
 import { attachAuth } from './auth/authApi.mjs';
-import { wrapAsyncHandler } from './asyncMiddleware.mjs';
+import { statusForError, wrapAsyncHandler } from './asyncMiddleware.mjs';
 import { readJsonBody } from './readJsonBody.mjs';
 import { requireMemberTab } from './tabAccessGuard.mjs';
 import { getGameHandler, GAME_IDS } from './gameRegistry.mjs';
@@ -125,18 +125,20 @@ export async function handleGamesRequest(req, res) {
     return sendJson(res, 404, { error: 'Not found' });
   } catch (e) {
     const msg = e instanceof Error ? e.message : 'Server error';
-    const status =
-      isRateLimitError(e) ? 429
-        : e instanceof SyntaxError ? 400
-        : msg === 'Permission denied' ? 403
-        : msg === 'Not logged in' ? 401
-        : msg.includes('Please wait') ? 429
-        : msg.includes('enough') || msg.includes('Invalid') || msg.includes('already')
-          || msg.includes('turn') || msg.includes('taken') || msg.includes('Column')
-          || msg.includes('Finish your active') || msg.includes('Leave your other')
-          || msg.includes('Escrow') || msg.includes('re-join') ? 400
-          : msg.includes('not found') || msg.includes('expired') ? 404
-            : 500;
+    let status = statusForError(e);
+    if (status === 500) {
+      status =
+        isRateLimitError(e) || msg.includes('Please wait') || msg.includes('Too many') ? 429
+          : msg === 'Permission denied' ? 403
+            : msg === 'Not logged in' ? 401
+              : msg.includes('enough') || msg.includes('Invalid') || msg.includes('already')
+                || msg.includes('turn') || msg.includes('taken') || msg.includes('Column')
+                || msg.includes('Finish your active') || msg.includes('Leave your other')
+                || msg.includes('Escrow') || msg.includes('re-join') || msg.includes('bet')
+                ? 400
+                : msg.includes('not found') || msg.includes('expired') ? 404
+                  : 500;
+    }
     return sendJson(res, status, { error: msg });
   }
 }

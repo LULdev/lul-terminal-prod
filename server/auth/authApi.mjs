@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { wrapAsyncHandler } from '../asyncMiddleware.mjs';
+import { statusForError, wrapAsyncHandler } from '../asyncMiddleware.mjs';
 import { readJsonBody } from '../readJsonBody.mjs';
 import { requireMemberTab } from '../tabAccessGuard.mjs';
 import {
@@ -343,18 +343,24 @@ export async function handleAuthRequest(req, res) {
       applyRateLimitHeaders(res, e);
       return sendJson(res, 429, { error: msg });
     }
-    const status = msg === 'Permission denied'
-        ? 403
-        : msg === 'Not logged in' || msg === 'Invalid login credentials'
-          ? 401
-          : e instanceof SyntaxError || msg === 'Payload too large'
-            || msg === 'Achievement proof required'
-            || msg === 'Achievement proof expired'
-            || msg === 'Achievement proof invalid for this action'
-            || msg === 'Invalid password'
-            || msg === 'Password required to delete account'
-            ? 400
-            : 500;
+    // Prefer statusCode (Invalid JSON 400, etc.) then domain-specific 400s
+    let status = statusForError(e);
+    if (status === 500) {
+      if (
+        msg === 'Achievement proof required'
+        || msg === 'Achievement proof expired'
+        || msg === 'Achievement proof invalid for this action'
+        || msg === 'Invalid password'
+        || msg === 'Password required to delete account'
+        || msg.includes('too long')
+        || msg.includes('Registration challenge')
+        || msg.includes('Too many registration')
+        || msg.includes('temporarily unavailable')
+      ) {
+        status = msg.includes('Too many') || msg.includes('temporarily') ? 429 : 400;
+      }
+    }
+    if (status === 429) applyRateLimitHeaders(res, e);
     return sendJson(res, status, { error: msg });
   }
 }

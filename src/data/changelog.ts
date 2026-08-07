@@ -23,6 +23,21 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '3.72.0',
+    title: 'Full residual audit Server+Client: statusForError honors Invalid JSON/429, API catch parity',
+    date: 'Aug 7, 2026',
+    highlight: true,
+    items: [
+      { priority: 'P2', text: 'P2 — checkRateLimit sets statusCode 429; wrapAsyncHandler applies Retry-After on 429.' },
+      { priority: 'P2', text: 'P2 — export statusForError: Invalid JSON/SyntaxError → 400, RATE_LIMIT → 429 (not 500).' },
+      { priority: 'P2', text: 'P2 — API catch blocks honor statusCode first: auth, paste, games, chat, image, admin, premium, access-control.' },
+      { priority: 'P2', text: 'P2 — pasteApi rate-limit path sets Retry-After headers (parity with auth/chat).' },
+      { priority: 'P3', text: 'P3 — image gallery name sort locale en-US (was de).' },
+      { priority: 'P3', text: 'P3 — NaN-safe stats: AdminProxyChecker/Scraper/CustomProxies, RpsMoveTendency picks.' },
+      { priority: 'P9', text: 'P9 — Version 3.72.0; full residual system audit after 3.71 (every fix listed).' },
+    ],
+  },
+  {
     version: '3.71.0',
     title: 'Full residual audit Server+Client: shared readJsonBody 400, copy timers, EN/NaN UI',
     date: 'Aug 7, 2026',

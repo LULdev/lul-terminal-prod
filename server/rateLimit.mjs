@@ -45,6 +45,7 @@ export async function checkRateLimit(key, { max = 30, windowMs = 60_000 } = {}) 
   if (!ok) {
     const err = new Error('Too many requests');
     err.code = 'RATE_LIMIT';
+    err.statusCode = 429;
     err.retryAfterMs = windowMs;
     throw err;
   }

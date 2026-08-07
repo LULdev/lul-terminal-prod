@@ -9,7 +9,7 @@ import { recordUserShoutboxSend } from './auth/authService.mjs';
 import { handleChatActivity } from './chatActivity.mjs';
 import { listLobbyMessages, postLobbyMessage } from './chatService.mjs';
 import { getEmoteFile, listPublicEmotes } from './chatEmotesStore.mjs';
-import { wrapAsyncHandler } from './asyncMiddleware.mjs';
+import { statusForError, wrapAsyncHandler } from './asyncMiddleware.mjs';
 import { readJsonBody } from './readJsonBody.mjs';
 import { requireChatAccess } from './tabAccessGuard.mjs';
 import { applyRateLimitHeaders, checkRateLimit, clientIp, isRateLimitError } from './rateLimit.mjs';
@@ -114,8 +114,9 @@ export async function handleChatRequest(req, res) {
       applyRateLimitHeaders(res, e);
       return sendJson(res, 429, { error: msg });
     }
-    const status = e instanceof SyntaxError ? 400
-      : msg.includes('logged in') || msg === 'Not logged in'
+    let status = statusForError(e);
+    if (status === 500) {
+      status = msg.includes('logged in') || msg === 'Not logged in'
         ? 401
         : msg === 'Permission denied' || msg.includes('banned') || msg.includes('muted')
           ? 403
@@ -125,6 +126,8 @@ export async function handleChatRequest(req, res) {
             || msg.includes('not found') || msg.includes('Cannot') || msg.includes('required')
             ? 400
             : 500;
+    }
+    if (status === 429) applyRateLimitHeaders(res, e);
     sendJson(res, status, { error: msg });
   }
 }

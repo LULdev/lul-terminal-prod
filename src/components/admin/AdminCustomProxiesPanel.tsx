@@ -66,7 +66,7 @@ export function AdminCustomProxiesPanel({ onAdded, onGoToChecker }: AdminCustomP
       setPasteText('');
       await load();
       if (mountedRef.current) {
-        setMsg(`${result.added.toLocaleString('en-US')} added${result.skipped ? ` · ${result.skipped} duplicates skipped` : ''} — pool: ${result.count.toLocaleString('en-US')}`);
+        setMsg(`${(Number.isFinite(Number(result.added)) ? Number(result.added) : 0).toLocaleString('en-US')} added${result.skipped ? ` · ${(Number.isFinite(Number(result.skipped)) ? Number(result.skipped) : 0).toLocaleString('en-US')} duplicates skipped` : ''} — pool: ${(Number.isFinite(Number(result.count)) ? Number(result.count) : 0).toLocaleString('en-US')}`);
       }
       if (result.added > 0) onAdded?.();
     } catch (e) {
@@ -144,7 +144,7 @@ export function AdminCustomProxiesPanel({ onAdded, onGoToChecker }: AdminCustomP
           {pasteText.trim() && (
             <div className="mt-1.5 flex flex-wrap gap-1.5 text-[8px] font-mono">
               <span className={`px-2 py-0.5 rounded border ${detection.count ? 'border-emerald-500/40 text-emerald-300 bg-emerald-500/10' : 'border-rose-500/40 text-rose-300 bg-rose-500/10'}`}>
-                {detection.count.toLocaleString('en-US')} detected
+                {(Number.isFinite(Number(detection.count)) ? Number(detection.count) : 0).toLocaleString('en-US')} detected
               </span>
               {(['http', 'https', 'socks4', 'socks5'] as ProxyType[]).map((t) =>
                 detection.byType[t] > 0 ? (
@@ -194,7 +194,7 @@ export function AdminCustomProxiesPanel({ onAdded, onGoToChecker }: AdminCustomP
 
       <div className="flex flex-wrap items-center gap-2 mb-3">
         <span className="text-[9px] font-mono text-slate-500">
-          <strong className="text-emerald-300">{proxies.length.toLocaleString('en-US')}</strong> stored
+          <strong className="text-emerald-300">{(Number.isFinite(proxies.length) ? proxies.length : 0).toLocaleString('en-US')}</strong> stored
         </span>
         <input
           value={search}

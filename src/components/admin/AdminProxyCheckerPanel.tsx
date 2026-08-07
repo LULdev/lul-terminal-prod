@@ -342,7 +342,7 @@ export function AdminProxyCheckerPanel({ onGoToScraper }: AdminProxyCheckerPanel
 
         <div className="flex flex-wrap gap-2 mb-3">
           <ModeBtn active={inputMode === 'scraped'} onClick={() => setInputMode('scraped')}>
-            <Database size={12} /> Pool ({poolCount.toLocaleString('en-US')}{customCount > 0 ? ` · ${customCount} custom` : ''})
+            <Database size={12} /> Pool ({(Number.isFinite(Number(poolCount)) ? Number(poolCount) : 0).toLocaleString('en-US')}{customCount > 0 ? ` · ${customCount} custom` : ''})
           </ModeBtn>
           <ModeBtn active={inputMode === 'paste'} onClick={() => setInputMode('paste')}>
             <ClipboardPaste size={12} /> Paste
@@ -377,7 +377,7 @@ export function AdminProxyCheckerPanel({ onGoToScraper }: AdminProxyCheckerPanel
               return (
                 <div className="mt-1.5 flex flex-wrap gap-1.5 text-[8px] font-mono">
                   <span className={`px-2 py-0.5 rounded border ${d.count ? 'border-teal-500/40 text-teal-300 bg-teal-500/10' : 'border-rose-500/40 text-rose-300'}`}>
-                    {d.count.toLocaleString('en-US')} auto-detected
+                    {(Number.isFinite(Number(d.count)) ? Number(d.count) : 0).toLocaleString('en-US')} auto-detected
                   </span>
                   {(['http', 'https', 'socks4', 'socks5'] as ProxyType[]).map((t) =>
                     d.byType[t] > 0 ? (
@@ -553,7 +553,7 @@ export function AdminProxyCheckerPanel({ onGoToScraper }: AdminProxyCheckerPanel
           </button>
         </div>
 
-        <div className="text-[9px] font-mono text-slate-600 mb-2">{filtered.length.toLocaleString('en-US')} shown</div>
+        <div className="text-[9px] font-mono text-slate-600 mb-2">{(Number.isFinite(filtered.length) ? filtered.length : 0).toLocaleString('en-US')} shown</div>
 
         <div className="max-h-[360px] overflow-y-auto space-y-1.5 pr-1">
           {filtered.map((p) => (
@@ -597,7 +597,9 @@ function StatPill({ label, value, accent = 'text-slate-300' }: { label: string; 
     <div className="rounded-xl border border-slate-800/80 bg-black/25 px-2 py-2 text-center">
       <div className="text-[7px] font-mono text-slate-600 uppercase tracking-wide">{label}</div>
       <div className={`text-[11px] font-mono font-semibold tabular-nums ${accent}`}>
-        {typeof value === 'number' ? value.toLocaleString('en-US') : value}
+        {typeof value === 'number'
+          ? (Number.isFinite(value) ? value.toLocaleString('en-US') : '—')
+          : value}
       </div>
     </div>
   );

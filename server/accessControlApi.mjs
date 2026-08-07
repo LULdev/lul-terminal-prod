@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { wrapAsyncHandler } from './asyncMiddleware.mjs';
+import { statusForError, wrapAsyncHandler } from './asyncMiddleware.mjs';
 import { readJsonBody } from './readJsonBody.mjs';
 import { attachAuth, requireAuth } from './auth/authApi.mjs';
 import { requireRole } from './auth/authApi.mjs';
@@ -97,10 +97,12 @@ export async function handleAccessControlRequest(req, res) {
   } catch (e) {
     if (isRateLimitError(e)) return sendJson(res, 429, { error: 'Too many requests' });
     const msg = e instanceof Error ? e.message : 'Server error';
-    const status =
-      msg === 'Permission denied' ? 403
+    let status = statusForError(e);
+    if (status === 500) {
+      status = msg === 'Permission denied' ? 403
         : msg === 'Not logged in' ? 401
           : 400;
+    }
     return sendJson(res, status, { error: msg });
   }
 }

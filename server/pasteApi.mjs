@@ -4,10 +4,10 @@
  */
 
 import { attachAuth, requireAuth, requireRole } from './auth/authApi.mjs';
-import { wrapAsyncHandler } from './asyncMiddleware.mjs';
+import { statusForError, wrapAsyncHandler } from './asyncMiddleware.mjs';
 import { readJsonBody } from './readJsonBody.mjs';
 import { resolvePublicOrigin } from './resolvePublicOrigin.mjs';
-import { checkRateLimit, clientIp, isRateLimitError } from './rateLimit.mjs';
+import { applyRateLimitHeaders, checkRateLimit, clientIp, isRateLimitError } from './rateLimit.mjs';
 import { claimGuestView } from './viewDedup.mjs';
 import { requireMemberTab } from './tabAccessGuard.mjs';
 import { canAccessAdmin } from './auth/permissions.mjs';
@@ -817,13 +817,15 @@ export async function handlePasteRequest(req, res) {
     res.statusCode = 404;
     res.end('Not found');
   } catch (e) {
-    if (isRateLimitError(e)) return sendJson(res, 429, { error: 'Too many requests' });
+    if (isRateLimitError(e)) {
+      applyRateLimitHeaders(res, e);
+      return sendJson(res, 429, { error: 'Too many requests' });
+    }
     const msg = e instanceof Error ? e.message : 'Server error';
-    const status = msg === 'Not logged in' ? 401
-      : msg === 'Permission denied' || msg === 'Not allowed' ? 403
-      : msg.includes('too large') || msg.includes('empty') ? 400
-      : e instanceof SyntaxError ? 400
-      : 500;
+    let status = statusForError(e);
+    if (status === 500 && (msg.includes('too large') || msg.includes('empty') || msg.includes('Password'))) {
+      status = 400;
+    }
     sendJson(res, status, { error: msg });
   }
 }
