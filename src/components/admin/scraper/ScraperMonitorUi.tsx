@@ -53,7 +53,9 @@ export function MetricTile({
   pulse?: boolean;
 }) {
   const s = ACCENT_STYLES[accent];
-  const display = typeof value === 'number' ? value.toLocaleString('en-US') : value;
+  const display = typeof value === 'number'
+    ? (Number.isFinite(value) ? value.toLocaleString('en-US') : '—')
+    : value;
   return (
     <div className={`relative overflow-hidden rounded-2xl border ${s.border} bg-black/35 p-3 transition hover:bg-black/45`}>
       <div className={`absolute inset-0 bg-gradient-to-br ${s.glow} to-transparent pointer-events-none`} />
@@ -77,9 +79,10 @@ export function MetricTile({
 
 export function RingProgress({ pct, label, accent = 'emerald' }: { pct: number; label: string; accent?: Accent }) {
   const s = ACCENT_STYLES[accent];
+  const safePct = Number.isFinite(Number(pct)) ? Math.min(100, Math.max(0, Number(pct))) : 0;
   const r = 28;
   const circ = 2 * Math.PI * r;
-  const offset = circ - (Math.min(100, pct) / 100) * circ;
+  const offset = circ - (safePct / 100) * circ;
   return (
     <div className="flex flex-col items-center gap-1">
       <svg width="72" height="72" className="-rotate-90">
@@ -91,21 +94,23 @@ export function RingProgress({ pct, label, accent = 'emerald' }: { pct: number; 
           style={{ transition: 'stroke-dashoffset 0.5s ease' }}
         />
       </svg>
-      <span className={`text-lg font-mono font-bold tabular-nums -mt-12 rotate-90 ${s.text}`}>{pct}%</span>
+      <span className={`text-lg font-mono font-bold tabular-nums -mt-12 rotate-90 ${s.text}`}>{Math.round(safePct)}%</span>
       <span className="text-[7px] font-mono text-slate-600 uppercase mt-6">{label}</span>
     </div>
   );
 }
 
 export function DistBar({ label, value, max, color }: { label: string; value: number; max: number; color: string }) {
-  const pct = max > 0 ? Math.round((value / max) * 100) : 0;
+  const v = Number.isFinite(Number(value)) ? Math.max(0, Number(value)) : 0;
+  const m = Number.isFinite(Number(max)) ? Math.max(0, Number(max)) : 0;
+  const pct = m > 0 ? Math.round((v / m) * 100) : 0;
   return (
     <div className="flex items-center gap-2 text-[8px] font-mono group">
       <span className="w-16 truncate text-slate-500 group-hover:text-slate-400">{label}</span>
       <div className="flex-1 h-2.5 rounded-full bg-slate-900/80 overflow-hidden border border-slate-800/50">
         <div className={`h-full ${color} rounded-full transition-all duration-700`} style={{ width: `${pct}%` }} />
       </div>
-      <span className="w-12 text-right text-slate-400 tabular-nums">{value.toLocaleString('en-US')}</span>
+      <span className="w-12 text-right text-slate-400 tabular-nums">{v.toLocaleString('en-US')}</span>
       <span className="w-8 text-right text-slate-600 tabular-nums">{pct}%</span>
     </div>
   );

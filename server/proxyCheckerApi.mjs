@@ -22,7 +22,7 @@ import {
   saveCheckerResults,
   saveCheckerState,
 } from './proxyCheckerStore.mjs';
-import { checkRateLimit, clientIp, isRateLimitError } from './rateLimit.mjs';
+import { applyRateLimitHeaders, checkRateLimit, clientIp, isRateLimitError } from './rateLimit.mjs';
 import { pruneJobMap } from './jobPrune.mjs';
 import { assertSafeFetchUrlAsync } from './assertSafeFetchUrl.mjs';
 import { statusForError, wrapAsyncHandler } from './asyncMiddleware.mjs';
@@ -271,7 +271,7 @@ export async function handleProxyCheckerRequest(req, res) {
 
     return sendJson(res, 404, { error: 'Not found' });
   } catch (e) {
-    if (isRateLimitError(e)) return sendJson(res, 429, { error: 'Too many requests' });
+    if (isRateLimitError(e)) { applyRateLimitHeaders(res, e); return sendJson(res, 429, { error: 'Too many requests' }); }
     const msg = e instanceof Error ? e.message : 'Server error';
     return sendJson(res, statusForError(e), { error: msg });
   }

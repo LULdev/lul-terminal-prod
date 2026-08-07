@@ -136,7 +136,8 @@ export async function handleGamesRequest(req, res) {
                 || msg.includes('Finish your active') || msg.includes('Leave your other')
                 || msg.includes('Escrow') || msg.includes('re-join') || msg.includes('bet')
                 ? 400
-                : msg.includes('not found') || msg.includes('expired') ? 404
+                : msg.includes('not found') || msg.includes('not found or expired') || msg.includes('Match expired')
+                  ? 404
                   : 500;
     }
     return sendJson(res, status, { error: msg });

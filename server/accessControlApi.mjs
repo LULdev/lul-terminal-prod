@@ -18,7 +18,7 @@ import {
   publicTabIds,
   saveAccessControl,
 } from './accessControlStore.mjs';
-import { checkRateLimit, clientIp, isRateLimitError } from './rateLimit.mjs';
+import { applyRateLimitHeaders, checkRateLimit, clientIp, isRateLimitError } from './rateLimit.mjs';
 
 function sendJson(res, status, body) {
   res.statusCode = status;
@@ -95,7 +95,7 @@ export async function handleAccessControlRequest(req, res) {
 
     return sendJson(res, 404, { error: 'Not found' });
   } catch (e) {
-    if (isRateLimitError(e)) return sendJson(res, 429, { error: 'Too many requests' });
+    if (isRateLimitError(e)) { applyRateLimitHeaders(res, e); return sendJson(res, 429, { error: 'Too many requests' }); }
     const msg = e instanceof Error ? e.message : 'Server error';
     let status = statusForError(e);
     if (status === 500) {

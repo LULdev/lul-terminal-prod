@@ -18,7 +18,14 @@ export function statusForError(e) {
   if (msg === 'Not logged in' || msg === 'Invalid login credentials') return 401;
   if (msg === 'Invalid JSON' || e instanceof SyntaxError) return 400;
   if (msg === 'Payload too large' || msg.startsWith('Payload too large')) return 413;
-  if (/\bnot found\b/i.test(msg) || msg.includes('expired')) return 404;
+  // Proof/session expiry are client-actionable 400/401 — not resource 404
+  if (msg.includes('proof expired') || msg.includes('Achievement proof')) return 400;
+  if (/\bsession\b/i.test(msg) && /expired/i.test(msg)) return 401;
+  if (/\bnot found\b/i.test(msg)) return 404;
+  // Match/paste content expiry (resource gone), not auth/proof
+  if (msg.includes('not found or expired') || msg.includes('Match expired') || msg.includes('queue expired')) {
+    return 404;
+  }
   return 500;
 }
 

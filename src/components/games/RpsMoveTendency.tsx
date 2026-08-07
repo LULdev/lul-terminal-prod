@@ -7,7 +7,8 @@ import React from 'react';
 import { MOVE_META, type MoveCounts, type RpsMove } from '../../lib/games';
 
 export function RpsMoveTendency({ moves, title = 'Your move DNA' }: { moves: MoveCounts; title?: string }) {
-  const total = moves.rock + moves.paper + moves.scissors;
+  const safe = (n: unknown) => (Number.isFinite(Number(n)) ? Math.max(0, Math.floor(Number(n))) : 0);
+  const total = safe(moves.rock) + safe(moves.paper) + safe(moves.scissors);
   const rows: RpsMove[] = ['rock', 'paper', 'scissors'];
 
   return (
@@ -15,7 +16,7 @@ export function RpsMoveTendency({ moves, title = 'Your move DNA' }: { moves: Mov
       <div className="text-[9px] font-mono uppercase tracking-wider text-slate-500 mb-3">{title}</div>
       <div className="space-y-2.5">
         {rows.map((m) => {
-          const v = moves[m];
+          const v = safe(moves[m]);
           const pct = total > 0 ? Math.round((v / total) * 100) : 0;
           const meta = MOVE_META[m];
           return (

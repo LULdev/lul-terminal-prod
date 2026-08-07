@@ -5,7 +5,7 @@
 
 import { statusForError, wrapAsyncHandler } from './asyncMiddleware.mjs';
 import { buildSystemStatus } from './statusService.mjs';
-import { checkRateLimit, clientIp, isRateLimitError } from './rateLimit.mjs';
+import { applyRateLimitHeaders, checkRateLimit, clientIp, isRateLimitError } from './rateLimit.mjs';
 
 function sendJson(res, status, body) {
   res.statusCode = status;
@@ -26,7 +26,7 @@ export async function handleStatusRequest(req, res) {
     await checkRateLimit(`status:${clientIp(req)}`, { max: 60, windowMs: 60_000 });
     sendJson(res, 200, await buildSystemStatus());
   } catch (e) {
-    if (isRateLimitError(e)) return sendJson(res, 429, { error: 'Too many requests' });
+    if (isRateLimitError(e)) { applyRateLimitHeaders(res, e); return sendJson(res, 429, { error: 'Too many requests' }); }
     const msg = e instanceof Error ? e.message : 'Server error';
     sendJson(res, statusForError(e), { error: msg });
   }

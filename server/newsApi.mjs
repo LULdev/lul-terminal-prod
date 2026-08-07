@@ -16,7 +16,7 @@ import {
 import { statusForError, wrapAsyncHandler } from './asyncMiddleware.mjs';
 import { readJsonBody } from './readJsonBody.mjs';
 import { requireMemberTab } from './tabAccessGuard.mjs';
-import { checkRateLimit, clientIp, isRateLimitError } from './rateLimit.mjs';
+import { applyRateLimitHeaders, checkRateLimit, clientIp, isRateLimitError } from './rateLimit.mjs';
 
 function sendJson(res, status, body) {
   res.statusCode = status;
@@ -82,7 +82,7 @@ export async function handleNewsRequest(req, res) {
 
     return sendJson(res, 404, { error: 'Not found' });
   } catch (err) {
-    if (isRateLimitError(err)) return sendJson(res, 429, { error: 'Too many requests' });
+    if (isRateLimitError(err)) { applyRateLimitHeaders(res, err); return sendJson(res, 429, { error: 'Too many requests' }); }
     const msg = err instanceof Error ? err.message : 'Server error';
     let status = statusForError(err);
     if (status === 500) {

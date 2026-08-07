@@ -15,7 +15,7 @@ import {
   saveAtlasToDatabase,
   saveXmlMatchesToDatabase,
 } from './colonScraperDatabaseService.mjs';
-import { checkRateLimit, clientIp, isRateLimitError } from './rateLimit.mjs';
+import { applyRateLimitHeaders, checkRateLimit, clientIp, isRateLimitError } from './rateLimit.mjs';
 import { pruneJobMap } from './jobPrune.mjs';
 import { statusForError, wrapAsyncHandler } from './asyncMiddleware.mjs';
 import { readJsonBody } from './readJsonBody.mjs';
@@ -206,7 +206,7 @@ export async function handleXmlLinkScraperRequest(req, res) {
 
     return sendJson(res, 404, { error: 'Not found' });
   } catch (err) {
-    if (isRateLimitError(err)) return sendJson(res, 429, { error: 'Too many requests' });
+    if (isRateLimitError(err)) { applyRateLimitHeaders(res, err); return sendJson(res, 429, { error: 'Too many requests' }); }
     const msg = err instanceof Error ? err.message : 'Server error';
     let status = statusForError(err);
     if (status === 500) {

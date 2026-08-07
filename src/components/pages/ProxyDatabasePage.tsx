@@ -255,9 +255,9 @@ export function ProxyDatabasePage() {
             >
               <div className={`text-[9px] font-mono uppercase mb-1 ${TYPE_COLORS[t].split(' ')[0]}`}>{t}</div>
               <div className="text-lg font-mono font-bold text-white tabular-nums">
-                {(stats?.byType?.[t] ?? 0).toLocaleString('en-US')}
+                {(Number.isFinite(Number(stats?.byType?.[t])) ? Number(stats?.byType?.[t]) : 0).toLocaleString('en-US')}
                 <span className="text-[10px] text-slate-500 font-normal ml-1">
-                  +{(stats?.offlineByType?.[t] ?? 0).toLocaleString('en-US')} off
+                  +{(Number.isFinite(Number(stats?.offlineByType?.[t])) ? Number(stats?.offlineByType?.[t]) : 0).toLocaleString('en-US')} off
                 </span>
               </div>
             </button>

@@ -58,14 +58,16 @@ function BarRow({ label, value, max, color, labelWidth = 'w-24' }: {
   color: string;
   labelWidth?: string;
 }) {
-  const pct = max > 0 ? Math.round((value / max) * 100) : 0;
+  const v = Number.isFinite(Number(value)) ? Math.max(0, Number(value)) : 0;
+  const m = Number.isFinite(Number(max)) ? Math.max(0, Number(max)) : 0;
+  const pct = m > 0 ? Math.round((v / m) * 100) : 0;
   return (
     <div className="flex items-center gap-2 text-[8px] font-mono">
       <span className={`${labelWidth} truncate text-slate-500`}>{label}</span>
       <div className="flex-1 h-2 rounded-full bg-slate-800 overflow-hidden">
         <div className={`h-full ${color} transition-all`} style={{ width: `${pct}%` }} />
       </div>
-      <span className="w-10 text-right text-slate-400 tabular-nums">{value}</span>
+      <span className="w-10 text-right text-slate-400 tabular-nums">{Number.isFinite(v) ? v : '—'}</span>
     </div>
   );
 }

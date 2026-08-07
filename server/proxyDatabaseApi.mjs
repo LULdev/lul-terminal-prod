@@ -13,7 +13,7 @@ import {
 } from './proxyDatabaseService.mjs';
 import { statusForError, wrapAsyncHandler } from './asyncMiddleware.mjs';
 import { readJsonBody } from './readJsonBody.mjs';
-import { checkRateLimit, clientIp, isRateLimitError } from './rateLimit.mjs';
+import { applyRateLimitHeaders, checkRateLimit, clientIp, isRateLimitError } from './rateLimit.mjs';
 
 function sendJson(res, status, body) {
   res.statusCode = status;
@@ -66,7 +66,7 @@ export async function handleProxyDatabaseRequest(req, res) {
     res.statusCode = 404;
     res.end('Not found');
   } catch (e) {
-    if (isRateLimitError(e)) return sendJson(res, 429, { error: 'Too many requests' });
+    if (isRateLimitError(e)) { applyRateLimitHeaders(res, e); return sendJson(res, 429, { error: 'Too many requests' }); }
     const msg = e instanceof Error ? e.message : 'Server error';
     sendJson(res, statusForError(e), { error: msg });
   }

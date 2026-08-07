@@ -23,6 +23,19 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '3.74.0',
+    title: 'Full residual audit Server+Client: expired status map, Retry-After 429 parity, scraper NaN',
+    date: 'Aug 7, 2026',
+    highlight: true,
+    items: [
+      { priority: 'P2', text: 'P2 — statusForError: proof/session expired no longer map to 404 (proof→400, session→401).' },
+      { priority: 'P2', text: 'P2 — Retry-After on 429 for remaining APIs (news, leaderboard, image, status, terminal-stats, persona, proxy*, access-control, xml).' },
+      { priority: 'P3', text: 'P3 — gamesApi expired→404 only for match/paste resource expiry (not broad includes expired).' },
+      { priority: 'P3', text: 'P3 — ScraperMonitorUi RingProgress/DistBar/stat tiles NaN-safe; AdminAnalytics BarRow; RpsMoveTendency counts; ProxyDatabase type counts.' },
+      { priority: 'P9', text: 'P9 — Version 3.74.0; full residual system audit after 3.73 (every fix listed).' },
+    ],
+  },
+  {
     version: '3.73.0',
     title: 'Full residual audit Server+Client: remaining API statusForError + NaN stats sweep',
     date: 'Aug 7, 2026',
