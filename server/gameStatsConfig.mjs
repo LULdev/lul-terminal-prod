@@ -34,18 +34,23 @@ export function statFields(prefix) {
   };
 }
 
+function finiteNonNegInt(v) {
+  const n = Math.floor(Number(v));
+  return Number.isFinite(n) && n > 0 ? n : 0;
+}
+
 export function defaultGameStats(user, prefix) {
   const f = statFields(prefix);
   return {
-    wins: Number(user[f.wins]) || 0,
-    losses: Number(user[f.losses]) || 0,
-    draws: Number(user[f.draws]) || 0,
-    games: Number(user[f.games]) || 0,
-    streak: Number(user[f.streak]) || 0,
-    bestStreak: Number(user[f.bestStreak]) || 0,
-    jackpotsWon: Number(user.gameJackpotsWon) || 0,
-    totalWon: Number(user.gameTotalWon) || 0,
-    totalLost: Number(user.gameTotalLost) || 0,
+    wins: finiteNonNegInt(user[f.wins]),
+    losses: finiteNonNegInt(user[f.losses]),
+    draws: finiteNonNegInt(user[f.draws]),
+    games: finiteNonNegInt(user[f.games]),
+    streak: finiteNonNegInt(user[f.streak]),
+    bestStreak: finiteNonNegInt(user[f.bestStreak]),
+    jackpotsWon: finiteNonNegInt(user.gameJackpotsWon),
+    totalWon: finiteNonNegInt(user.gameTotalWon),
+    totalLost: finiteNonNegInt(user.gameTotalLost),
   };
 }
 
@@ -81,12 +86,12 @@ export function extractPublicGameStats(u) {
   const out = {};
   for (const prefix of ARCADE_STAT_KEYS) {
     const f = statFields(prefix);
-    out[f.wins] = Number(u[f.wins]) || 0;
-    out[f.losses] = Number(u[f.losses]) || 0;
-    out[f.draws] = Number(u[f.draws]) || 0;
-    out[f.games] = Number(u[f.games]) || 0;
-    out[f.streak] = Number(u[f.streak]) || 0;
-    out[f.bestStreak] = Number(u[f.bestStreak]) || 0;
+    out[f.wins] = finiteNonNegInt(u[f.wins]);
+    out[f.losses] = finiteNonNegInt(u[f.losses]);
+    out[f.draws] = finiteNonNegInt(u[f.draws]);
+    out[f.games] = finiteNonNegInt(u[f.games]);
+    out[f.streak] = finiteNonNegInt(u[f.streak]);
+    out[f.bestStreak] = finiteNonNegInt(u[f.bestStreak]);
   }
   return out;
 }

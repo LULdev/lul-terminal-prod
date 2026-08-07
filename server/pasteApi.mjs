@@ -818,15 +818,12 @@ export async function handlePasteRequest(req, res) {
     res.statusCode = 404;
     res.end('Not found');
   } catch (e) {
-    if (isRateLimitError(e)) {
-      applyRateLimitHeaders(res, e);
-      return sendJson(res, 429, { error: 'Too many requests' });
-    }
     const msg = e instanceof Error ? e.message : 'Server error';
     let status = statusForError(e);
     if (status === 500 && (msg.includes('too large') || msg.includes('empty') || msg.includes('Password'))) {
       status = 400;
     }
+    if (status === 429 || isRateLimitError(e)) applyRateLimitHeaders(res, e);
     sendJson(res, status, { error: msg });
   }
 }

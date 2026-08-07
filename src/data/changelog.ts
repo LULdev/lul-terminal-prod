@@ -23,8 +23,22 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '3.81.0',
+    title: 'Full residual P0-P9 audit Server+Client: Retry-After parity, integer counters, job cancel soft401',
+    date: 'Aug 7, 2026',
+    highlight: true,
+    items: [
+      { priority: 'P0', text: 'P0 — authService integer floor on profileViews / imagesUploaded / pastesCreated / pasteViewsTotal / memesCreated increments.' },
+      { priority: 'P0', text: 'P0 — userRecord + defaultGameStats/extractPublicGameStats finiteNonNegInt floors (no float/NaN on public stats).' },
+      { priority: 'P1', text: 'P1 — proxyChecker job DELETE cancel soft401; xml-scraper job stop soft401 (mid-job flaky 401 no logout).' },
+      { priority: 'P2', text: 'P2 — respondApiError helper: status map + Retry-After on every 429 (image/leaderboard/persona/status/terminal-stats/proxy-db/checker/page+post views/analytics).' },
+      { priority: 'P2', text: 'P2 — paste/news/xml/access-control/proxy-scraper catch paths apply Retry-After when status is 429 (not only isRateLimitError early return).' },
+      { priority: 'P9', text: 'P9 — Version 3.81.0; full residual complete-website audit after 3.80 (every fix listed).' },
+    ],
+  },
+  {
     version: '3.80.0',
-    title: 'Full P0–P9 residual audit Server+Client: status map, game totals, soft401, sort safety',
+    title: 'Full residual P0-P9 audit Server+Client: status map, game totals, soft401, sort safety',
     date: 'Aug 7, 2026',
     highlight: true,
     items: [

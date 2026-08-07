@@ -112,7 +112,8 @@ export async function startCheckJob(opts: CheckOptions = {}): Promise<string> {
 }
 
 export async function cancelCheckerJob(jobId: string): Promise<void> {
-  const res = await sessionFetch(`${API}/jobs/${jobId}`, { method: 'DELETE' });
+  // soft401: cancel is best-effort admin control — flaky 401 must not wipe session mid-job
+  const res = await sessionFetch(`${API}/jobs/${jobId}`, { method: 'DELETE' }, { soft401: true });
   if (!res.ok) {
     const data = await res.json().catch(() => ({})) as { error?: string };
     throw new Error(data.error ?? 'Cancel failed');

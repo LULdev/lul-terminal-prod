@@ -66,6 +66,17 @@ export function statusForError(e) {
   return 500;
 }
 
+/**
+ * Shared API catch response: map status + always set Retry-After on 429
+ * (even when message-based, not only isRateLimitError).
+ */
+export function respondApiError(res, e, sendJson) {
+  const msg = e instanceof Error ? e.message : 'Server error';
+  const status = statusForError(e);
+  if (status === 429 || isRateLimitError(e)) applyRateLimitHeaders(res, e);
+  return sendJson(res, status, { error: msg });
+}
+
 /** Wrap async API handlers so unexpected rejections return JSON errors instead of hanging. */
 export function wrapAsyncHandler(handler) {
   return (req, res, next) => {

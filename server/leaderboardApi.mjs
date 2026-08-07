@@ -3,9 +3,9 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { statusForError, wrapAsyncHandler } from './asyncMiddleware.mjs';
+import { respondApiError, wrapAsyncHandler } from './asyncMiddleware.mjs';
 import { getLeaderboardsWithSync } from './leaderboardService.mjs';
-import { applyRateLimitHeaders, checkRateLimit, clientIp, isRateLimitError } from './rateLimit.mjs';
+import { checkRateLimit, clientIp } from './rateLimit.mjs';
 
 function sendJson(res, status, body) {
   res.statusCode = status;
@@ -27,9 +27,7 @@ export async function handleLeaderboardRequest(req, res) {
     const data = await getLeaderboardsWithSync();
     sendJson(res, 200, data);
   } catch (e) {
-    if (isRateLimitError(e)) { applyRateLimitHeaders(res, e); return sendJson(res, 429, { error: 'Too many requests' }); }
-    const msg = e instanceof Error ? e.message : 'Server error';
-    sendJson(res, statusForError(e), { error: msg });
+    return respondApiError(res, e, sendJson);
   }
 }
 

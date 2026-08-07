@@ -7,7 +7,7 @@ import crypto from 'crypto';
 import { attachAuth, requireAuth } from './auth/authApi.mjs';
 import { requireRole } from './auth/authApi.mjs';
 import { canAccessAdmin } from './auth/permissions.mjs';
-import { statusForError, wrapAsyncHandler } from './asyncMiddleware.mjs';
+import { respondApiError, wrapAsyncHandler } from './asyncMiddleware.mjs';
 import { readJsonBody } from './readJsonBody.mjs';
 
 import { applyRateLimitHeaders, checkRateLimit, clientIp, isRateLimitError } from './rateLimit.mjs';
@@ -260,12 +260,7 @@ export async function handleAnalyticsRequest(req, res) {
 
     return sendJson(res, 404, { error: 'Not found' });
   } catch (e) {
-    const msg = e instanceof Error ? e.message : 'Server error';
-    if (isRateLimitError(e)) {
-      applyRateLimitHeaders(res, e);
-      return sendJson(res, 429, { error: msg });
-    }
-    return sendJson(res, statusForError(e), { error: msg });
+    return respondApiError(res, e, sendJson);
   }
 }
 

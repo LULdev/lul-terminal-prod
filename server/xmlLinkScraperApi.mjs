@@ -206,7 +206,6 @@ export async function handleXmlLinkScraperRequest(req, res) {
 
     return sendJson(res, 404, { error: 'Not found' });
   } catch (err) {
-    if (isRateLimitError(err)) { applyRateLimitHeaders(res, err); return sendJson(res, 429, { error: 'Too many requests' }); }
     const msg = err instanceof Error ? err.message : 'Server error';
     let status = statusForError(err);
     if (status === 500) {
@@ -215,6 +214,7 @@ export async function handleXmlLinkScraperRequest(req, res) {
           : msg.includes('too large') ? 413
             : 400;
     }
+    if (status === 429 || isRateLimitError(err)) applyRateLimitHeaders(res, err);
     return sendJson(res, status, { error: msg });
   }
 }

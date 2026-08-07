@@ -360,12 +360,12 @@ export async function handleProxyScraperRequest(req, res) {
 
     return sendJson(res, 404, { error: 'Not found' });
   } catch (e) {
-    if (isRateLimitError(e)) { applyRateLimitHeaders(res, e); return sendJson(res, 429, { error: 'Too many requests' }); }
     const msg = e instanceof Error ? e.message : 'Server error';
     let status = statusForError(e);
     if (status === 500) {
       status = msg === 'Permission denied' ? 403 : msg === 'Not logged in' ? 401 : 400;
     }
+    if (status === 429 || isRateLimitError(e)) applyRateLimitHeaders(res, e);
     return sendJson(res, status, { error: msg });
   }
 }

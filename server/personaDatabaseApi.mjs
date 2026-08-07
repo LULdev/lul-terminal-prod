@@ -3,10 +3,10 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { statusForError, wrapAsyncHandler } from './asyncMiddleware.mjs';
+import { respondApiError, wrapAsyncHandler } from './asyncMiddleware.mjs';
 import { requireMemberTab } from './tabAccessGuard.mjs';
 import { getPersonaStats, listCountries, pickRandomEntry } from './personaDatabaseStore.mjs';
-import { applyRateLimitHeaders, checkRateLimit, clientIp, isRateLimitError } from './rateLimit.mjs';
+import { checkRateLimit, clientIp } from './rateLimit.mjs';
 
 function sendJson(res, status, body) {
   res.statusCode = status;
@@ -44,9 +44,7 @@ export async function handlePersonaDatabaseRequest(req, res) {
 
     return sendJson(res, 404, { error: 'Not found' });
   } catch (e) {
-    if (isRateLimitError(e)) { applyRateLimitHeaders(res, e); return sendJson(res, 429, { error: 'Too many requests' }); }
-    const msg = e instanceof Error ? e.message : 'Server error';
-    return sendJson(res, statusForError(e), { error: msg });
+    return respondApiError(res, e, sendJson);
   }
 }
 

@@ -935,7 +935,7 @@ export async function incrementProfileView(username, { viewer = null, clientIp: 
     let credited = false;
 
     if (mayCount) {
-      user.profileViews = (Number(user.profileViews) || 0) + 1;
+      user.profileViews = Math.max(0, Math.floor(Number(user.profileViews) || 0)) + 1;
       user.updatedAt = Date.now();
       dirty = true;
       credited = true;
@@ -1056,7 +1056,7 @@ export async function incrementUserImageUpload(userId) {
     const db = await loadUsersDb();
     const user = db.users.find((u) => u.id === userId);
     if (!user || user.role === 'bot') return [];
-    user.imagesUploaded = (Number(user.imagesUploaded) || 0) + 1;
+    user.imagesUploaded = Math.max(0, Math.floor(Number(user.imagesUploaded) || 0)) + 1;
     ensureActivity(user).flags.image_host = true;
     const newUnlocks = await syncAchievementsOnLoadedUser(user, db, { accountsSubmitted: preAccounts });
     user.updatedAt = Date.now();
@@ -1072,7 +1072,7 @@ export async function incrementUserPasteCount(userId) {
     const db = await loadUsersDb();
     const user = db.users.find((u) => u.id === userId);
     if (!user || user.role === 'bot') return [];
-    user.pastesCreated = (Number(user.pastesCreated) || 0) + 1;
+    user.pastesCreated = Math.max(0, Math.floor(Number(user.pastesCreated) || 0)) + 1;
     ensureActivity(user).flags.paste_create = true;
     const newUnlocks = await syncAchievementsOnLoadedUser(user, db, { accountsSubmitted: preAccounts });
     user.updatedAt = Date.now();
@@ -1100,7 +1100,7 @@ export async function incrementUserPasteViews(userId, { viewerId, pasteId } = {}
       await saveUsersDb(db);
       return [];
     }
-    user.pasteViewsTotal = (Number(user.pasteViewsTotal) || 0) + 1;
+    user.pasteViewsTotal = Math.max(0, Math.floor(Number(user.pasteViewsTotal) || 0)) + 1;
     const newUnlocks = await syncAchievementsOnLoadedUser(user, db, { accountsSubmitted: preAccounts });
     user.updatedAt = Date.now();
     await saveUsersDb(db);
@@ -1122,7 +1122,7 @@ export async function incrementUserMemeCreated(userId, memeImageId = '') {
       if (act.flags[statKey]) return [];
       act.flags[statKey] = true;
     }
-    user.memesCreated = (Number(user.memesCreated) || 0) + 1;
+    user.memesCreated = Math.max(0, Math.floor(Number(user.memesCreated) || 0)) + 1;
     const newUnlocks = await syncAchievementsOnLoadedUser(user, db, { accountsSubmitted: preAccounts });
     user.updatedAt = Date.now();
     await saveUsersDb(db);

@@ -3,10 +3,10 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { statusForError, wrapAsyncHandler } from './asyncMiddleware.mjs';
+import { respondApiError, wrapAsyncHandler } from './asyncMiddleware.mjs';
 import { attachAuth } from './auth/authApi.mjs';
 import { canAccessAdmin } from './auth/permissions.mjs';
-import { applyRateLimitHeaders, checkRateLimit, clientIp, isRateLimitError } from './rateLimit.mjs';
+import { checkRateLimit, clientIp } from './rateLimit.mjs';
 import { buildTerminalStats } from './terminalStatsService.mjs';
 
 function sendJson(res, status, body) {
@@ -30,9 +30,7 @@ export async function handleTerminalStatsRequest(req, res) {
     const includeSensitive = Boolean(req.auth?.user && canAccessAdmin(req.auth.user));
     sendJson(res, 200, await buildTerminalStats({ includeSensitive }));
   } catch (e) {
-    if (isRateLimitError(e)) { applyRateLimitHeaders(res, e); return sendJson(res, 429, { error: 'Too many requests' }); }
-    const msg = e instanceof Error ? e.message : 'Server error';
-    sendJson(res, statusForError(e), { error: msg });
+    return respondApiError(res, e, sendJson);
   }
 }
 

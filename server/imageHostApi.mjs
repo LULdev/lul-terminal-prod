@@ -5,10 +5,10 @@
 
 import fs from 'fs/promises';
 import { attachAuth, requireAuth } from './auth/authApi.mjs';
-import { statusForError, wrapAsyncHandler } from './asyncMiddleware.mjs';
+import { respondApiError, wrapAsyncHandler } from './asyncMiddleware.mjs';
 import { readJsonBody } from './readJsonBody.mjs';
 import { resolvePublicOrigin } from './resolvePublicOrigin.mjs';
-import { applyRateLimitHeaders, checkRateLimit, clientIp, isRateLimitError } from './rateLimit.mjs';
+import { checkRateLimit, clientIp } from './rateLimit.mjs';
 import { claimGuestView } from './viewDedup.mjs';
 import { requireMemberTab } from './tabAccessGuard.mjs';
 import { incrementUserImageUpload } from './auth/authService.mjs';
@@ -197,9 +197,7 @@ export async function handleImageHostRequest(req, res) {
     res.statusCode = 404;
     res.end('Not found');
   } catch (e) {
-    if (isRateLimitError(e)) { applyRateLimitHeaders(res, e); return sendJson(res, 429, { error: 'Too many requests' }); }
-    const msg = e instanceof Error ? e.message : 'Server error';
-    sendJson(res, statusForError(e), { error: msg });
+    return respondApiError(res, e, sendJson);
   }
 }
 

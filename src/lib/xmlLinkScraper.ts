@@ -208,7 +208,8 @@ export async function startWebsiteCrawl(opts: {
 }
 
 export async function cancelCrawlJob(jobId: string): Promise<void> {
-  const res = await sessionFetch(`/api/xml-scraper/jobs/${jobId}`, { method: 'POST' });
+  // soft401: stop job best-effort — flaky 401 must not wipe session mid-crawl
+  const res = await sessionFetch(`/api/xml-scraper/jobs/${jobId}`, { method: 'POST' }, { soft401: true });
   const data = await res.json();
   if (!res.ok) throw new Error(data.error || 'Cancel failed');
 }

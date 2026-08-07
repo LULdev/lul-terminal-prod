@@ -3,10 +3,10 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { applyRateLimitHeaders, checkRateLimit, clientIp, isRateLimitError } from './rateLimit.mjs';
+import { checkRateLimit, clientIp } from './rateLimit.mjs';
 import { changelogVersionExists } from './changelogMeta.mjs';
 import { getArticleById } from './newsStore.mjs';
-import { statusForError, wrapAsyncHandler } from './asyncMiddleware.mjs';
+import { respondApiError, wrapAsyncHandler } from './asyncMiddleware.mjs';
 import { readJsonBody } from './readJsonBody.mjs';
 import { claimIpView } from './viewDedup.mjs';
 import { getAllPostViews, recordPostView, sanitizePostId } from './postViewsStore.mjs';
@@ -74,11 +74,7 @@ export async function handlePostViewsRequest(req, res) {
 
     return sendJson(res, 404, { error: 'Not found' });
   } catch (err) {
-    if (isRateLimitError(err)) {
-      applyRateLimitHeaders(res, err);
-      return sendJson(res, 429, { error: err.message || 'Too many requests' });
-    }
-    return sendJson(res, statusForError(err), { error: err?.message || 'Server error' });
+    return respondApiError(res, err, sendJson);
   }
 }
 
