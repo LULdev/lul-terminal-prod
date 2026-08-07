@@ -75,7 +75,7 @@ export function AdminPersonaPanel() {
 
       {stats && (
         <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
-          <StatTile label="Entries" value={stats.total.toLocaleString('en-US')} />
+          <StatTile label="Entries" value={(Number.isFinite(Number(stats.total)) ? Number(stats.total) : 0).toLocaleString('en-US')} />
           <StatTile label="Countries" value={stats.countries.length} />
           <StatTile label="Filtered" value={entryTotal} />
           <StatTile label="Updated" value={stats.updatedAt ? new Date(stats.updatedAt).toLocaleDateString('en-US') : '—'} />

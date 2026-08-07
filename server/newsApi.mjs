@@ -13,7 +13,7 @@ import {
   listPublishedArticles,
   updateArticle,
 } from './newsStore.mjs';
-import { wrapAsyncHandler } from './asyncMiddleware.mjs';
+import { statusForError, wrapAsyncHandler } from './asyncMiddleware.mjs';
 import { readJsonBody } from './readJsonBody.mjs';
 import { requireMemberTab } from './tabAccessGuard.mjs';
 import { checkRateLimit, clientIp, isRateLimitError } from './rateLimit.mjs';
@@ -84,14 +84,15 @@ export async function handleNewsRequest(req, res) {
   } catch (err) {
     if (isRateLimitError(err)) return sendJson(res, 429, { error: 'Too many requests' });
     const msg = err instanceof Error ? err.message : 'Server error';
-    const status =
-      msg === 'Permission denied'
-        ? 403
-        : msg === 'Not logged in'
-          ? 401
-          : msg === 'Article not found' || msg === 'News feed unavailable'
-            ? msg === 'Article not found' ? 404 : 503
-            : 400;
+    let status = statusForError(err);
+    if (status === 500) {
+      status =
+        msg === 'Permission denied' ? 403
+          : msg === 'Not logged in' ? 401
+            : msg === 'Article not found' ? 404
+              : msg === 'News feed unavailable' ? 503
+                : 400;
+    }
     return sendJson(res, status, { error: msg });
   }
 }

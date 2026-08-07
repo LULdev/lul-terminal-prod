@@ -66,11 +66,11 @@ export function PasteStatsBar() {
 
           <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-2">
             <MiniStat icon="📋" label="Yours" value={String(mine.count)} accent="text-emerald-300" />
-            <MiniStat icon="👁️" label="Your views" value={mine.totalViews.toLocaleString('en-US')} accent="text-indigo-300" />
-            <MiniStat icon="📊" label="Ø Views" value={String(mine.avgViews)} accent="text-cyan-300" />
-            <MiniStat icon="📌" label="Pinned" value={String(mine.pinned)} accent="text-amber-300" />
+            <MiniStat icon="👁️" label="Your views" value={(Number.isFinite(Number(mine.totalViews)) ? Math.max(0, Math.floor(Number(mine.totalViews))) : 0).toLocaleString('en-US')} accent="text-indigo-300" />
+            <MiniStat icon="📊" label="Ø Views" value={String(Number.isFinite(Number(mine.avgViews)) ? mine.avgViews : 0)} accent="text-cyan-300" />
+            <MiniStat icon="📌" label="Pinned" value={String(Number.isFinite(Number(mine.pinned)) ? mine.pinned : 0)} accent="text-amber-300" />
             <MiniStat icon="💾" label="Storage" value={formatPasteBytes(mine.totalBytes)} accent="text-sky-300" raw />
-            <MiniStat icon="📏" label="Lines" value={mine.totalLines.toLocaleString('en-US')} accent="text-violet-300" />
+            <MiniStat icon="📏" label="Lines" value={(Number.isFinite(Number(mine.totalLines)) ? Math.max(0, Math.floor(Number(mine.totalLines))) : 0).toLocaleString('en-US')} accent="text-violet-300" />
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -100,7 +100,7 @@ export function PasteStatsBar() {
           {mine.topViewedId && (
             <p className="text-[8px] font-mono text-slate-500">
               🔥 Top hit: <span className="text-emerald-400/90">{mine.topViewedTitle}</span>
-              {' · '}{mine.topViewedViews.toLocaleString('en-US')} views
+              {' · '}{(Number.isFinite(Number(mine.topViewedViews)) ? Math.max(0, Math.floor(Number(mine.topViewedViews))) : 0).toLocaleString('en-US')} views
             </p>
           )}
         </div>
@@ -129,7 +129,11 @@ function StatCard({
     violet: 'border-violet-500/25 bg-violet-500/5 text-violet-300',
   };
 
-  const display = raw ? String(value) : typeof value === 'number' ? value.toLocaleString('en-US') : value;
+  const display = raw
+    ? String(value)
+    : typeof value === 'number'
+      ? (Number.isFinite(value) ? value.toLocaleString('en-US') : '—')
+      : value;
 
   return (
     <div className={`rounded-xl border px-3 py-2.5 flex items-center gap-2.5 ${colors[accent]}`}>

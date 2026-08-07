@@ -17,7 +17,7 @@ import {
 } from './colonScraperDatabaseService.mjs';
 import { checkRateLimit, clientIp, isRateLimitError } from './rateLimit.mjs';
 import { pruneJobMap } from './jobPrune.mjs';
-import { wrapAsyncHandler } from './asyncMiddleware.mjs';
+import { statusForError, wrapAsyncHandler } from './asyncMiddleware.mjs';
 import { readJsonBody } from './readJsonBody.mjs';
 
 const MAX_XML_BYTES = 10 * 1024 * 1024;
@@ -208,10 +208,13 @@ export async function handleXmlLinkScraperRequest(req, res) {
   } catch (err) {
     if (isRateLimitError(err)) return sendJson(res, 429, { error: 'Too many requests' });
     const msg = err instanceof Error ? err.message : 'Server error';
-    const status = msg === 'Permission denied' ? 403
-      : msg === 'Not logged in' ? 401
-        : msg.includes('too large') ? 413
-          : 400;
+    let status = statusForError(err);
+    if (status === 500) {
+      status = msg === 'Permission denied' ? 403
+        : msg === 'Not logged in' ? 401
+          : msg.includes('too large') ? 413
+            : 400;
+    }
     return sendJson(res, status, { error: msg });
   }
 }

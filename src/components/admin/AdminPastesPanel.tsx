@@ -262,7 +262,7 @@ export function AdminPastesPanel() {
           <StatTile label="Public" value={visCounts.public ?? 0} />
           <StatTile label="Private" value={visCounts.private ?? 0} />
           <StatTile label="Protected" value={visCounts.protected ?? 0} />
-          <StatTile label="Views" value={stats.totalViews.toLocaleString('en-US')} />
+          <StatTile label="Views" value={(Number.isFinite(Number(stats.totalViews)) ? Math.max(0, Math.floor(Number(stats.totalViews))) : 0).toLocaleString('en-US')} />
           <StatTile label="Storage" value={formatPasteBytes(stats.totalBytes)} sub={`${stats.burnAfterRead} burn`} />
         </div>
       )}

@@ -7,7 +7,7 @@ import crypto from 'crypto';
 import { attachAuth, requireAuth } from './auth/authApi.mjs';
 import { requireRole } from './auth/authApi.mjs';
 import { canAccessAdmin } from './auth/permissions.mjs';
-import { wrapAsyncHandler } from './asyncMiddleware.mjs';
+import { statusForError, wrapAsyncHandler } from './asyncMiddleware.mjs';
 import { readJsonBody } from './readJsonBody.mjs';
 
 import { applyRateLimitHeaders, checkRateLimit, clientIp, isRateLimitError } from './rateLimit.mjs';
@@ -262,14 +262,7 @@ export async function handleAnalyticsRequest(req, res) {
       applyRateLimitHeaders(res, e);
       return sendJson(res, 429, { error: msg });
     }
-    const status = msg === 'Permission denied'
-        ? 403
-        : msg === 'Not logged in'
-          ? 401
-          : e instanceof SyntaxError || msg === 'Payload too large'
-            ? 400
-            : 500;
-    return sendJson(res, status, { error: msg });
+    return sendJson(res, statusForError(e), { error: msg });
   }
 }
 

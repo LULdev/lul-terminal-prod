@@ -23,6 +23,18 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '3.73.0',
+    title: 'Full residual audit Server+Client: remaining API statusForError + NaN stats sweep',
+    date: 'Aug 7, 2026',
+    highlight: true,
+    items: [
+      { priority: 'P2', text: 'P2 — statusForError in remaining API catches: news, leaderboard, analytics, page/post views, proxy checker/db/scraper, xml-scraper, persona-db, status, terminal-stats.' },
+      { priority: 'P3', text: 'P3 — NaN-safe: PasteStatsBar, MyActivity, ProxyDatabase, UserDashboard, MemeGenerator matches, ArcadeStatsPanel coins/pool.' },
+      { priority: 'P3', text: 'P3 — NaN-safe admin tiles: ColonDb total, Pastes views, Persona entries, Storage files, XML Colon-DB total.' },
+      { priority: 'P9', text: 'P9 — Version 3.73.0; full residual system audit after 3.72 (every fix listed).' },
+    ],
+  },
+  {
     version: '3.72.0',
     title: 'Full residual audit Server+Client: statusForError honors Invalid JSON/429, API catch parity',
     date: 'Aug 7, 2026',

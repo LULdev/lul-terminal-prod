@@ -35,7 +35,9 @@ function StatTile({ icon: Icon, label, value, accent }: {
         <span className="text-[8px] font-mono text-slate-500 uppercase">{label}</span>
       </div>
       <div className={`text-xl font-mono font-bold tabular-nums ${accent}`}>
-        {typeof value === 'number' ? value.toLocaleString('en-US') : value}
+        {typeof value === 'number'
+          ? (Number.isFinite(value) ? value.toLocaleString('en-US') : '—')
+          : value}
       </div>
     </div>
   );

@@ -403,7 +403,9 @@ function DashStat({ icon: Icon, label, value, accent }: {
         <span className="text-[7px] font-mono text-slate-600 uppercase tracking-wide">{label}</span>
       </div>
       <div className={`text-lg font-mono font-bold tabular-nums ${accent}`}>
-        {typeof value === 'number' ? value.toLocaleString('en-US') : value}
+        {typeof value === 'number'
+          ? (Number.isFinite(value) ? value.toLocaleString('en-US') : '—')
+          : value}
       </div>
     </div>
   );

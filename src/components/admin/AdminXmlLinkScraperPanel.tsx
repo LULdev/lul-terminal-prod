@@ -549,7 +549,7 @@ export function AdminXmlLinkScraperPanel() {
         <div className="flex flex-wrap items-center gap-3 rounded-xl border border-violet-500/20 bg-violet-500/5 px-3 py-2">
           <Database size={14} className="text-violet-400 shrink-0" />
           <span className="text-[9px] font-mono text-slate-400">
-            Colon-DB: <strong className="text-violet-300">{colonDbStats.total.toLocaleString('en-US')}</strong> entries
+            Colon-DB: <strong className="text-violet-300">{(Number.isFinite(Number(colonDbStats.total)) ? Number(colonDbStats.total) : 0).toLocaleString('en-US')}</strong> entries
             · <strong className="text-emerald-300/90">{colonDbStats.websites}</strong> websites
             {colonDbStats.updatedAt && (
               <span className="text-slate-600"> · updated {new Date(colonDbStats.updatedAt).toLocaleString('en-US')}</span>

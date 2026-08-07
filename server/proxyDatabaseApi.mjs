@@ -11,7 +11,7 @@ import {
   getProxiesGrouped,
   runDailyCheck,
 } from './proxyDatabaseService.mjs';
-import { wrapAsyncHandler } from './asyncMiddleware.mjs';
+import { statusForError, wrapAsyncHandler } from './asyncMiddleware.mjs';
 import { readJsonBody } from './readJsonBody.mjs';
 import { checkRateLimit, clientIp, isRateLimitError } from './rateLimit.mjs';
 
@@ -68,12 +68,7 @@ export async function handleProxyDatabaseRequest(req, res) {
   } catch (e) {
     if (isRateLimitError(e)) return sendJson(res, 429, { error: 'Too many requests' });
     const msg = e instanceof Error ? e.message : 'Server error';
-    const status =
-      e instanceof SyntaxError ? 400
-        : msg === 'Permission denied' ? 403
-        : msg === 'Not logged in' ? 401
-        : 500;
-    sendJson(res, status, { error: msg });
+    sendJson(res, statusForError(e), { error: msg });
   }
 }
 

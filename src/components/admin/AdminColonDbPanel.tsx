@@ -102,7 +102,7 @@ export function AdminColonDbPanel() {
 
       {stats && (
         <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
-          <StatTile label="Total" value={stats.total.toLocaleString('en-US')} />
+          <StatTile label="Total" value={(Number.isFinite(Number(stats.total)) ? Number(stats.total) : 0).toLocaleString('en-US')} />
           <StatTile label="Websites" value={stats.websites} />
           <StatTile label="Filtered" value={filteredTotal} />
           <StatTile label="Updated" value={stats.updatedAt ? new Date(stats.updatedAt).toLocaleDateString('en-US') : '—'} />

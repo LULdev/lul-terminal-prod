@@ -6,7 +6,7 @@
 import { applyRateLimitHeaders, checkRateLimit, clientIp, isRateLimitError } from './rateLimit.mjs';
 import { changelogVersionExists } from './changelogMeta.mjs';
 import { getArticleById } from './newsStore.mjs';
-import { wrapAsyncHandler } from './asyncMiddleware.mjs';
+import { statusForError, wrapAsyncHandler } from './asyncMiddleware.mjs';
 import { readJsonBody } from './readJsonBody.mjs';
 import { claimIpView } from './viewDedup.mjs';
 import { getAllPostViews, recordPostView, sanitizePostId } from './postViewsStore.mjs';
@@ -78,14 +78,7 @@ export async function handlePostViewsRequest(req, res) {
       applyRateLimitHeaders(res, err);
       return sendJson(res, 429, { error: err.message || 'Too many requests' });
     }
-    const status = err instanceof SyntaxError || err?.message === 'Payload too large'
-        ? 400
-        : err?.message === 'Not logged in'
-          ? 401
-          : err?.message === 'Permission denied'
-            ? 403
-            : 500;
-    return sendJson(res, status, { error: err.message || 'Server error' });
+    return sendJson(res, statusForError(err), { error: err?.message || 'Server error' });
   }
 }
 

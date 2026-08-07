@@ -24,7 +24,7 @@ import {
 } from './proxyScraperStore.mjs';
 import { dedupeProxies } from './proxyScraperEngine.mjs';
 import { detectProxyPaste, parseProxiesFromText } from './proxyParseCore.mjs';
-import { wrapAsyncHandler } from './asyncMiddleware.mjs';
+import { statusForError, wrapAsyncHandler } from './asyncMiddleware.mjs';
 import { readJsonBody } from './readJsonBody.mjs';
 import { assertSafeFetchUrl } from './assertSafeFetchUrl.mjs';
 import { checkRateLimit, clientIp, isRateLimitError } from './rateLimit.mjs';
@@ -362,8 +362,10 @@ export async function handleProxyScraperRequest(req, res) {
   } catch (e) {
     if (isRateLimitError(e)) return sendJson(res, 429, { error: 'Too many requests' });
     const msg = e instanceof Error ? e.message : 'Server error';
-    const status =
-      msg === 'Permission denied' ? 403 : msg === 'Not logged in' ? 401 : 400;
+    let status = statusForError(e);
+    if (status === 500) {
+      status = msg === 'Permission denied' ? 403 : msg === 'Not logged in' ? 401 : 400;
+    }
     return sendJson(res, status, { error: msg });
   }
 }

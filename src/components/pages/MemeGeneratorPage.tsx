@@ -349,7 +349,7 @@ export function MemeGeneratorPage() {
           <>
             <div className="text-[9px] font-mono text-slate-600 shrink-0 flex justify-between">
               <span>
-                {filtered.length.toLocaleString('en-US')} matches
+                {(Number.isFinite(filtered.length) ? filtered.length : 0).toLocaleString('en-US')} matches
                 {search !== debouncedSearch && ' · Searching…'}
                 {filter === 'favorites' && favorites.length === 0 && ' — click ★ in gallery'}
               </span>

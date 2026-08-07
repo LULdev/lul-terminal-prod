@@ -5,7 +5,7 @@
 
 import { applyRateLimitHeaders, checkRateLimit, clientIp, isRateLimitError } from './rateLimit.mjs';
 import { ALL_MANAGEABLE_TAB_IDS } from './accessControlStore.mjs';
-import { wrapAsyncHandler } from './asyncMiddleware.mjs';
+import { statusForError, wrapAsyncHandler } from './asyncMiddleware.mjs';
 import { claimIpView } from './viewDedup.mjs';
 import { getAllPageViews, getPageViews, recordPageView, sanitizePageId } from './pageViewsStore.mjs';
 
@@ -66,14 +66,7 @@ export async function handlePageViewsRequest(req, res) {
       applyRateLimitHeaders(res, err);
       return sendJson(res, 429, { error: err.message || 'Too many requests' });
     }
-    const status = err instanceof SyntaxError
-        ? 400
-        : err?.message === 'Not logged in'
-          ? 401
-          : err?.message === 'Permission denied'
-            ? 403
-            : 500;
-    return sendJson(res, status, { error: err.message || 'Server error' });
+    return sendJson(res, statusForError(err), { error: err?.message || 'Server error' });
   }
 }
 

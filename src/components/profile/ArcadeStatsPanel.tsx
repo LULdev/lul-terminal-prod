@@ -162,7 +162,7 @@ export function ArcadeStatsPanel({
           <div>
             <h3 className="text-[11px] font-semibold text-white">Arcade Career</h3>
             <p className="text-[8px] font-mono text-slate-500">
-              {summary.variety}/{GAME_CATALOG.length} titles · {summary.totalGames.toLocaleString('en-US')} matches · {summary.overallWinRate}% win rate
+              {summary.variety}/{GAME_CATALOG.length} titles · {(Number.isFinite(Number(summary.totalGames)) ? Number(summary.totalGames) : 0).toLocaleString('en-US')} matches · {Number.isFinite(Number(summary.overallWinRate)) ? summary.overallWinRate : 0}% win rate
             </p>
           </div>
         </div>
@@ -186,7 +186,7 @@ export function ArcadeStatsPanel({
           {showCoins && (
             <SummaryTile
               label="LULcoins"
-              value={summary.lulCoins.toLocaleString('en-US')}
+              value={(Number.isFinite(Number(summary.lulCoins)) ? Math.max(0, Math.floor(Number(summary.lulCoins))) : 0).toLocaleString('en-US')}
               icon={<Coins size={10} />}
               accent="text-amber-300"
               coinTile
@@ -203,8 +203,8 @@ export function ArcadeStatsPanel({
           {showCoins && (
             <SummaryTile
               label="Net coins"
-              value={`${summary.netCoins >= 0 ? '+' : ''}${summary.netCoins.toLocaleString('en-US')}`}
-              sub={`+${summary.coinsWon.toLocaleString('en-US')} / -${summary.coinsLost.toLocaleString('en-US')}`}
+              value={`${(Number.isFinite(Number(summary.netCoins)) ? Number(summary.netCoins) : 0) >= 0 ? '+' : ''}${(Number.isFinite(Number(summary.netCoins)) ? Number(summary.netCoins) : 0).toLocaleString('en-US')}`}
+              sub={`+${(Number.isFinite(Number(summary.coinsWon)) ? Number(summary.coinsWon) : 0).toLocaleString('en-US')} / -${(Number.isFinite(Number(summary.coinsLost)) ? Number(summary.coinsLost) : 0).toLocaleString('en-US')}`}
               icon={<BarChart3 size={10} />}
               accent={summary.netCoins >= 0 ? 'text-emerald-400' : 'text-rose-400'}
             />
@@ -221,7 +221,7 @@ export function ArcadeStatsPanel({
             value={String(summary.jackpotsWon)}
             sub={
               showCoins && jackpot
-                ? `pool ${jackpot.pool.toLocaleString('en-US')} · ${jackpot.chancePercent}%`
+                ? `pool ${(Number.isFinite(Number(jackpot.pool)) ? Number(jackpot.pool) : 0).toLocaleString('en-US')} · ${Number.isFinite(Number(jackpot.chancePercent)) ? jackpot.chancePercent : 0}%`
                 : undefined
             }
             icon={<Zap size={10} />}
