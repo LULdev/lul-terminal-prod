@@ -395,17 +395,18 @@ async function finalizeMatch(m) {
         outcome = 'win';
         p1Delta = bet * 2;
         creditCoins(p1, p1Delta, logGameWinCredit, { ...ledgerCtx, mode: 'bot' });
-        p1.gameTotalWon = (Number(p1.gameTotalWon) || 0) + bet;
+        // Integer-safe lifetime counters (parity with gamesCore bumpGameTotal*)
+        p1.gameTotalWon = Math.max(0, Math.floor(Number(p1.gameTotalWon) || 0)) + Math.max(0, Math.floor(Number(bet) || 0));
         bumpStats(p1, 'win');
         streakBonus = calcStreakBonus(bet, p1.gameRpsStreak);
         if (streakBonus > 0) {
           creditCoins(p1, streakBonus, logStreakCredit, ledgerCtx);
-          p1.gameTotalWon = (Number(p1.gameTotalWon) || 0) + streakBonus;
+          p1.gameTotalWon = Math.max(0, Math.floor(Number(p1.gameTotalWon) || 0)) + Math.max(0, Math.floor(Number(streakBonus) || 0));
         }
       } else {
         outcome = 'loss';
         deferredLossPot = bet; // pot write after users lock
-        p1.gameTotalLost = (Number(p1.gameTotalLost) || 0) + bet;
+        p1.gameTotalLost = Math.max(0, Math.floor(Number(p1.gameTotalLost) || 0)) + Math.max(0, Math.floor(Number(bet) || 0));
         bumpStats(p1, 'loss');
       }
     } else {
@@ -421,14 +422,14 @@ async function finalizeMatch(m) {
         const loser = r === 'p1' ? p2 : p1;
         const pot = bet * 2;
         creditCoins(winner, pot, logGameWinCredit, { ...ledgerCtx, mode: 'pvp' });
-        winner.gameTotalWon = (Number(winner.gameTotalWon) || 0) + bet;
-        loser.gameTotalLost = (Number(loser.gameTotalLost) || 0) + bet;
+        winner.gameTotalWon = Math.max(0, Math.floor(Number(winner.gameTotalWon) || 0)) + Math.max(0, Math.floor(Number(bet) || 0));
+        loser.gameTotalLost = Math.max(0, Math.floor(Number(loser.gameTotalLost) || 0)) + Math.max(0, Math.floor(Number(bet) || 0));
         bumpStats(winner, 'win');
         bumpStats(loser, 'loss');
         streakBonus = calcStreakBonus(bet, winner.gameRpsStreak);
         if (streakBonus > 0) {
           creditCoins(winner, streakBonus, logStreakCredit, ledgerCtx);
-          winner.gameTotalWon = (Number(winner.gameTotalWon) || 0) + streakBonus;
+          winner.gameTotalWon = Math.max(0, Math.floor(Number(winner.gameTotalWon) || 0)) + Math.max(0, Math.floor(Number(streakBonus) || 0));
         }
 
         if (Math.random() < JACKPOT_CHANCE) {

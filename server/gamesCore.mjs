@@ -238,6 +238,21 @@ export function creditCoins(user, amount) {
   user.lulCoins += Math.max(0, Math.floor(Number(amount) || 0));
 }
 
+/** Integer-safe lifetime coin counters (leaderboard / profile stats). */
+export function bumpGameTotalWon(user, delta) {
+  if (!user) return;
+  const cur = Math.max(0, Math.floor(Number(user.gameTotalWon) || 0));
+  const add = Math.max(0, Math.floor(Number(delta) || 0));
+  user.gameTotalWon = cur + add;
+}
+
+export function bumpGameTotalLost(user, delta) {
+  if (!user) return;
+  const cur = Math.max(0, Math.floor(Number(user.gameTotalLost) || 0));
+  const add = Math.max(0, Math.floor(Number(delta) || 0));
+  user.gameTotalLost = cur + add;
+}
+
 export function calcStreakBonus(bet, streak) {
   const s = Math.max(0, Number(streak) || 0);
   if (s <= 1) return 0;
@@ -512,12 +527,12 @@ export async function settleMatch({
         }
         logGameWinCredit(p1, { ...ledgerCtx, mode: 'bot', amount: p1Delta });
       }
-      p1.gameTotalWon = (Number(p1.gameTotalWon) || 0) + Math.max(0, p1Delta - bet);
+      bumpGameTotalWon(p1, Math.max(0, p1Delta - bet));
       bumpGameStats(p1, statKey, 'win');
       streakBonus = calcStreakBonus(bet, p1[f.streak]);
       if (streakBonus > 0) {
         logStreakCredit(p1, { ...ledgerCtx, amount: streakBonus });
-        p1.gameTotalWon = (Number(p1.gameTotalWon) || 0) + streakBonus;
+        bumpGameTotalWon(p1, streakBonus);
       }
       // Jackpot chance: defer drain+credit outside users lock
       if (Math.random() < JACKPOT_CHANCE) {
@@ -527,7 +542,7 @@ export async function settleMatch({
       outcome = 'loss';
       // Full lost stake feeds the community jackpot pot (after users lock)
       deferredLossPot = bet;
-      p1.gameTotalLost = (Number(p1.gameTotalLost) || 0) + bet;
+      bumpGameTotalLost(p1, bet);
       bumpGameStats(p1, statKey, 'loss');
     }
   } else {
@@ -542,14 +557,14 @@ export async function settleMatch({
       const winner = r === 'p1' ? p1 : p2;
       const loser = r === 'p1' ? p2 : p1;
       logGameWinCredit(winner, { ...ledgerCtx, mode: 'pvp', amount: bet * 2 });
-      winner.gameTotalWon = (Number(winner.gameTotalWon) || 0) + bet;
-      loser.gameTotalLost = (Number(loser.gameTotalLost) || 0) + bet;
+      bumpGameTotalWon(winner, bet);
+      bumpGameTotalLost(loser, bet);
       bumpGameStats(winner, statKey, 'win');
       bumpGameStats(loser, statKey, 'loss');
       streakBonus = calcStreakBonus(bet, winner[f.streak]);
       if (streakBonus > 0) {
         logStreakCredit(winner, { ...ledgerCtx, amount: streakBonus });
-        winner.gameTotalWon = (Number(winner.gameTotalWon) || 0) + streakBonus;
+        bumpGameTotalWon(winner, streakBonus);
       }
       if (Math.random() < JACKPOT_CHANCE) {
         deferredJackpot = { userId: winner.id, username: winner.username };
@@ -1232,8 +1247,8 @@ export async function expireMatchWithRefund(m, activeMatches, expireMeta) {
           mode: 'pvp',
           amount: bet * 2,
         });
-        winner.gameTotalWon = (Number(winner.gameTotalWon) || 0) + bet;
-        loser.gameTotalLost = (Number(loser.gameTotalLost) || 0) + bet;
+        bumpGameTotalWon(winner, bet);
+        bumpGameTotalLost(loser, bet);
         // Keep W/L stats consistent with normal settles
         const sk = ARCADE_GAMES_META.find((g) => g.id === gameId)?.statKey;
         if (sk) {

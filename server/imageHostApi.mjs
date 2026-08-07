@@ -203,22 +203,27 @@ export async function handleImageHostRequest(req, res) {
   }
 }
 
+function finiteSortKey(v) {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : 0;
+}
+
 function sortGallery(images, sort) {
   const list = [...images];
   switch (sort) {
     case 'oldest':
-      return list.sort((a, b) => (a.createdAt ?? 0) - (b.createdAt ?? 0));
+      return list.sort((a, b) => finiteSortKey(a.createdAt) - finiteSortKey(b.createdAt));
     case 'views':
-      return list.sort((a, b) => (b.views ?? 0) - (a.views ?? 0));
+      return list.sort((a, b) => finiteSortKey(b.views) - finiteSortKey(a.views));
     case 'size':
-      return list.sort((a, b) => (b.size ?? 0) - (a.size ?? 0));
+      return list.sort((a, b) => finiteSortKey(b.size) - finiteSortKey(a.size));
     case 'name':
       return list.sort((a, b) => String(a.name).localeCompare(String(b.name), 'en-US'));
     case 'favorites':
-      return list.sort((a, b) => Number(b.favorite) - Number(a.favorite) || (b.createdAt ?? 0) - (a.createdAt ?? 0));
+      return list.sort((a, b) => Number(b.favorite) - Number(a.favorite) || finiteSortKey(b.createdAt) - finiteSortKey(a.createdAt));
     case 'newest':
     default:
-      return list.sort((a, b) => (b.createdAt ?? 0) - (a.createdAt ?? 0));
+      return list.sort((a, b) => finiteSortKey(b.createdAt) - finiteSortKey(a.createdAt));
   }
 }
 

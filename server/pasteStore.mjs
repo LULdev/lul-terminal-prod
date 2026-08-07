@@ -352,24 +352,28 @@ export async function recordView(id, { consumeBurn = true } = {}) {
 
 export function sortPastes(pastes, sort = 'newest') {
   const list = [...pastes];
+  const key = (v) => {
+    const n = Number(v);
+    return Number.isFinite(n) ? n : 0;
+  };
   switch (sort) {
     case 'oldest':
-      return list.sort((a, b) => (a.createdAt ?? 0) - (b.createdAt ?? 0));
+      return list.sort((a, b) => key(a.createdAt) - key(b.createdAt));
     case 'views':
-      return list.sort((a, b) => (b.views ?? 0) - (a.views ?? 0));
+      return list.sort((a, b) => key(b.views) - key(a.views));
     case 'size':
-      return list.sort((a, b) => (b.size ?? 0) - (a.size ?? 0));
+      return list.sort((a, b) => key(b.size) - key(a.size));
     case 'title':
       return list.sort((a, b) => String(a.title ?? '').localeCompare(String(b.title ?? '')));
     case 'pinned':
       return list.sort((a, b) => {
         const pinDiff = Number(Boolean(b.pinned)) - Number(Boolean(a.pinned));
         if (pinDiff !== 0) return pinDiff;
-        return (b.createdAt ?? 0) - (a.createdAt ?? 0);
+        return key(b.createdAt) - key(a.createdAt);
       });
     case 'newest':
     default:
-      return list.sort((a, b) => (b.createdAt ?? 0) - (a.createdAt ?? 0));
+      return list.sort((a, b) => key(b.createdAt) - key(a.createdAt));
   }
 }
 

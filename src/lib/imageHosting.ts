@@ -322,12 +322,15 @@ export async function updateHostedImage(
   id: string,
   patch: { name?: string; favorite?: boolean; tags?: string[] },
 ): Promise<HostedImageMeta> {
-  const res = await sessionFetch(`${API}/${id}`, {
-    method: 'PATCH',
-    body: JSON.stringify(patch),
-  });
+  // soft401: favorite/rename are high-frequency UI — flaky 401 must not wipe global session
+  const res = await sessionFetch(
+    `${API}/${id}`,
+    { method: 'PATCH', body: JSON.stringify(patch) },
+    { soft401: true },
+  );
   const body = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(body.error || 'Update failed');
+  if (res.status === 401) throw new Error('Sign in required');
+  if (!res.ok) throw new Error((body as { error?: string }).error || 'Update failed');
   return body as HostedImageMeta;
 }
 

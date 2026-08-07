@@ -458,7 +458,9 @@ export async function updatePasteMeta(
 }
 
 export async function forkPaste(id: string): Promise<PasteForkPayload> {
-  const res = await sessionFetch(`${API}/${id}/fork`, { method: 'POST' });
+  // soft401: fork needs login but flaky 401 must not wipe session mid-read
+  const res = await sessionFetch(`${API}/${id}/fork`, { method: 'POST' }, { soft401: true });
+  if (res.status === 401) throw new Error('Sign in required');
   if (!res.ok) throw new Error(await parseError(res));
   return res.json();
 }

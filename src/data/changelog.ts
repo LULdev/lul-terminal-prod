@@ -23,6 +23,21 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '3.80.0',
+    title: 'Full P0–P9 residual audit Server+Client: status map, game totals, soft401, sort safety',
+    date: 'Aug 7, 2026',
+    highlight: true,
+    items: [
+      { priority: 'P0', text: 'P0 — gamesCore bumpGameTotalWon/Lost integer floor on settle + forfeit pot path (no float/NaN leaderboard counters).' },
+      { priority: 'P0', text: 'P0 — rpsService + tttService finalize lifetime won/lost counters floor on every win/loss/streak bump.' },
+      { priority: 'P1', text: 'P1 — updateHostedImage soft401 (favorite/rename high-frequency UI; flaky 401 no global logout).' },
+      { priority: 'P1', text: 'P1 — forkPaste soft401 (sign-in required error; no session wipe mid-read).' },
+      { priority: 'P2', text: 'P2 — statusForError centralized: logged-in variants→401, VIP/Admin/permission→403, lock timeout→503, validation→400 (all API modules).' },
+      { priority: 'P3', text: 'P3 — imageHostApi sortGallery finiteSortKey (views/size/createdAt); pasteStore sortPastes finite keys.' },
+      { priority: 'P9', text: 'P9 — Version 3.80.0; full residual complete-website audit after 3.79 (every fix listed).' },
+    ],
+  },
+  {
     version: '3.79.0',
     title: 'Full P1 audit Server+Client: match participant gate, view counter integrity, paste unlock soft401',
     date: 'Aug 7, 2026',
