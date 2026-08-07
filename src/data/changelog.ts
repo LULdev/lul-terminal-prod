@@ -21,7 +21,20 @@ export type ChangelogEntry = {
   items: ChangelogItem[];
 };
 
-export const CHANGELOG: ChangelogEntry[] = [
+export const CHANGELOG: ChangelogEntry[
+  {
+    version: '3.76.0',
+    title: 'Full P3 audit Server+Client: date/time NaN safety, status probe finite metrics',
+    date: 'Aug 7, 2026',
+    highlight: true,
+    items: [
+      { priority: 'P3', text: 'P3 — formatWhen/formatDate/formatTime finite-safe: FreePremium, ProxyDatabase, ProfileHero/Overview, UnifiedTerminal, AdminEmotes/Shoutbox relative.' },
+      { priority: 'P3', text: 'P3 — UserBar Hall of Fame earnedAt date guard; TrophyTip Number() coerce; MemeDatabaseStats scrapedAt guard.' },
+      { priority: 'P3', text: 'P3 — statusService probes finite-safe: storage/aggregates/vault/colon/persona/proxy-db metrics (no NaN MB/counts).' },
+      { priority: 'P3', text: 'P3 — AdminScraperPool last scrape + sources OK/failed finite-safe.' },
+      { priority: 'P9', text: 'P9 — Version 3.76.0; full P3 module audit after 3.75 (every fix listed).' },
+    ],
+  },] = [
   {
     version: '3.75.0',
     title: 'Full residual audit Server+Client: Retry-After on admin/games/premium 429, date display safety',
