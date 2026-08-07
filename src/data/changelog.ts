@@ -23,6 +23,20 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '3.78.0',
+    title: 'Full residual P3 audit Server+Client: paste status field, gallery/paste stats, EN labels',
+    date: 'Aug 7, 2026',
+    highlight: true,
+    items: [
+      { priority: 'P3', text: 'P3 — statusService paste probe uses pastesCreated (was stats.total → always 0 pastes).' },
+      { priority: 'P3', text: 'P3 — pasteStore/imageHostStore readStats + user/admin view sums finite-safe; terminalStats dayKey NaN-safe.' },
+      { priority: 'P3', text: 'P3 — FreePremium: Categories (was Kategorien); updatedAt parse number|ISO; Admin review label.' },
+      { priority: 'P3', text: 'P3 — AdminImages/Pastes views+lines finite-safe; MyImageGallery residual views; ImageHostViewer views set finite.' },
+      { priority: 'P3', text: 'P3 — PasteStatsBar avg views division finite-safe; AdminAnalytics 14-day bars finite; SystemFooter formatSessionTime.' },
+      { priority: 'P9', text: 'P9 — Version 3.78.0; full residual P3 module audit after 3.77 (every fix listed).' },
+    ],
+  },
+  {
     version: '3.77.0',
     title: 'Full residual P3 audit Server+Client: analytics dates, toolVault time, status/view sums',
     date: 'Aug 7, 2026',

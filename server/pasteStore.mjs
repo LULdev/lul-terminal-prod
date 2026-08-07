@@ -123,10 +123,13 @@ export async function readStats() {
   try {
     const raw = await fs.readFile(STATS_FILE, 'utf8');
     const parsed = JSON.parse(raw);
+    const created = Number(parsed.pastesCreated);
+    const views = Number(parsed.pasteViewsTotal);
+    const active = Number(parsed.activePastes);
     return {
-      pastesCreated: parsed.pastesCreated ?? 0,
-      pasteViewsTotal: parsed.pasteViewsTotal ?? 0,
-      activePastes: parsed.activePastes ?? 0,
+      pastesCreated: Number.isFinite(created) ? Math.max(0, Math.floor(created)) : 0,
+      pasteViewsTotal: Number.isFinite(views) ? Math.max(0, Math.floor(views)) : 0,
+      activePastes: Number.isFinite(active) ? Math.max(0, Math.floor(active)) : 0,
     };
   } catch (err) {
     console.error('[paste] CRITICAL: stats.json unreadable', err);
@@ -383,11 +386,16 @@ export async function listByUser(userId, sort = 'newest') {
   return sortPastes(out, sort);
 }
 
+function finiteNonNeg(v) {
+  const n = Number(v);
+  return Number.isFinite(n) ? Math.max(0, n) : 0;
+}
+
 export async function computeUserPasteStats(userId) {
   const pastes = await listByUser(userId, 'newest');
-  const totalViews = pastes.reduce((s, m) => s + (m.views ?? 0), 0);
-  const totalBytes = pastes.reduce((s, m) => s + (m.size ?? 0), 0);
-  const totalLines = pastes.reduce((s, m) => s + (m.lineCount ?? 0), 0);
+  const totalViews = pastes.reduce((s, m) => s + finiteNonNeg(m.views), 0);
+  const totalBytes = pastes.reduce((s, m) => s + finiteNonNeg(m.size), 0);
+  const totalLines = pastes.reduce((s, m) => s + finiteNonNeg(m.lineCount), 0);
   const pinned = pastes.filter((m) => m.pinned).length;
   const byVisibility = {};
   const byLanguage = {};
@@ -401,7 +409,7 @@ export async function computeUserPasteStats(userId) {
     if (m.burnAfterRead) burnAfterRead += 1;
     if (m.visibility === 'protected') protectedCount += 1;
   }
-  const topViewed = [...pastes].sort((a, b) => (b.views ?? 0) - (a.views ?? 0))[0] ?? null;
+  const topViewed = [...pastes].sort((a, b) => finiteNonNeg(b.views) - finiteNonNeg(a.views))[0] ?? null;
   return {
     count: pastes.length,
     totalViews,
@@ -415,7 +423,7 @@ export async function computeUserPasteStats(userId) {
     byLanguage,
     topViewedId: topViewed?.id ?? null,
     topViewedTitle: topViewed?.title ?? null,
-    topViewedViews: topViewed?.views ?? 0,
+    topViewedViews: finiteNonNeg(topViewed?.views),
   };
 }
 
@@ -608,8 +616,8 @@ export async function computeAdminPasteStats() {
       byVisibility[vis] = (byVisibility[vis] ?? 0) + 1;
       if (m.burnAfterRead) burnAfterRead += 1;
       if (m.visibility === 'protected') protectedCount += 1;
-      totalViews += m.views ?? 0;
-      totalBytes += m.size ?? 0;
+      totalViews += finiteNonNeg(m.views);
+      totalBytes += finiteNonNeg(m.size);
     } catch { /* skip */ }
   }
   return {

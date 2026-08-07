@@ -332,8 +332,8 @@ export function AdminPastesPanel() {
                 <span className="text-cyan-400/90">{p.id}</span>
                 {' · '}{languageLabel(p.language)}
                 {' · '}{formatPasteBytes(p.size)}
-                {' · '}{p.lineCount} lines
-                {' · '}{p.views} views
+                {' · '}{(Number.isFinite(Number(p.lineCount)) ? Math.max(0, Math.floor(Number(p.lineCount))) : 0)} lines
+                {' · '}{(Number.isFinite(Number(p.views)) ? Math.max(0, Math.floor(Number(p.views))) : 0)} views
               </div>
               <div className="text-[8px] font-mono text-slate-600 mt-0.5">
                 {p.username ? `@${p.username}` : 'anonymous'}

@@ -148,7 +148,7 @@ export function AdminImagesPanel() {
               >
                 <img src={safeHostedImageUrl(img.url, img.id) ?? ''} alt={img.name} className="w-full h-full object-cover" loading="lazy" />
                 <div className="absolute inset-x-0 bottom-0 bg-black/70 px-1 py-0.5 text-[6px] font-mono text-slate-400 truncate">
-                  {img.views} views
+                  {(Number.isFinite(Number(img.views)) ? Math.max(0, Math.floor(Number(img.views))) : 0)} views
                 </div>
               </button>
             ))}
@@ -196,7 +196,7 @@ export function AdminImagesPanel() {
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[8px] font-mono">
               <div><span className="text-slate-600">Size</span><br /><span className="text-slate-300">{formatBytes(preview.size)}</span></div>
               <div><span className="text-slate-600">Dims</span><br /><span className="text-slate-300">{preview.width ?? '?'}×{preview.height ?? '?'}</span></div>
-              <div><span className="text-slate-600">Views</span><br /><span className="text-cyan-300">{preview.views}</span></div>
+              <div><span className="text-slate-600">Views</span><br /><span className="text-cyan-300">{Number.isFinite(Number(preview.views)) ? Math.max(0, Math.floor(Number(preview.views))) : 0}</span></div>
               <div><span className="text-slate-600">User</span><br /><span className="text-violet-300 truncate">{preview.userId ?? 'guest'}</span></div>
             </div>
           </div>

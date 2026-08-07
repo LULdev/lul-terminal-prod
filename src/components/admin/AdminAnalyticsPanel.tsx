@@ -676,10 +676,18 @@ export function AdminAnalyticsPanel() {
             <ToolCard title="14-day trend" icon="📈" accent="teal">
               <div className="flex items-end gap-1 h-24">
                 {overview.dailySeries.map((d) => {
-                  const max = Math.max(...overview.dailySeries.map((x) => x.events), 1);
-                  const h = Math.max(4, Math.round((d.events / max) * 88));
+                  const max = Math.max(
+                    1,
+                    ...overview.dailySeries.map((x) => {
+                      const n = Number(x.events);
+                      return Number.isFinite(n) ? n : 0;
+                    }),
+                  );
+                  const events = Number.isFinite(Number(d.events)) ? Number(d.events) : 0;
+                  const users = Number.isFinite(Number(d.uniqueUsers)) ? Number(d.uniqueUsers) : 0;
+                  const h = Math.max(4, Math.round((events / max) * 88));
                   return (
-                    <div key={d.date} className="flex-1 flex flex-col items-center gap-0.5" title={`${d.date}: ${d.events} events, ${d.uniqueUsers} users`}>
+                    <div key={d.date} className="flex-1 flex flex-col items-center gap-0.5" title={`${d.date}: ${events} events, ${users} users`}>
                       <div className="w-full bg-teal-500/70 rounded-t" style={{ height: h }} />
                       <span className="text-[6px] font-mono text-slate-600 rotate-0 truncate w-full text-center">{d.date.slice(5)}</span>
                     </div>

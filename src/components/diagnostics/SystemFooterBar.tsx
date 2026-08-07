@@ -12,9 +12,10 @@ type SystemFooterBarProps = {
 };
 
 function formatSessionTime(totalSecs: number) {
-  const hrs = Math.floor(totalSecs / 3600);
-  const mins = Math.floor((totalSecs % 3600) / 60);
-  const secs = totalSecs % 60;
+  const safe = Number.isFinite(Number(totalSecs)) ? Math.max(0, Math.floor(Number(totalSecs))) : 0;
+  const hrs = Math.floor(safe / 3600);
+  const mins = Math.floor((safe % 3600) / 60);
+  const secs = safe % 60;
   return [
     hrs > 0 ? String(hrs).padStart(2, '0') : null,
     String(mins).padStart(2, '0'),

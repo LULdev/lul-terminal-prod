@@ -42,10 +42,10 @@ export function ImageHostViewer({ id }: Props) {
           return;
         }
         setMeta(m);
-        setViews(m.views ?? 0);
+        setViews(Number.isFinite(Number(m.views)) ? Math.max(0, Math.floor(Number(m.views))) : 0);
         const count = await recordImageView(id, { credentialed: isLoggedIn });
         if (!cancelled) {
-          setViews(count);
+          setViews(Number.isFinite(Number(count)) ? Math.max(0, Math.floor(Number(count))) : 0);
           setViewsReady(true);
         }
       } catch (e) {
@@ -68,7 +68,7 @@ export function ImageHostViewer({ id }: Props) {
     if (!meta) return;
     return pollImageMeta(id, (m) => {
       setMeta(m);
-      setViews(m.views ?? 0);
+      setViews(Number.isFinite(Number(m.views)) ? Math.max(0, Math.floor(Number(m.views))) : 0);
       setViewsReady(true);
     }, 4000, { credentialed: isLoggedIn });
   }, [id, meta?.id, isLoggedIn]);

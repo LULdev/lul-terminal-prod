@@ -169,7 +169,8 @@ export async function buildSystemStatus() {
 
     probe('paste', 'Paste Service', 'content', '📋', async () => {
       const stats = await readPasteStats();
-      const total = finiteNonNeg(stats.total);
+      // readStats fields: pastesCreated / pasteViewsTotal / activePastes (not `.total`)
+      const total = finiteNonNeg(stats.pastesCreated ?? stats.total);
       const active = finiteNonNeg(stats.activePastes);
       return { message: `${total} pastes`, metric: `${active} active` };
     }),

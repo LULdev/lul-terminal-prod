@@ -867,14 +867,20 @@ function PremiumAccountsContent({
             <StatCard
               label="Pending"
               value={stats?.pending ?? 0}
-              sub="Admin-Review"
+              sub="Admin review"
               accent="border-sky-500/30 bg-sky-500/10 text-sky-300"
             />
           )}
           <StatCard
-            label="Kategorien"
+            label="Categories"
             value={stats?.activeCategories ?? 0}
-            sub={stats?.updatedAt ? `Update ${formatWhen(Date.parse(stats.updatedAt))}` : 'no data'}
+            sub={stats?.updatedAt
+              ? `Update ${formatWhen(
+                  typeof stats.updatedAt === 'number'
+                    ? stats.updatedAt
+                    : Date.parse(String(stats.updatedAt)),
+                )}`
+              : 'no data'}
             accent="border-violet-500/25 bg-violet-500/5 text-violet-300"
           />
         </div>

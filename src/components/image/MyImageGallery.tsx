@@ -438,7 +438,7 @@ function GalleryCard({
       <div className="absolute bottom-0 left-0 right-0 p-2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
         <p className="text-[8px] font-mono text-white truncate">{img.name}</p>
         <p className="text-[7px] font-mono text-slate-400 flex items-center gap-2">
-          <span className="flex items-center gap-0.5"><Eye size={8} /> {img.views ?? 0}</span>
+          <span className="flex items-center gap-0.5"><Eye size={8} /> {(Number.isFinite(Number(img.views)) ? Math.max(0, Math.floor(Number(img.views))) : 0)}</span>
           <span>{formatImageBytes(img.size)}</span>
         </p>
       </div>
@@ -582,7 +582,7 @@ function ImageDetailModal({
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
-            <StatChip label="Views" value={String(img.views ?? 0)} />
+            <StatChip label="Views" value={String(Number.isFinite(Number(img.views)) ? Math.max(0, Math.floor(Number(img.views))) : 0)} />
             <StatChip label="Size" value={formatImageBytes(img.size)} />
             <StatChip label="Type" value={mimeLabel(img.mime)} />
             <StatChip label="Dimensions" value={img.width && img.height ? `${img.width}×${img.height}` : '—'} />

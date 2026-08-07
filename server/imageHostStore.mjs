@@ -62,9 +62,11 @@ export async function readStats() {
   try {
     const raw = await fs.readFile(STATS_FILE, 'utf8');
     const parsed = JSON.parse(raw);
+    const hosted = Number(parsed.imagesHosted);
+    const views = Number(parsed.imageViewsTotal);
     return {
-      imagesHosted: parsed.imagesHosted ?? 0,
-      imageViewsTotal: parsed.imageViewsTotal ?? 0,
+      imagesHosted: Number.isFinite(hosted) ? Math.max(0, Math.floor(hosted)) : 0,
+      imageViewsTotal: Number.isFinite(views) ? Math.max(0, Math.floor(views)) : 0,
     };
   } catch (err) {
     console.error('[image-host] CRITICAL: stats.json unreadable', err);
@@ -209,17 +211,22 @@ export async function listImagesByUser(userId) {
   return all.filter((m) => String(m.userId) === uid);
 }
 
+function finiteNonNeg(v) {
+  const n = Number(v);
+  return Number.isFinite(n) ? Math.max(0, n) : 0;
+}
+
 export async function computeUserGalleryStats(userId) {
   const images = await listImagesByUser(userId);
-  const totalViews = images.reduce((s, m) => s + (m.views ?? 0), 0);
-  const totalBytes = images.reduce((s, m) => s + (m.size ?? 0), 0);
+  const totalViews = images.reduce((s, m) => s + finiteNonNeg(m.views), 0);
+  const totalBytes = images.reduce((s, m) => s + finiteNonNeg(m.size), 0);
   const favorites = images.filter((m) => m.favorite).length;
   const byMime = {};
   for (const m of images) {
     const key = m.mime ?? 'unknown';
     byMime[key] = (byMime[key] ?? 0) + 1;
   }
-  const topViewed = [...images].sort((a, b) => (b.views ?? 0) - (a.views ?? 0))[0] ?? null;
+  const topViewed = [...images].sort((a, b) => finiteNonNeg(b.views) - finiteNonNeg(a.views))[0] ?? null;
   return {
     count: images.length,
     totalViews,
@@ -228,7 +235,7 @@ export async function computeUserGalleryStats(userId) {
     avgViews: images.length ? Math.round((totalViews / images.length) * 10) / 10 : 0,
     byMime,
     topViewedId: topViewed?.id ?? null,
-    topViewedViews: topViewed?.views ?? 0,
+    topViewedViews: finiteNonNeg(topViewed?.views),
     storageLimitBytes: MAX_BYTES * 50,
   };
 }
@@ -340,7 +347,7 @@ export async function adminListImages({ limit = 120, q, sort = 'newest' } = {}) 
     url: `/hosting/${m.id}`,
   }));
 
-  const totalBytes = list.reduce((s, m) => s + (m.size ?? 0), 0);
+  const totalBytes = list.reduce((s, m) => s + finiteNonNeg(m.size), 0);
 
   return {
     images,
@@ -348,7 +355,7 @@ export async function adminListImages({ limit = 120, q, sort = 'newest' } = {}) 
     stats: {
       onDisk: list.length,
       totalBytes,
-      totalViews: list.reduce((s, m) => s + (m.views ?? 0), 0),
+      totalViews: list.reduce((s, m) => s + finiteNonNeg(m.views), 0),
     },
   };
 }

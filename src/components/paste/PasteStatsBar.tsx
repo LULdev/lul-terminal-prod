@@ -47,7 +47,12 @@ export function PasteStatsBar() {
         <StatCard
           icon="📊"
           label="Avg views / paste"
-          value={pastesCreated ? Math.round(pasteViewsTotal / pastesCreated) : 0}
+          value={
+            Number.isFinite(Number(pastesCreated)) && Number(pastesCreated) > 0
+            && Number.isFinite(Number(pasteViewsTotal))
+              ? Math.round(Number(pasteViewsTotal) / Number(pastesCreated))
+              : 0
+          }
           accent="violet"
           raw
         />
