@@ -187,9 +187,6 @@ export const colorpick = createInstantDuelGame({
     return 'draw';
   },
   botMove: (playerMove, difficulty) => {
-    if (difficulty === 'hard' && playerMove && Math.random() < 0.3) {
-      return randPick(COLORS.filter((c) => c !== playerMove));
-    }
     return randPick(COLORS);
   },
 });
@@ -212,9 +209,6 @@ export const highlow = createInstantDuelGame({
     return 'draw';
   },
   botMove: (playerMove, difficulty) => {
-    if (difficulty === 'hard' && playerMove && Math.random() < 0.35) {
-      return playerMove === 'high' ? 'low' : 'high';
-    }
     return randPick(['high', 'low']);
   },
 });

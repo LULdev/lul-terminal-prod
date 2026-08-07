@@ -23,6 +23,24 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '3.67.0',
+    title: 'Full P2 audit Server+Client: paste async scrypt, MM heartbeat write, logout/coin UX',
+    date: 'Aug 7, 2026',
+    highlight: true,
+    items: [
+      { priority: 'P2', text: 'P2 — pasteStore hash/verify async scrypt (no scryptSync event-loop stall); hash outside paste write lock.' },
+      { priority: 'P2', text: 'P2 — pasteAccess verifyPassword awaited (async path).' },
+      { priority: 'P2', text: 'P2 — buildUserSlice/RPS/TTT: authenticated slices always matchmaker write so multi-worker heartbeats persist after hydrate.' },
+      { priority: 'P2', text: 'P2 — stripEscrowRows default gameId arcade (no cross-game strip when gameId missing).' },
+      { priority: 'P2', text: 'P2 — colorpick/highlow hard bot: fair random (bogus anti-player bias removed).' },
+      { priority: 'P2', text: 'P2 — nextStreakBonus stays MIN_BET base (client scales to current bet; MAX_BET would break hint).' },
+      { priority: 'P2', text: 'P2 — Profile + Dashboard logoutRef (double-click sign-out parity with UserBar).' },
+      { priority: 'P2', text: 'P2 — chat unlocks optimistic patchUser lulCoins (UserBar no longer waits on /me).' },
+      { priority: 'P2', text: 'P2 — Games/Profile coin patch monotonic updatedAt (clock-skew safe merge protect).' },
+      { priority: 'P9', text: 'P9 — Version 3.67.0; full P2 module audit after 3.66 (every fix listed).' },
+    ],
+  },
+  {
     version: '3.66.0',
     title: '25-round P1 audit Server+Client: hot-path coin-lock I/O, session bus, login interrupt',
     date: 'Aug 6, 2026',

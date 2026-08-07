@@ -601,6 +601,7 @@ export async function getRpsUserSlice(userId) {
             totalWon: user.gameTotalWon ?? 0,
             totalLost: user.gameTotalLost ?? 0,
             moves: user.gameRpsMoves ?? emptyMoves(),
+            // MIN_BET base — client scales (base/minBet)*currentBet for streak hint
             nextStreakBonus: calcStreakBonus(
               MIN_BET,
               (Number(user.gameRpsStreak) || 0) + 1,
@@ -611,15 +612,8 @@ export async function getRpsUserSlice(userId) {
       activeMatch: resolveActiveMatchForSlice({ queue, activeMatches, userId, publicMatch }),
     };
   };
-  // Heartbeat/sweep need write; pure status uses read (no disk thrash)
-  const needsWrite = Boolean(userId && (
-    queue.some((q) => q.userId === userId)
-    || [...activeMatches.values()].some(
-      (m) => m.status !== 'done'
-        && (m.player1?.userId === userId || m.player2?.userId === userId),
-    )
-  ));
-  return needsWrite ? withMatchmakerWrite(mm, run) : withMatchmakerRead(mm, run);
+  // Authenticated: always write so hydrate+heartbeat persist (multi-worker). Guest: read.
+  return userId ? withMatchmakerWrite(mm, run) : withMatchmakerRead(mm, run);
 }
 
 export function getDailyBonusStatus(user) {

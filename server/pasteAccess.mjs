@@ -14,7 +14,7 @@ import { verifyPassword } from './pasteStore.mjs';
  */
 export async function resolvePasteAccess(req, meta, passwordFromQuery = '') {
   if (meta.visibility === 'protected') {
-    if (!meta.passwordHash || !verifyPassword(passwordFromQuery, meta.passwordHash)) {
+    if (!meta.passwordHash || !(await verifyPassword(passwordFromQuery, meta.passwordHash))) {
       return { allowed: false, requiresPassword: true };
     }
     return { allowed: true };

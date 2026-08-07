@@ -76,6 +76,7 @@ export function UserDashboardPage({ onNavigate }: UserDashboardPageProps) {
   const [currentPassword, setCurrentPassword] = useState('');
   const [saving, setSaving] = useState(false);
   const savingRef = useRef(false);
+  const logoutRef = useRef(false);
   const [msg, setMsg] = useState('');
   const [err, setErr] = useState('');
   const [inviteUrl, setInviteUrl] = useState('');
@@ -336,10 +337,18 @@ export function UserDashboardPage({ onNavigate }: UserDashboardPageProps) {
               <span className="text-[9px] font-mono text-slate-500 flex items-center gap-1"><Calendar size={10} /> Registered {formatDate(user.createdAt)}</span>
               <button
                 type="button"
-                onClick={async () => {
+                onClick={() => {
+                  if (logoutRef.current) return;
+                  logoutRef.current = true;
                   setErr('');
-                  const ok = await logout();
-                  if (!ok) setErr(LOGOUT_ARCADE_BLOCKED);
+                  void (async () => {
+                    try {
+                      const ok = await logout();
+                      if (!ok) setErr(LOGOUT_ARCADE_BLOCKED);
+                    } finally {
+                      logoutRef.current = false;
+                    }
+                  })();
                 }}
                 className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border border-slate-700 text-[9px] font-mono text-slate-500 hover:text-rose-300"
               >

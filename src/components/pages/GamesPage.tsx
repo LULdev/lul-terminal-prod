@@ -344,8 +344,12 @@ export function GamesPage() {
       setState(s);
       if (s.myCoins != null && Number.isFinite(Number(s.myCoins))) {
         const c = Math.floor(Number(s.myCoins));
-        // Bump updatedAt so AuthContext merge keeps fresher coins over stale /me
-        patchUser((u) => (u ? { ...u, lulCoins: c, updatedAt: Date.now() } : u));
+        // Monotonic updatedAt so AuthContext merge keeps fresher coins over stale /me (clock-skew safe)
+        patchUser((u) => {
+          if (!u) return u;
+          const nextAt = Math.max(Date.now(), (Number(u.updatedAt) || 0) + 1);
+          return { ...u, lulCoins: c, updatedAt: nextAt };
+        });
       }
       const activeId = selectedGameRef.current;
       if (opts?.applySlice !== false) {
@@ -382,7 +386,11 @@ export function GamesPage() {
       setState(s);
       if (s.myCoins != null && Number.isFinite(Number(s.myCoins))) {
         const c = Math.floor(Number(s.myCoins));
-        patchUser((u) => (u ? { ...u, lulCoins: c, updatedAt: Date.now() } : u));
+        patchUser((u) => {
+          if (!u) return u;
+          const nextAt = Math.max(Date.now(), (Number(u.updatedAt) || 0) + 1);
+          return { ...u, lulCoins: c, updatedAt: nextAt };
+        });
       }
       if (opts?.applySlice !== false) {
         const game = opts?.gameId ?? selectedGameRef.current;
@@ -1157,8 +1165,12 @@ export function GamesPage() {
                       : prev.dailyBonus,
                   }
                 : prev));
-              // Sync UserBar immediately (don't wait for /me); bump updatedAt for merge protect
-              patchUser((u) => (u ? { ...u, lulCoins: c, updatedAt: Date.now() } : u));
+              // Sync UserBar immediately (don't wait for /me); monotonic updatedAt for merge protect
+              patchUser((u) => {
+                if (!u) return u;
+                const nextAt = Math.max(Date.now(), (Number(u.updatedAt) || 0) + 1);
+                return { ...u, lulCoins: c, updatedAt: nextAt };
+              });
               void refresh();
               void load();
               setCoinFeedTick((t) => t + 1);

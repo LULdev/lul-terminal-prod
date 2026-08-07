@@ -73,7 +73,7 @@ export function tombstoneRoom(consumedRooms, code) {
 
 function stripEscrowRows(user, amt, { gameId = null } = {}) {
   if (!user?.gameEscrows?.length || amt <= 0) return 0;
-  const gid = gameId ?? null;
+  const gid = gameId ?? 'arcade';
   let remaining = amt;
   const kept = [];
   const rows = gid
@@ -863,22 +863,17 @@ export function buildUserSlice({ statKey, queue, activeMatches, publicMatch, ext
           ? {
               ...base,
               ...extraStats?.(user),
+              // MIN_BET base — client scales (base/minBet)*currentBet for streak hint
               nextStreakBonus: calcStreakBonus(MIN_BET, (Number(user[statFields(statKey).streak]) || 0) + 1),
             }
           : null,
         activeMatch: resolveActiveMatchForSlice({ queue, activeMatches, userId, publicMatch }),
       };
     };
-    // Heartbeat/sweep need write; pure status can still hydrate via write path when in queue
+    // Authenticated slices always write after hydrate so multi-worker heartbeats/sweeps
+    // persist (pre-hydrate needsWrite missed disk-only queue membership). Guests: read-only.
     if (mm?.gameId) {
-      const needsWrite = Boolean(userId && (
-        queue.some((q) => q.userId === userId)
-        || [...activeMatches.values()].some(
-          (m) => m.status !== 'done'
-            && (m.player1?.userId === userId || m.player2?.userId === userId),
-        )
-      ));
-      return needsWrite
+      return userId
         ? withMatchmakerWrite(mm, run)
         : withMatchmakerRead(mm, run);
     }

@@ -692,7 +692,15 @@ export const TerminalDiagnosticsPane = memo(function TerminalDiagnosticsPane({
                 onOpenProfile={onNavigateProfile}
                 onChatUnlocks={(ids, rewards, coinsTotal) => {
                   handleUnlocks(ids, rewards);
-                  if (coinsTotal || ids.length) {
+                  // Optimistic coin patch — avoid UserBar lag waiting on /me
+                  const c = Number(coinsTotal);
+                  if (Number.isFinite(c) && c >= 0) {
+                    patchUser((prev) => {
+                      if (!prev) return prev;
+                      const nextAt = Math.max(Date.now(), (Number(prev.updatedAt) || 0) + 1);
+                      return { ...prev, lulCoins: Math.floor(c), updatedAt: nextAt };
+                    });
+                  } else if (ids.length) {
                     void refresh();
                   }
                 }}

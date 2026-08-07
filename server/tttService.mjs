@@ -560,6 +560,7 @@ export async function getTttUserSlice(userId) {
             jackpotsWon: user.gameJackpotsWon ?? 0,
             totalWon: user.gameTotalWon ?? 0,
             totalLost: user.gameTotalLost ?? 0,
+            // MIN_BET base — client scales (base/minBet)*currentBet for streak hint
             nextStreakBonus: calcStreakBonus(
               MIN_BET,
               (Number(user.gameTttStreak) || 0) + 1,
@@ -569,14 +570,8 @@ export async function getTttUserSlice(userId) {
       activeMatch: resolveActiveMatchForSlice({ queue, activeMatches, userId, publicMatch }),
     };
   };
-  const needsWrite = Boolean(userId && (
-    queue.some((q) => q.userId === userId)
-    || [...activeMatches.values()].some(
-      (m) => m.status !== 'done'
-        && (m.player1?.userId === userId || m.player2?.userId === userId),
-    )
-  ));
-  return needsWrite ? withMatchmakerWrite(mm, run) : withMatchmakerRead(mm, run);
+  // Authenticated: always write so hydrate+heartbeat persist (multi-worker). Guest: read.
+  return userId ? withMatchmakerWrite(mm, run) : withMatchmakerRead(mm, run);
 }
 
 export async function joinTttQueue(userId, opts = {}) {

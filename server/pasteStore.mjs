@@ -7,6 +7,9 @@ import fs from 'fs/promises';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import crypto from 'crypto';
+import { promisify } from 'util';
+
+const scrypt = promisify(crypto.scrypt);
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 export const DATA_ROOT = path.join(__dirname, '..', 'data', 'paste');
@@ -38,14 +41,15 @@ export function generateId() {
 /** Cap paste passwords to match auth (avoids scrypt CPU DoS on huge bodies). */
 const MAX_PASTE_PASSWORD_LENGTH = 128;
 
-export function hashPassword(password) {
+/** Async scrypt — never block the event loop (auth crypto.mjs parity). */
+export async function hashPassword(password) {
   const pw = String(password ?? '');
   if (pw.length > MAX_PASTE_PASSWORD_LENGTH) {
     throw new Error(`Password max. ${MAX_PASTE_PASSWORD_LENGTH} characters`);
   }
   const salt = crypto.randomBytes(16).toString('hex');
-  const hash = crypto.scryptSync(pw, salt, 64).toString('hex');
-  return `${salt}:${hash}`;
+  const derived = await scrypt(pw, salt, 64);
+  return `${salt}:${derived.toString('hex')}`;
 }
 
 /** @typedef {'public' | 'private' | 'protected'} PasteVisibility */
@@ -61,7 +65,8 @@ export function normalizeStoredVisibility(meta) {
   return { ...meta, visibility: 'public' };
 }
 
-export function normalizeVisibilityInput(visibility, password) {
+/** Resolve visibility; optional precomputed passwordHash avoids scrypt under paste write lock. */
+export async function normalizeVisibilityInput(visibility, password, prePasswordHash = null) {
   let vis = 'public';
   if (visibility === 'private' || visibility === 'protected' || visibility === 'public') {
     vis = visibility;
@@ -70,13 +75,16 @@ export function normalizeVisibilityInput(visibility, password) {
   }
   const trimmed = String(password ?? '').trim();
   if (vis === 'protected') {
+    if (prePasswordHash) {
+      return { visibility: 'protected', passwordHash: prePasswordHash };
+    }
     if (!trimmed) throw new Error('Password required for protected pastes');
-    return { visibility: 'protected', passwordHash: hashPassword(trimmed) };
+    return { visibility: 'protected', passwordHash: await hashPassword(trimmed) };
   }
   return { visibility: vis, passwordHash: null };
 }
 
-export function verifyPassword(password, stored) {
+export async function verifyPassword(password, stored) {
   if (!stored || typeof stored !== 'string') return false;
   const pw = String(password ?? '');
   // Reject oversize without hashing (CPU DoS)
@@ -84,8 +92,10 @@ export function verifyPassword(password, stored) {
   const [salt, hash] = stored.split(':');
   if (!salt || !hash) return false;
   try {
-    const test = crypto.scryptSync(pw, salt, 64).toString('hex');
-    return crypto.timingSafeEqual(Buffer.from(hash, 'hex'), Buffer.from(test, 'hex'));
+    const derived = await scrypt(pw, salt, 64);
+    const expected = Buffer.from(hash, 'hex');
+    if (derived.length !== expected.length) return false;
+    return crypto.timingSafeEqual(expected, derived);
   } catch {
     return false;
   }
@@ -240,6 +250,15 @@ export async function savePaste({
   authorRole = null,
   authorVerified = false,
 }) {
+  // scrypt OUTSIDE paste write lock — protected create must not block burn/meta RMW
+  let prePasswordHash = null;
+  const visProbe = visibility === 'unlisted' ? 'private' : visibility;
+  if (visProbe === 'protected') {
+    const trimmed = String(password ?? '').trim();
+    if (!trimmed) throw new Error('Password required for protected pastes');
+    prePasswordHash = await hashPassword(trimmed);
+  }
+
   return withPasteWrite(async () => {
     const text = String(content ?? '');
     const bytes = Buffer.byteLength(text, 'utf8');
@@ -249,7 +268,11 @@ export async function savePaste({
     await ensureDirs();
     const id = generateId();
     const now = Date.now();
-    const { visibility: vis, passwordHash } = normalizeVisibilityInput(visibility, password);
+    const { visibility: vis, passwordHash } = await normalizeVisibilityInput(
+      visibility,
+      password,
+      prePasswordHash,
+    );
 
     const meta = {
       id,
@@ -436,23 +459,34 @@ export async function listTrendingPublic(limit = 12) {
     .slice(0, limit);
 }
 
-async function applyPastePatch(meta, patch) {
+/**
+ * @param {object} meta
+ * @param {object} patch
+ * @param {{ prePasswordHash?: string|null }} [opts] precomputed hash (scrypt outside paste lock)
+ */
+async function applyPastePatch(meta, patch, opts = {}) {
+  const preHash = opts.prePasswordHash ?? null;
   if (patch.title !== undefined) meta.title = String(patch.title).slice(0, 120);
   if (patch.language !== undefined) meta.language = String(patch.language).slice(0, 32);
   if (patch.visibility !== undefined) {
     if (patch.visibility === 'protected') {
       const pw = String(patch.password ?? '').trim();
-      if (!pw && !meta.passwordHash) throw new Error('Password required for protected pastes');
+      if (!preHash && !pw && !meta.passwordHash) throw new Error('Password required for protected pastes');
       meta.visibility = 'protected';
-      if (pw) meta.passwordHash = hashPassword(pw);
+      if (preHash) meta.passwordHash = preHash;
+      else if (pw) meta.passwordHash = await hashPassword(pw);
     } else if (patch.visibility === 'private' || patch.visibility === 'public') {
       meta.visibility = patch.visibility;
       meta.passwordHash = null;
     }
   } else if (patch.password !== undefined && meta.visibility === 'protected') {
-    const pw = String(patch.password).trim();
-    if (!pw) throw new Error('Password required for protected pastes');
-    meta.passwordHash = hashPassword(pw);
+    if (preHash) {
+      meta.passwordHash = preHash;
+    } else {
+      const pw = String(patch.password).trim();
+      if (!pw) throw new Error('Password required for protected pastes');
+      meta.passwordHash = await hashPassword(pw);
+    }
   }
   if (patch.expiry !== undefined) meta.expiresAt = resolveExpiry(patch.expiry);
   if (patch.burnAfterRead !== undefined) meta.burnAfterRead = Boolean(patch.burnAfterRead);
@@ -473,20 +507,33 @@ async function applyPastePatch(meta, patch) {
   return meta;
 }
 
+/** Precompute password hash outside paste write lock when patch sets a new password. */
+async function preHashPastePatchPassword(patch) {
+  if (!patch || typeof patch !== 'object') return null;
+  const wantsProtected = patch.visibility === 'protected'
+    || (patch.password !== undefined && patch.visibility === undefined);
+  if (!wantsProtected && patch.password === undefined) return null;
+  const pw = String(patch.password ?? '').trim();
+  if (!pw) return null;
+  return hashPassword(pw);
+}
+
 export async function updatePaste(id, userId, patch) {
+  const prePasswordHash = await preHashPastePatchPassword(patch);
   return withPasteWrite(async () => {
     const meta = await purgeIfExpired(await getMeta(id), { inWrite: true });
     if (!meta) throw new Error('Paste not found');
     if (String(meta.userId) !== String(userId)) throw new Error('Not allowed');
-    return applyPastePatch(meta, patch);
+    return applyPastePatch(meta, patch, { prePasswordHash });
   });
 }
 
 export async function adminUpdatePaste(id, patch) {
+  const prePasswordHash = await preHashPastePatchPassword(patch);
   return withPasteWrite(async () => {
     const meta = await purgeIfExpired(await getMeta(id), { inWrite: true });
     if (!meta) throw new Error('Paste not found');
-    return applyPastePatch(meta, patch);
+    return applyPastePatch(meta, patch, { prePasswordHash });
   });
 }
 

@@ -67,6 +67,7 @@ export function ProfilePage({ routeUsername, profileTabReadyTick = 0, onNavigate
   const [saving, setSaving] = useState(false);
   const savingRef = useRef(false);
   const avatarUploadingRef = useRef(false);
+  const logoutRef = useRef(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState<React.ReactNode>('');
 
@@ -351,7 +352,11 @@ export function ProfilePage({ routeUsername, profileTabReadyTick = 0, onNavigate
                 compact
                 onClaimed={(coins, amount) => {
                   const c = Math.floor(Number(coins) || 0);
-                  patchUser((u) => (u ? { ...u, lulCoins: c, updatedAt: Date.now() } : u));
+                  patchUser((u) => {
+                    if (!u) return u;
+                    const nextAt = Math.max(Date.now(), (Number(u.updatedAt) || 0) + 1);
+                    return { ...u, lulCoins: c, updatedAt: nextAt };
+                  });
                   void refresh();
                   setCoinFeedTick((t) => t + 1);
                   flashSuccess(
@@ -385,9 +390,17 @@ export function ProfilePage({ routeUsername, profileTabReadyTick = 0, onNavigate
 
             <button
               type="button"
-              onClick={async () => {
-                const ok = await logout();
-                if (!ok) setError(LOGOUT_ARCADE_BLOCKED);
+              onClick={() => {
+                if (logoutRef.current) return;
+                logoutRef.current = true;
+                void (async () => {
+                  try {
+                    const ok = await logout();
+                    if (!ok) setError(LOGOUT_ARCADE_BLOCKED);
+                  } finally {
+                    logoutRef.current = false;
+                  }
+                })();
               }}
               className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl border border-slate-800 bg-[#161a24] text-[10px] font-mono text-slate-400 hover:text-slate-200 transition"
             >
