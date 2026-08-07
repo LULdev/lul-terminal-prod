@@ -76,6 +76,12 @@ export const MATCH_DONE_TTL_MS = 180_000;
 export const QUEUE_TIMEOUT_MS = 30 * 60 * 1000;
 export const STREAK_BONUS_RATE = 0.05;
 export const STREAK_BONUS_CAP = 0.25;
+/**
+ * Base bet used only for nextStreakBonus API previews.
+ * MIN_BET is 1 → floor(1 * rate) is always 0 for rates ≤ 25%; use 100 so
+ * clients can scale: coinsAtBet = floor((nextStreakBonus / STREAK_HINT_BASE_BET) * bet).
+ */
+export const STREAK_HINT_BASE_BET = 100;
 export const BO3_WINS_NEEDED = 2;
 
 export async function ensureGamesStore() {

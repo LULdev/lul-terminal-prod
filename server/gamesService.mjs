@@ -18,6 +18,7 @@ import {
   MIN_BET,
   STREAK_BONUS_CAP,
   STREAK_BONUS_RATE,
+  STREAK_HINT_BASE_BET,
 } from './gamesStore.mjs';
 import {
   claimDailyBonus,
@@ -67,6 +68,8 @@ export async function getGamesState(userId) {
     streakBonus: {
       ratePercent: STREAK_BONUS_RATE * 100,
       capPercent: STREAK_BONUS_CAP * 100,
+      // nextStreakBonus is computed at this bet; client scales (bonus/hintBaseBet)*currentBet
+      hintBaseBet: STREAK_HINT_BASE_BET,
     },
     games,
     rps: games.rps,

@@ -172,9 +172,11 @@ function VaultTile({ label, value, emoji, color }: { label: string; value: numbe
 }
 
 function formatMinutes(minutes: number) {
-  if (minutes < 60) return `${minutes}m`;
-  const h = Math.floor(minutes / 60);
-  const m = minutes % 60;
+  const mins = Math.floor(Number(minutes));
+  if (!Number.isFinite(mins) || mins < 0) return '—';
+  if (mins < 60) return `${mins}m`;
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
   return m > 0 ? `${h}h ${m}m` : `${h}h`;
 }
 

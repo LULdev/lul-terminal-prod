@@ -58,6 +58,7 @@ import {
   STARTING_LULCOINS,
   STREAK_BONUS_CAP,
   STREAK_BONUS_RATE,
+  STREAK_HINT_BASE_BET,
 } from './gamesStore.mjs';
 
 const MOVES = ['rock', 'paper', 'scissors'];
@@ -601,9 +602,9 @@ export async function getRpsUserSlice(userId) {
             totalWon: user.gameTotalWon ?? 0,
             totalLost: user.gameTotalLost ?? 0,
             moves: user.gameRpsMoves ?? emptyMoves(),
-            // MIN_BET base — client scales (base/minBet)*currentBet for streak hint
+            // STREAK_HINT_BASE_BET — floor(MIN_BET*rate) is always 0 at minBet=1
             nextStreakBonus: calcStreakBonus(
-              MIN_BET,
+              STREAK_HINT_BASE_BET,
               (Number(user.gameRpsStreak) || 0) + 1,
             ),
           }

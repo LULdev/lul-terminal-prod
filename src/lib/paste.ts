@@ -120,7 +120,9 @@ export function formatPasteBytes(n: number): string {
 }
 
 export function formatPasteDate(ts: number): string {
-  return new Date(ts).toLocaleString('en-US', {
+  const t = Number(ts);
+  if (!Number.isFinite(t) || t <= 0) return '—';
+  return new Date(t).toLocaleString('en-US', {
     month: 'short',
     day: 'numeric',
     year: 'numeric',
@@ -130,9 +132,11 @@ export function formatPasteDate(ts: number): string {
 }
 
 export function expiryLabel(expiresAt: number | null): string {
-  if (!expiresAt) return 'Never expires';
-  const diff = expiresAt - Date.now();
-  if (diff <= 0) return 'Expired';
+  if (expiresAt == null) return 'Never expires';
+  const exp = Number(expiresAt);
+  if (!Number.isFinite(exp)) return '—';
+  const diff = exp - Date.now();
+  if (!Number.isFinite(diff) || diff <= 0) return 'Expired';
   const mins = Math.floor(diff / 60000);
   if (mins < 60) return `Expires in ${mins}m`;
   const hrs = Math.floor(mins / 60);
@@ -347,7 +351,9 @@ export function pollPasteMeta(
 }
 
 export function formatPasteViews(n: number): string {
-  return n.toLocaleString('en-US');
+  const v = Number(n);
+  if (!Number.isFinite(v) || v < 0) return '—';
+  return Math.floor(v).toLocaleString('en-US');
 }
 
 const MAX_PASTE_BYTES = 512 * 1024;

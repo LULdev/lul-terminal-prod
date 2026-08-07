@@ -103,9 +103,17 @@ export function MemeEditor({ template, onBack, onMemeCreated }: Props) {
 
   useMemeDraft(template.id, snapshot, mediaLoaded && !draftBanner);
 
+  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => {
+    if (toastTimerRef.current != null) clearTimeout(toastTimerRef.current);
+  }, []);
   const flash = (msg: string, ms = 2000) => {
     setToast(msg);
-    setTimeout(() => setToast(''), ms);
+    if (toastTimerRef.current != null) clearTimeout(toastTimerRef.current);
+    toastTimerRef.current = setTimeout(() => {
+      setToast('');
+      toastTimerRef.current = null;
+    }, ms);
   };
 
   const pushHistory = useCallback((snap: MemeEditorSnapshot) => {

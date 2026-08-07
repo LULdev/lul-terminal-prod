@@ -756,11 +756,21 @@ export function GamesPage() {
 
   const minBet = state?.minBet ?? 1;
   const streakBonusAtBet = (() => {
+    const b = Number(bet) || Number(minBet) || 1;
+    if (!Number.isFinite(b) || b <= 0) return 0;
+    // Prefer rate meta (always precise); fallback scales nextStreakBonus at hintBaseBet
+    const ratePct = Number(state?.streakBonus?.ratePercent);
+    const capPct = Number(state?.streakBonus?.capPercent);
+    const streak = Number(stats?.streak) || 0;
+    const nextS = streak + 1;
+    if (Number.isFinite(ratePct) && Number.isFinite(capPct) && nextS > 1) {
+      const rate = Math.min(capPct, (nextS - 1) * ratePct) / 100;
+      return Math.floor(b * rate);
+    }
     const base = Number(stats?.nextStreakBonus);
-    const mb = Number(minBet) || 1;
-    const b = Number(bet) || mb;
-    if (!Number.isFinite(base) || base <= 0) return 0;
-    return Math.floor((base / mb) * b);
+    const hintBase = Number(state?.streakBonus?.hintBaseBet) || 100;
+    if (!Number.isFinite(base) || base <= 0 || !Number.isFinite(hintBase) || hintBase <= 0) return 0;
+    return Math.floor((base / hintBase) * b);
   })();
 
   const gameBoard = boards?.[selectedGame] as GameLeaderboardSlice | undefined;

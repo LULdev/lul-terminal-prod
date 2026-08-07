@@ -279,11 +279,13 @@ export async function purgeAnalyticsEvents(keep = 2000) {
 }
 
 export function formatRelativeTime(ts: number) {
-  const diff = Date.now() - ts;
-  if (diff < 60_000) return 'just now';
+  const t = Number(ts);
+  if (!Number.isFinite(t) || t <= 0) return '—';
+  const diff = Date.now() - t;
+  if (!Number.isFinite(diff) || diff < 60_000) return 'just now';
   if (diff < 3_600_000) return `${Math.floor(diff / 60_000)} min ago`;
   if (diff < 86_400_000) return `${Math.floor(diff / 3_600_000)} hr ago`;
-  return new Date(ts).toLocaleString('en-US');
+  return new Date(t).toLocaleString('en-US');
 }
 
 export function formatAnalyticsDate(ts: number | null | undefined) {

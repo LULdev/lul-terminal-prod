@@ -248,7 +248,7 @@ export type GamesState = {
   minBet: number;
   maxBet: number;
   dailyBonus: DailyBonusInfo;
-  streakBonus: { ratePercent: number; capPercent: number };
+  streakBonus: { ratePercent: number; capPercent: number; hintBaseBet?: number };
   games: Record<string, GameSlice>;
   rps: RpsSlice;
   ttt: TttSlice;
@@ -454,7 +454,9 @@ export const MOVE_META: Record<RpsMove, { label: string; emoji: string; color: s
 export const QUICK_BETS = [1, 5, 10, 25, 50, 100] as const;
 
 export function formatTimeLeft(ms: number): string {
-  const s = Math.max(0, Math.ceil(ms / 1000));
+  const raw = Number(ms);
+  if (!Number.isFinite(raw)) return '0:00';
+  const s = Math.max(0, Math.ceil(raw / 1000));
   const m = Math.floor(s / 60);
   const r = s % 60;
   return `${m}:${String(r).padStart(2, '0')}`;

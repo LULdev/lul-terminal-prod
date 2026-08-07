@@ -73,7 +73,9 @@ function CheckRow({ check }: { check: StatusCheck }) {
       {check.metric && (
         <span className="text-[9px] font-mono text-slate-400 shrink-0 hidden sm:block">{check.metric}</span>
       )}
-      <span className="text-[8px] font-mono text-slate-600 shrink-0 tabular-nums">{check.latencyMs}ms</span>
+      <span className="text-[8px] font-mono text-slate-600 shrink-0 tabular-nums">
+        {Number.isFinite(Number(check.latencyMs)) ? `${Math.max(0, Math.floor(Number(check.latencyMs)))}ms` : '—'}
+      </span>
     </div>
   );
 }

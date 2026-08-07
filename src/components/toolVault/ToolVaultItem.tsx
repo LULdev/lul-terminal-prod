@@ -26,6 +26,13 @@ export function ToolVaultItem({ tool }: Props) {
   const [swRunning, setSwRunning] = useState(false);
   const [cdLeft, setCdLeft] = useState(0);
   const swRef = useRef(0);
+  const runBusyRef = useRef(false);
+  const mountedRef = useRef(true);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
 
   useEffect(() => {
     setInput(tool.defaultInput ?? '');
@@ -46,14 +53,17 @@ export function ToolVaultItem({ tool }: Props) {
   }, [cdLeft]);
 
   const run = async () => {
+    if (runBusyRef.current) return;
+    runBusyRef.current = true;
     setLoading(true);
     try {
       const result = await runToolExecutor(tool.id, input, input2, { shift, dice });
-      setOutput(result);
+      if (mountedRef.current) setOutput(result);
     } catch (e) {
-      setOutput(e instanceof Error ? e.message : 'Error');
+      if (mountedRef.current) setOutput(e instanceof Error ? e.message : 'Error');
     } finally {
-      setLoading(false);
+      runBusyRef.current = false;
+      if (mountedRef.current) setLoading(false);
     }
   };
 

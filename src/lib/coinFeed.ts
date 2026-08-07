@@ -55,12 +55,14 @@ export async function fetchCoinFeed(limit = 40): Promise<CoinFeedResponse> {
 }
 
 export function formatCoinFeedTime(ts: number): string {
-  const diff = Date.now() - ts;
-  if (diff < 60_000) return 'just now';
+  const t = Number(ts);
+  if (!Number.isFinite(t) || t <= 0) return '—';
+  const diff = Date.now() - t;
+  if (!Number.isFinite(diff) || diff < 60_000) return 'just now';
   if (diff < 3_600_000) return `${Math.floor(diff / 60_000)}m ago`;
   if (diff < 86_400_000) return `${Math.floor(diff / 3_600_000)}h ago`;
   if (diff < 7 * 86_400_000) return `${Math.floor(diff / 86_400_000)}d ago`;
-  return new Date(ts).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  return new Date(t).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
 export const COIN_FEED_KIND_STYLES: Record<string, { chip: string; amount: string }> = {

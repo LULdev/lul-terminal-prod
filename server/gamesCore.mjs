@@ -35,6 +35,7 @@ import {
   STARTING_LULCOINS,
   STREAK_BONUS_CAP,
   STREAK_BONUS_RATE,
+  STREAK_HINT_BASE_BET,
 } from './gamesStore.mjs';
 import {
   addGameEscrow,
@@ -863,8 +864,11 @@ export function buildUserSlice({ statKey, queue, activeMatches, publicMatch, ext
           ? {
               ...base,
               ...extraStats?.(user),
-              // MIN_BET base — client scales (base/minBet)*currentBet for streak hint
-              nextStreakBonus: calcStreakBonus(MIN_BET, (Number(user[statFields(statKey).streak]) || 0) + 1),
+              // STREAK_HINT_BASE_BET (not MIN_BET) — floor(MIN_BET*rate) is always 0 at minBet=1
+              nextStreakBonus: calcStreakBonus(
+                STREAK_HINT_BASE_BET,
+                (Number(user[statFields(statKey).streak]) || 0) + 1,
+              ),
             }
           : null,
         activeMatch: resolveActiveMatchForSlice({ queue, activeMatches, userId, publicMatch }),

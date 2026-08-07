@@ -58,15 +58,18 @@ const ROLE_GLOW: Record<UserRole, string> = {
 };
 
 function formatDate(ts: number | null) {
-  if (!ts) return '—';
-  return new Date(ts).toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' });
+  const t = Number(ts);
+  if (!Number.isFinite(t) || t <= 0) return '—';
+  return new Date(t).toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
 function formatRelative(ts: number) {
-  const diff = Date.now() - ts;
-  if (diff < 86_400_000) return 'today';
+  const t = Number(ts);
+  if (!Number.isFinite(t) || t <= 0) return '—';
+  const diff = Date.now() - t;
+  if (!Number.isFinite(diff) || diff < 86_400_000) return 'today';
   if (diff < 7 * 86_400_000) return `${Math.floor(diff / 86_400_000)} days ago`;
-  return formatDate(ts);
+  return formatDate(t);
 }
 
 export function UserDashboardPage({ onNavigate }: UserDashboardPageProps) {

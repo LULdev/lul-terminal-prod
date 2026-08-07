@@ -373,9 +373,23 @@ export function ArcadeStatsPanel({
                       <div className="mt-2 flex flex-wrap justify-between gap-1 text-[7px] font-mono text-slate-500">
                         <span>{stats.games} games</span>
                         <span>🔥 {stats.streak} · best {stats.bestStreak}</span>
-                        {nextStreakBonus > 0 && (
-                          <span className="text-amber-400/80">+{nextStreakBonus}% next win</span>
-                        )}
+                        {(() => {
+                          // nextStreakBonus is coins at hintBaseBet — show rate % for next win
+                          const ratePct = Number(gamesState?.streakBonus?.ratePercent);
+                          const capPct = Number(gamesState?.streakBonus?.capPercent);
+                          const streak = Number(stats.streak) || 0;
+                          const nextS = streak + 1;
+                          let pct = 0;
+                          if (Number.isFinite(ratePct) && Number.isFinite(capPct) && nextS > 1) {
+                            pct = Math.min(capPct, (nextS - 1) * ratePct);
+                          } else if (nextStreakBonus > 0) {
+                            const hintBase = Number(gamesState?.streakBonus?.hintBaseBet) || 100;
+                            pct = Math.round((nextStreakBonus / hintBase) * 100);
+                          }
+                          return pct > 0 ? (
+                            <span className="text-amber-400/80">+{pct}% next win</span>
+                          ) : null;
+                        })()}
                         {inQueue && <span className="text-cyan-400">in queue</span>}
                       </div>
                       {!compact && badges.length > 0 && (

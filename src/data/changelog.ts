@@ -23,6 +23,22 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '3.68.0',
+    title: 'Full P3 audit Server+Client: streak hint precision, NaN formats, timer/busy UX',
+    date: 'Aug 7, 2026',
+    highlight: true,
+    items: [
+      { priority: 'P3', text: 'P3 — STREAK_HINT_BASE_BET=100 for nextStreakBonus (MIN_BET=1 made floor(rate) always 0).' },
+      { priority: 'P3', text: 'P3 — games /state exposes streakBonus.hintBaseBet; GamesPage prefers ratePercent for streak chip.' },
+      { priority: 'P3', text: 'P3 — ArcadeStatsPanel next-win label shows real rate % (was mislabeled coin amount as %).' },
+      { priority: 'P3', text: 'P3 — NaN-safe: formatTimeLeft, formatUptime, formatCoinFeedTime, formatRelativeTime, formatRelativeEn/boardValue, formatLastSeen, formatPasteViews/Date, expiryLabel, formatBirthday, formatMinutes, dashboard formatRelative, status latency.' },
+      { priority: 'P3', text: 'P3 — CopyField/CopyRow timer cleanup (Paste/ImageHosting/MyImageGallery); MemeEditor toast timer cleanup.' },
+      { priority: 'P3', text: 'P3 — ToolVaultItem runBusyRef + mounted guard (no double-run / setState after unmount).' },
+      { priority: 'P3', text: 'P3 — Terminal reboot/shake timeouts tracked and cleared on unmount.' },
+      { priority: 'P9', text: 'P9 — Version 3.68.0; full P3 module audit after 3.67 (every fix listed).' },
+    ],
+  },
+  {
     version: '3.67.0',
     title: 'Full P2 audit Server+Client: paste async scrypt, MM heartbeat write, logout/coin UX',
     date: 'Aug 7, 2026',

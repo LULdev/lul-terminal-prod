@@ -142,18 +142,21 @@ export function computePersonalityType(
 }
 
 export function formatBirthday(month: number | null, day: number | null): string | null {
-  if (!month || !day) return null;
+  const m = Math.floor(Number(month));
+  const d = Math.floor(Number(day));
+  if (!Number.isFinite(m) || !Number.isFinite(d) || m < 1 || m > 12 || d < 1 || d > 31) return null;
   const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-  return `${months[month - 1]} ${day}`;
+  return `${months[m - 1]} ${d}`;
 }
 
 export function formatLastSeen(ts: number | null | undefined): string {
-  if (!ts) return '—';
-  const diff = Date.now() - ts;
-  if (diff < 60000) return 'Just now';
+  const t = Number(ts);
+  if (!Number.isFinite(t) || t <= 0) return '—';
+  const diff = Date.now() - t;
+  if (!Number.isFinite(diff) || diff < 60000) return 'Just now';
   if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`;
   if (diff < 86400000) return `${Math.floor(diff / 3600000)}h ago`;
-  return new Date(ts).toLocaleDateString('en-US', { day: '2-digit', month: 'short' });
+  return new Date(t).toLocaleDateString('en-US', { day: '2-digit', month: 'short' });
 }
 
 export function profileViewsMilestone(views: number): { next: number; progress: number } {

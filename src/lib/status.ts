@@ -47,10 +47,12 @@ export async function fetchSystemStatus(): Promise<SystemStatus> {
 }
 
 export function formatUptime(sec: number): string {
-  if (sec < 60) return `${sec}s`;
-  if (sec < 3600) return `${Math.floor(sec / 60)}m ${sec % 60}s`;
-  const h = Math.floor(sec / 3600);
-  const m = Math.floor((sec % 3600) / 60);
+  const s = Math.floor(Number(sec));
+  if (!Number.isFinite(s) || s < 0) return '—';
+  if (s < 60) return `${s}s`;
+  if (s < 3600) return `${Math.floor(s / 60)}m ${s % 60}s`;
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
   return `${h}h ${m}m`;
 }
 

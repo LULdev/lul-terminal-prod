@@ -181,6 +181,7 @@ export const TerminalDiagnosticsPane = memo(function TerminalDiagnosticsPane({
   >(async () => ({ ok: false, error: 'Chat not ready' }));
   const cliInputRef = useRef<HTMLInputElement>(null);
   const activeIntervalsRef = useRef(new Set<ReturnType<typeof setInterval>>());
+  const activeTimeoutsRef = useRef(new Set<ReturnType<typeof setTimeout>>());
 
   const trackInterval = useCallback((id: ReturnType<typeof setInterval>) => {
     activeIntervalsRef.current.add(id);
@@ -192,10 +193,17 @@ export const TerminalDiagnosticsPane = memo(function TerminalDiagnosticsPane({
     activeIntervalsRef.current.delete(id);
   }, []);
 
+  const trackTimeout = useCallback((id: ReturnType<typeof setTimeout>) => {
+    activeTimeoutsRef.current.add(id);
+    return id;
+  }, []);
+
   useEffect(() => {
     return () => {
       for (const id of activeIntervalsRef.current) clearInterval(id);
       activeIntervalsRef.current.clear();
+      for (const id of activeTimeoutsRef.current) clearTimeout(id);
+      activeTimeoutsRef.current.clear();
     };
   }, []);
 
@@ -350,10 +358,12 @@ export const TerminalDiagnosticsPane = memo(function TerminalDiagnosticsPane({
         appendLog('🧹 Screen buffer cleared.', 'info');
       } else if (query === 'reboot') {
         appendLog('🔄 Initiating cold OS terminal restart...', 'warn');
-        setTimeout(() => {
+        const rebootId = setTimeout(() => {
+          activeTimeoutsRef.current.delete(rebootId);
           setCommandLogs(getCompactCommandHintLogs());
           playBeep(1200, 0.4, 'sine');
         }, 800);
+        trackTimeout(rebootId);
       } else if (query === 'hack') {
         appendLog('💀 CRITICAL: Elevating grid permissions... access GRANTED.', 'alert');
         playBeep(150, 0.5, 'square');
@@ -531,13 +541,18 @@ export const TerminalDiagnosticsPane = memo(function TerminalDiagnosticsPane({
         appendLog(`❓ Unknown command "${displayCmd}". Type "!commands" for all commands.`, 'warn');
         setIsShaking(true);
         playBeep(220, 0.35, 'sawtooth');
-        setTimeout(() => setIsShaking(false), 410);
+        const shakeId = setTimeout(() => {
+          activeTimeoutsRef.current.delete(shakeId);
+          setIsShaking(false);
+        }, 410);
+        trackTimeout(shakeId);
       }
     },
     [
       appendLog,
       trackInterval,
       clearTrackedInterval,
+      trackTimeout,
       isLoggedIn,
       playBeep,
       setThemeColor,

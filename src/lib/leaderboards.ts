@@ -209,21 +209,25 @@ export function boardsDataEqual(a: LeaderboardBoard[], b: LeaderboardBoard[]): b
 }
 
 export function formatBoardValue(value: number, unit: string): string {
-  if (unit === 'minutes' && value >= 60) {
-    const h = Math.floor(value / 60);
-    const m = value % 60;
+  const v = Number(value);
+  if (!Number.isFinite(v)) return '—';
+  if (unit === 'minutes' && v >= 60) {
+    const h = Math.floor(v / 60);
+    const m = Math.floor(v % 60);
     return m > 0 ? `${h}h ${m}m` : `${h}h`;
   }
-  return value.toLocaleString('en-US');
+  return v.toLocaleString('en-US');
 }
 
 export function formatRelativeEn(ts: number): string {
-  const diff = Date.now() - ts;
-  if (diff < 60_000) return 'just now';
+  const t = Number(ts);
+  if (!Number.isFinite(t) || t <= 0) return '—';
+  const diff = Date.now() - t;
+  if (!Number.isFinite(diff) || diff < 60_000) return 'just now';
   if (diff < 3_600_000) return `${Math.floor(diff / 60_000)}m ago`;
   if (diff < 86_400_000) return `${Math.floor(diff / 3_600_000)}h ago`;
   if (diff < 7 * 86_400_000) return `${Math.floor(diff / 86_400_000)}d ago`;
-  return new Date(ts).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  return new Date(t).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
 export type LeaderboardFilter = 'all' | 'community' | 'arcade';
