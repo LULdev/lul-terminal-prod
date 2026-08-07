@@ -111,6 +111,7 @@ export function PasteCodeView({
 }: Props) {
   const [copied, setCopied] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lines = useMemo(() => content.replace(/\r\n/g, '\n').split('\n'), [content]);
 
   useEffect(() => {
@@ -119,11 +120,19 @@ export function PasteCodeView({
     row?.scrollIntoView({ block: 'center', behavior: 'smooth' });
   }, [activeLine]);
 
+  useEffect(() => () => {
+    if (copyTimerRef.current != null) clearTimeout(copyTimerRef.current);
+  }, []);
+
   const onCopy = async () => {
     const ok = await copyToClipboard(content);
     if (ok) {
       setCopied(true);
-      setTimeout(() => setCopied(false), 1800);
+      if (copyTimerRef.current != null) clearTimeout(copyTimerRef.current);
+      copyTimerRef.current = setTimeout(() => {
+        setCopied(false);
+        copyTimerRef.current = null;
+      }, 1800);
     }
   };
 

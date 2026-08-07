@@ -9,17 +9,19 @@ import { fetchContentAnalytics, type ContentAnalytics } from '../../lib/adminMod
 import { ToolCard } from '../pages/PageShell';
 
 function ViewBar({ label, views, max }: { label: string; views: number; max: number }) {
-  const pct = max > 0 ? Math.round((views / max) * 100) : 0;
+  const v = Number.isFinite(Number(views)) ? Math.max(0, Math.floor(Number(views))) : 0;
+  const m = Number.isFinite(Number(max)) ? Math.max(0, Number(max)) : 0;
+  const pct = m > 0 ? Math.round((v / m) * 100) : 0;
   return (
     <div className="space-y-1">
       <div className="flex justify-between text-[8px] font-mono">
         <span className="text-slate-400 truncate pr-2" title={label}>{label}</span>
-        <span className="text-cyan-300 tabular-nums shrink-0">{views.toLocaleString('en-US')}</span>
+        <span className="text-cyan-300 tabular-nums shrink-0">{v.toLocaleString('en-US')}</span>
       </div>
       <div className="h-1.5 rounded-full bg-slate-800/80 overflow-hidden">
         <div
           className="h-full rounded-full bg-gradient-to-r from-violet-500/60 to-cyan-500/60 transition-all"
-          style={{ width: `${Math.max(pct, views > 0 ? 4 : 0)}%` }}
+          style={{ width: `${Math.max(pct, v > 0 ? 4 : 0)}%` }}
         />
       </div>
     </div>
@@ -93,7 +95,9 @@ export function AdminContentPanel() {
                 <s.icon size={14} className={`${s.accent} shrink-0`} />
                 <div>
                   <div className="text-[7px] font-mono uppercase text-slate-600">{s.label}</div>
-                  <div className={`text-base font-mono font-bold ${s.accent}`}>{s.value.toLocaleString('en-US')}</div>
+                  <div className={`text-base font-mono font-bold ${s.accent}`}>
+                    {Number.isFinite(Number(s.value)) ? Number(s.value).toLocaleString('en-US') : '—'}
+                  </div>
                 </div>
               </div>
             ))}

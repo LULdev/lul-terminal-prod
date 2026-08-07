@@ -23,13 +23,17 @@ export function addGameEscrow(user, { gameId, chatLabel, amount }) {
 }
 
 function releaseEscrowAt(user, index, amt) {
-  const e = user.gameEscrows[index];
-  if (e.amount === amt) {
+  const e = user.gameEscrows?.[index];
+  if (!e) return false;
+  // Floor both sides — string/float/NaN rows must never become NaN after -=
+  const take = Math.floor(Number(amt) || 0);
+  if (take <= 0) return false;
+  const rowAmt = Math.floor(Number(e.amount) || 0);
+  if (rowAmt <= take) {
     user.gameEscrows.splice(index, 1);
     return true;
   }
-  e.amount -= amt;
-  if (e.amount <= 0) user.gameEscrows.splice(index, 1);
+  e.amount = rowAmt - take;
   return true;
 }
 

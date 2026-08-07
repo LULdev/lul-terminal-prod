@@ -73,9 +73,10 @@ export function tombstoneRoom(consumedRooms, code) {
 }
 
 function stripEscrowRows(user, amt, { gameId = null } = {}) {
-  if (!user?.gameEscrows?.length || amt <= 0) return 0;
+  const need = Math.floor(Number(amt) || 0);
+  if (!user?.gameEscrows?.length || need <= 0) return 0;
   const gid = gameId ?? 'arcade';
-  let remaining = amt;
+  let remaining = need;
   const kept = [];
   const rows = gid
     ? user.gameEscrows.filter((e) => e.gameId === gid)
@@ -85,8 +86,9 @@ function stripEscrowRows(user, amt, { gameId = null } = {}) {
     : [];
   for (const e of rows) {
     const rowAmt = Math.floor(Number(e.amount) || 0);
+    if (rowAmt <= 0) continue; // drop zero/NaN escrow rows
     if (remaining <= 0) {
-      kept.push(e);
+      kept.push({ ...e, amount: rowAmt });
       continue;
     }
     if (rowAmt <= remaining) {
@@ -97,7 +99,7 @@ function stripEscrowRows(user, amt, { gameId = null } = {}) {
     remaining = 0;
   }
   user.gameEscrows = [...kept, ...skipped];
-  return amt - remaining;
+  return need - remaining;
 }
 
 /**

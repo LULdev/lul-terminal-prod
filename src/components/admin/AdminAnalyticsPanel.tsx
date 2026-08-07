@@ -42,7 +42,9 @@ function StatCard({ label, value, sub, accent = 'text-slate-200' }: {
     <div className="rounded-xl border border-slate-800/80 bg-black/30 p-3 text-center">
       <div className="text-[7px] font-mono text-slate-600 uppercase tracking-wider">{label}</div>
       <div className={`text-lg font-mono font-bold tabular-nums ${accent}`}>
-        {typeof value === 'number' ? value.toLocaleString('en-US') : value}
+        {typeof value === 'number'
+          ? (Number.isFinite(value) ? value.toLocaleString('en-US') : '—')
+          : value}
       </div>
       {sub && <div className="text-[7px] font-mono text-slate-600 mt-0.5">{sub}</div>}
     </div>

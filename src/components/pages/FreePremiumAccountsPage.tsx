@@ -67,7 +67,9 @@ function StatCard({
     <div className={`rounded-xl border px-3 py-3 flex flex-col gap-0.5 ${accent}`}>
       <span className="text-[8px] font-mono uppercase tracking-widest opacity-70">{label}</span>
       <span className="text-xl font-mono font-bold tabular-nums leading-none">
-        {typeof value === 'number' ? value.toLocaleString('en-US') : value}
+        {typeof value === 'number'
+          ? (Number.isFinite(value) ? value.toLocaleString('en-US') : '—')
+          : value}
       </span>
       {sub && <span className="text-[8px] font-mono opacity-60">{sub}</span>}
     </div>

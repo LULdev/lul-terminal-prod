@@ -51,7 +51,7 @@ export function PostViewTracker({
         <div className="flex justify-end mt-2 pt-1.5 border-t border-slate-700/30 min-h-[22px]">
           <span className="text-[9px] text-slate-500 flex items-center gap-1 font-mono tabular-nums" title="Post views">
             <Eye size={9} className="opacity-70 shrink-0" />
-            {views.toLocaleString('en-US')} {label}
+            {(Number.isFinite(Number(views)) ? Math.max(0, Math.floor(Number(views))) : 0).toLocaleString('en-US')} {label}
           </span>
         </div>
       )}

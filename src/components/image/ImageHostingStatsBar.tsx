@@ -43,7 +43,7 @@ function StatCard({
       <div className="min-w-0">
         <p className="text-[8px] font-mono uppercase tracking-wider opacity-70">{label}</p>
         <p className="text-[15px] font-mono font-bold tabular-nums leading-tight">
-          {value.toLocaleString('en-US')}
+          {Number.isFinite(Number(value)) ? Number(value).toLocaleString('en-US') : '—'}
         </p>
       </div>
     </div>

@@ -23,6 +23,20 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '3.70.0',
+    title: 'Full P0–P9 audit Server+Client: escrow release NaN harden, cooldown UX, view NaN sweep',
+    date: 'Aug 7, 2026',
+    highlight: true,
+    items: [
+      { priority: 'P0', text: 'P0 — releaseEscrowAt floors take/row amount (string/float/NaN rows no longer become NaN after -=).' },
+      { priority: 'P1', text: 'P1 — stripEscrowRows floors need/row, drops zero/NaN rows, rewrites kept amounts as integers.' },
+      { priority: 'P2', text: 'P2 — claimDailyBonus re-ensureCoins + finite remainingMs; formatCooldownRemaining NaN-safe.' },
+      { priority: 'P3', text: 'P3 — Copy timer cleanup: PasteCodeView, IdentityForge CopyButton.' },
+      { priority: 'P3', text: 'P3 — NaN-safe view/stat displays: FreePremium StatCard, AdminOverview/Analytics/Content/Heatmap/Images/Referrals, ImageHostingStatsBar, PagePinnedBanner, PostViewTracker, NewsArticleCard/NewsPanel, MyImageGallery views.' },
+      { priority: 'P9', text: 'P9 — Version 3.70.0; full system P0–P9 residual audit after 3.69 (every fix listed).' },
+    ],
+  },
+  {
     version: '3.69.0',
     title: 'Full P0–P9 audit Server+Client: deductCoins NaN harden, balance floor, timers, EN copy',
     date: 'Aug 7, 2026',

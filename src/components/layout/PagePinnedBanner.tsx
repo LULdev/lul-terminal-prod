@@ -87,7 +87,9 @@ function PageViewCounter({ views }: { views: number | null }) {
       </div>
       <div className="leading-none pr-0.5">
         <span className="text-[11px] font-mono font-bold text-emerald-200 tabular-nums">
-          {views == null ? '—' : views.toLocaleString('en-US')}
+          {views == null || !Number.isFinite(Number(views))
+            ? '—'
+            : Math.max(0, Math.floor(Number(views))).toLocaleString('en-US')}
         </span>
         <span className="text-[6px] font-mono text-emerald-400/70 uppercase tracking-wider block mt-0.5">
           views

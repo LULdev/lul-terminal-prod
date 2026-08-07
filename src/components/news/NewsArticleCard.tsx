@@ -213,7 +213,7 @@ export function NewsArticleCard({ article, variant = 'standard', views, onNaviga
               title="Post views"
             >
               <Eye size={isFeatured ? 11 : 9} className="opacity-70" />
-              {views.toLocaleString('en-US')} {viewLabel}
+              {(Number.isFinite(Number(views)) ? Math.max(0, Math.floor(Number(views))) : 0).toLocaleString('en-US')} {viewLabel}
             </span>
           )}
         </div>

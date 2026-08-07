@@ -362,7 +362,12 @@ function GalleryStatsPanel({ stats, storagePct }: { stats: MyGalleryStats; stora
     <div className="rounded-2xl border border-sky-500/15 bg-gradient-to-br from-sky-950/30 via-[#0c0d12] to-violet-950/20 overflow-hidden">
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-px bg-slate-800/40">
         <MiniStat icon="🖼️" label="Your uploads" value={String(stats.count)} accent="text-sky-300" />
-        <MiniStat icon="👁️" label="Your views" value={stats.totalViews.toLocaleString('en-US')} accent="text-violet-300" />
+        <MiniStat
+          icon="👁️"
+          label="Your views"
+          value={(Number.isFinite(Number(stats.totalViews)) ? Math.max(0, Math.floor(Number(stats.totalViews))) : 0).toLocaleString('en-US')}
+          accent="text-violet-300"
+        />
         <MiniStat icon="📊" label="Avg views" value={String(stats.avgViews)} accent="text-cyan-300" />
         <MiniStat icon="⭐" label="Favorites" value={String(stats.favorites)} accent="text-amber-300" />
       </div>

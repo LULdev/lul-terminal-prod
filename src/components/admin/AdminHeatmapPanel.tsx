@@ -10,14 +10,16 @@ import { fetchAdminHeatmap, type HeatmapData } from '../../lib/adminModules';
 import { ToolCard } from '../pages/PageShell';
 
 function Bar({ label, value, max }: { label: string; value: number; max: number }) {
-  const pct = max > 0 ? Math.round((value / max) * 100) : 0;
+  const v = Number.isFinite(Number(value)) ? Math.max(0, Math.floor(Number(value))) : 0;
+  const m = Number.isFinite(Number(max)) ? Math.max(0, Number(max)) : 0;
+  const pct = m > 0 ? Math.round((v / m) * 100) : 0;
   return (
     <div className="space-y-0.5">
       <div className="flex justify-between text-[8px] font-mono">
         <span className="text-slate-400 truncate pr-2">{label}</span>
-        <span className="text-violet-300 tabular-nums">{value.toLocaleString('en-US')}</span>
+        <span className="text-violet-300 tabular-nums">{v.toLocaleString('en-US')}</span>
       </div>
-      <div className="h-1 rounded-full bg-slate-800/80"><div className="h-full rounded-full bg-violet-500/50" style={{ width: `${Math.max(pct, value ? 3 : 0)}%` }} /></div>
+      <div className="h-1 rounded-full bg-slate-800/80"><div className="h-full rounded-full bg-violet-500/50" style={{ width: `${Math.max(pct, v ? 3 : 0)}%` }} /></div>
     </div>
   );
 }

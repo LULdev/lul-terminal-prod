@@ -93,7 +93,11 @@ export function AdminImagesPanel() {
           </div>
           <div className="rounded-lg border border-slate-800/80 bg-black/25 px-3 py-2 text-center">
             <div className="text-[7px] font-mono uppercase text-slate-600">Views</div>
-            <div className="text-sm font-mono font-bold text-cyan-300">{data.stats.totalViews.toLocaleString('en-US')}</div>
+            <div className="text-sm font-mono font-bold text-cyan-300">
+              {Number.isFinite(Number(data.stats.totalViews))
+                ? Math.max(0, Math.floor(Number(data.stats.totalViews))).toLocaleString('en-US')
+                : '—'}
+            </div>
           </div>
           <div className="rounded-lg border border-slate-800/80 bg-black/25 px-3 py-2 text-center">
             <div className="text-[7px] font-mono uppercase text-slate-600">Shown</div>

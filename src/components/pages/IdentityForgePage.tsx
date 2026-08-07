@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ActionButton, OutputBox, PageShell, ToolCard } from './PageShell';
 import { buildPersona, Persona, PersonaAddressRecord } from '../../utils/generators';
 import { PERSONA_STATS } from '../../data/personaData';
@@ -25,12 +25,20 @@ const COUNTRY_FLAGS: Record<string, string> = {
 
 function CopyButton({ value, className }: { value: string; className?: string }) {
   const [copied, setCopied] = useState(false);
+  const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => {
+    if (copyTimerRef.current != null) clearTimeout(copyTimerRef.current);
+  }, []);
 
   const copy = async () => {
     try {
       await navigator.clipboard.writeText(value);
       setCopied(true);
-      setTimeout(() => setCopied(false), 1500);
+      if (copyTimerRef.current != null) clearTimeout(copyTimerRef.current);
+      copyTimerRef.current = setTimeout(() => {
+        setCopied(false);
+        copyTimerRef.current = null;
+      }, 1500);
     } catch { /* ignore */ }
   };
 

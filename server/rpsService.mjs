@@ -635,7 +635,9 @@ export function getDailyBonusStatus(user) {
 }
 
 function formatCooldownRemaining(ms) {
-  const totalSec = Math.ceil(ms / 1000);
+  const raw = Number(ms);
+  if (!Number.isFinite(raw) || raw <= 0) return 'a moment';
+  const totalSec = Math.max(0, Math.ceil(raw / 1000));
   const h = Math.floor(totalSec / 3600);
   const m = Math.floor((totalSec % 3600) / 60);
   const s = totalSec % 60;
@@ -660,11 +662,12 @@ export async function claimDailyBonus(userId) {
     user.updatedAt = now;
     await saveUsersDb(db);
     const next = getDailyBonusStatus(user);
+    ensureCoins(user);
     return {
       coins: user.lulCoins,
       bonus: DAILY_BONUS_COINS,
       nextClaimAt: next.nextClaimAt,
-      remainingMs: next.remainingMs,
+      remainingMs: Number.isFinite(next.remainingMs) ? Math.max(0, next.remainingMs) : 0,
       canClaim: next.canClaim,
     };
   });

@@ -97,7 +97,9 @@ export function AdminReferralsPanel() {
                 <s.icon size={14} className={`${s.accent} shrink-0`} />
                 <div>
                   <div className="text-[7px] font-mono uppercase text-slate-600">{s.label}</div>
-                  <div className={`text-base font-mono font-bold ${s.accent}`}>{s.value.toLocaleString('en-US')}</div>
+                  <div className={`text-base font-mono font-bold ${s.accent}`}>
+                    {Number.isFinite(Number(s.value)) ? Number(s.value).toLocaleString('en-US') : '—'}
+                  </div>
                 </div>
               </div>
             ))}

@@ -264,7 +264,10 @@ export const NewsPanel = memo(function NewsPanel({ isActive = true, liveFeedVers
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-4">
           <StatPill label="Articles" value={String(articles.length)} />
           <StatPill label="Shown" value={String(filtered.length)} />
-          <StatPill label="Total views" value={totalViews.toLocaleString('en-US')} />
+          <StatPill
+            label="Total views"
+            value={(Number.isFinite(Number(totalViews)) ? Math.max(0, Math.floor(Number(totalViews))) : 0).toLocaleString('en-US')}
+          />
           <StatPill label="Feed" value={feedVersion ? `v${feedVersion.slice(0, 10)}` : '—'} />
         </div>
       </div>
