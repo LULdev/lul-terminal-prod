@@ -207,7 +207,11 @@ function AccountReportsPanel() {
                   {r.account?.createdByUsername ? ` · submitted by @${r.account.createdByUsername}` : ''}
                 </div>
                 <div className="text-[8px] font-mono text-sky-400/80 mt-1">
-                  Reported by @{r.reportedByUsername} · {new Date(r.createdAt).toLocaleString('en-US')}
+                  Reported by @{r.reportedByUsername} · {(
+                    Number.isFinite(Number(r.createdAt))
+                      ? new Date(Number(r.createdAt)).toLocaleString('en-US')
+                      : '—'
+                  )}
                 </div>
                 {r.account?.email && (
                   <div className="text-[8px] font-mono text-slate-600 mt-1 truncate">{r.account.email}</div>

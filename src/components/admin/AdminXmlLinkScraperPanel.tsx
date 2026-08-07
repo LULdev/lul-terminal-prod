@@ -552,7 +552,7 @@ export function AdminXmlLinkScraperPanel() {
             Colon-DB: <strong className="text-violet-300">{(Number.isFinite(Number(colonDbStats.total)) ? Number(colonDbStats.total) : 0).toLocaleString('en-US')}</strong> entries
             · <strong className="text-emerald-300/90">{colonDbStats.websites}</strong> websites
             {colonDbStats.updatedAt && (
-              <span className="text-slate-600"> · updated {new Date(colonDbStats.updatedAt).toLocaleString('en-US')}</span>
+              <span className="text-slate-600"> · updated {(Number.isFinite(Number(colonDbStats.updatedAt)) ? new Date(Number(colonDbStats.updatedAt)).toLocaleString('en-US') : '—')}</span>
             )}
           </span>
           {dbMsg && <span className="text-[8px] font-mono text-cyan-400/90">{dbMsg}</span>}
@@ -763,7 +763,7 @@ export function AdminXmlLinkScraperPanel() {
                     </span>
                     <span className="text-violet-300/80 shrink-0">{h.uniqueColons} :</span>
                     <span className="text-emerald-400/70 shrink-0">{h.pagesCrawled}p</span>
-                    <span className="text-slate-600 shrink-0">{new Date(h.at).toLocaleString('en-US')}</span>
+                    <span className="text-slate-600 shrink-0">{(Number.isFinite(Number(h.at)) ? new Date(Number(h.at)).toLocaleString('en-US') : '—')}</span>
                   </button>
                 ))}
               </div>
@@ -1055,7 +1055,7 @@ export function AdminXmlLinkScraperPanel() {
                 <span className="truncate text-slate-400">{h.fileName}</span>
                 <span className="text-violet-300/80 shrink-0">{h.pattern}</span>
                 <span className="text-cyan-400/80 shrink-0">{h.totalMatches} hits</span>
-                <span className="text-slate-600 shrink-0">{new Date(h.at).toLocaleString('en-US')}</span>
+                <span className="text-slate-600 shrink-0">{(Number.isFinite(Number(h.at)) ? new Date(Number(h.at)).toLocaleString('en-US') : '—')}</span>
               </div>
             ))}
           </div>

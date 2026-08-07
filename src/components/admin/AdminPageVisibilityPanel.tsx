@@ -386,7 +386,11 @@ export function AdminPageVisibilityPanel() {
 
       {data?.updatedAt && (
         <p className="text-[8px] font-mono text-slate-700 mt-3 text-right">
-          Last saved: {new Date(data.updatedAt).toLocaleString('en-US')}
+          Last saved: {(
+            Number.isFinite(Number(data.updatedAt))
+              ? new Date(Number(data.updatedAt)).toLocaleString('en-US')
+              : '—'
+          )}
         </p>
       )}
     </ToolCard>

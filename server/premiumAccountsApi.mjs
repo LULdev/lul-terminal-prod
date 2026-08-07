@@ -36,7 +36,7 @@ import {
 } from './premiumAccountsReports.mjs';
 import { statusForError, wrapAsyncHandler } from './asyncMiddleware.mjs';
 import { readJsonBody } from './readJsonBody.mjs';
-import { checkRateLimit, clientIp, isRateLimitError } from './rateLimit.mjs';
+import { applyRateLimitHeaders, checkRateLimit, clientIp, isRateLimitError } from './rateLimit.mjs';
 
 function sendJson(res, status, body) {
   res.statusCode = status;
@@ -287,6 +287,7 @@ export async function handlePremiumAccountsRequest(req, res) {
             ? 403
             : 400;
     }
+    if (status === 429 || isRateLimitError(e)) applyRateLimitHeaders(res, e);
     sendJson(res, status, { error: msg });
   }
 }

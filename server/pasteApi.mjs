@@ -635,6 +635,7 @@ export async function handlePasteRequest(req, res) {
       } catch (e) {
         const msg = e instanceof Error ? e.message : 'Rating failed';
         if (e?.code === 'RATE_LOCKED') {
+          applyRateLimitHeaders(res, e);
           return sendJson(res, 429, {
             error: msg,
             code: 'RATE_LOCKED',

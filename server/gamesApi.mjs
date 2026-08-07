@@ -8,7 +8,7 @@ import { statusForError, wrapAsyncHandler } from './asyncMiddleware.mjs';
 import { readJsonBody } from './readJsonBody.mjs';
 import { requireMemberTab } from './tabAccessGuard.mjs';
 import { getGameHandler, GAME_IDS } from './gameRegistry.mjs';
-import { checkRateLimit, clientIp, isRateLimitError } from './rateLimit.mjs';
+import { applyRateLimitHeaders, checkRateLimit, clientIp, isRateLimitError } from './rateLimit.mjs';
 import {
   claimDailyBonus,
   getCoinFeed,
@@ -140,6 +140,7 @@ export async function handleGamesRequest(req, res) {
                   ? 404
                   : 500;
     }
+    if (status === 429 || isRateLimitError(e)) applyRateLimitHeaders(res, e);
     return sendJson(res, status, { error: msg });
   }
 }

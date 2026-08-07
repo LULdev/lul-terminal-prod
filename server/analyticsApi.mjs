@@ -184,8 +184,11 @@ export async function handleAnalyticsRequest(req, res) {
           if (!isRateLimitError(e) && msg !== 'Permission denied') {
             console.warn('[analytics] tab visit side effect failed', e);
           }
-          const status = isRateLimitError(e) ? 429 : 201;
-          return sendJson(res, status, { ok: false, eventId: null, user: null, proof: null });
+          if (isRateLimitError(e)) {
+            applyRateLimitHeaders(res, e);
+            return sendJson(res, 429, { ok: false, eventId: null, user: null, proof: null });
+          }
+          return sendJson(res, 201, { ok: false, eventId: null, user: null, proof: null });
         }
       } else {
         event = await recordEvent(eventBase);

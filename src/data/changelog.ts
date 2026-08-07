@@ -23,6 +23,19 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '3.75.0',
+    title: 'Full residual audit Server+Client: Retry-After on admin/games/premium 429, date display safety',
+    date: 'Aug 7, 2026',
+    highlight: true,
+    items: [
+      { priority: 'P2', text: 'P2 — adminApi/premiumAccounts/gamesApi set Retry-After when status is 429.' },
+      { priority: 'P2', text: 'P2 — paste RATE_LOCKED response sets Retry-After (uses retryAfterMs).' },
+      { priority: 'P2', text: 'P2 — analytics tab-visit side-effect rate limit sets Retry-After (not silent 429 body only).' },
+      { priority: 'P3', text: 'P3 — Invalid Date avoided: AdminModeration, PageVisibility, Shoutbox, ColonDb, Persona, XML history, MyImageGallery createdAt.' },
+      { priority: 'P9', text: 'P9 — Version 3.75.0; full residual system audit after 3.74 (every fix listed).' },
+    ],
+  },
+  {
     version: '3.74.0',
     title: 'Full residual audit Server+Client: expired status map, Retry-After 429 parity, scraper NaN',
     date: 'Aug 7, 2026',

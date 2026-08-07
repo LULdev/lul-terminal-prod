@@ -309,8 +309,8 @@ export function AdminShoutboxPanel() {
     else setSelected(new Set(selectableIds));
   };
 
-  const lastUpdated = data?.updatedAt
-    ? new Date(data.updatedAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+  const lastUpdated = Number.isFinite(Number(data?.updatedAt))
+    ? new Date(Number(data.updatedAt)).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
     : '—';
 
   return (

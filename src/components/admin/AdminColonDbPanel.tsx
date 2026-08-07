@@ -105,7 +105,7 @@ export function AdminColonDbPanel() {
           <StatTile label="Total" value={(Number.isFinite(Number(stats.total)) ? Number(stats.total) : 0).toLocaleString('en-US')} />
           <StatTile label="Websites" value={stats.websites} />
           <StatTile label="Filtered" value={filteredTotal} />
-          <StatTile label="Updated" value={stats.updatedAt ? new Date(stats.updatedAt).toLocaleDateString('en-US') : '—'} />
+          <StatTile label="Updated" value={Number.isFinite(Number(stats.updatedAt)) ? new Date(Number(stats.updatedAt)).toLocaleDateString('en-US') : '—'} />
         </div>
       )}
 

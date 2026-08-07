@@ -78,7 +78,7 @@ export function AdminPersonaPanel() {
           <StatTile label="Entries" value={(Number.isFinite(Number(stats.total)) ? Number(stats.total) : 0).toLocaleString('en-US')} />
           <StatTile label="Countries" value={stats.countries.length} />
           <StatTile label="Filtered" value={entryTotal} />
-          <StatTile label="Updated" value={stats.updatedAt ? new Date(stats.updatedAt).toLocaleDateString('en-US') : '—'} />
+          <StatTile label="Updated" value={Number.isFinite(Number(stats.updatedAt)) ? new Date(Number(stats.updatedAt)).toLocaleDateString('en-US') : '—'} />
         </div>
       )}
 

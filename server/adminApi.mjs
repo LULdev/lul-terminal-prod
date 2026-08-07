@@ -7,7 +7,7 @@ import { statusForError, wrapAsyncHandler } from './asyncMiddleware.mjs';
 import { readJsonBody } from './readJsonBody.mjs';
 import { attachAuth, requireRole } from './auth/authApi.mjs';
 import { canAccessAdmin } from './auth/permissions.mjs';
-import { checkRateLimit, clientIp, isRateLimitError } from './rateLimit.mjs';
+import { applyRateLimitHeaders, checkRateLimit, clientIp, isRateLimitError } from './rateLimit.mjs';
 import {
   adminBroadcastBot,
   adminBulkDeleteMessages,
@@ -346,6 +346,7 @@ export async function handleAdminRequest(req, res) {
               ? 400
               : 500;
     }
+    if (status === 429 || isRateLimitError(e)) applyRateLimitHeaders(res, e);
     return sendJson(res, status, { error: msg });
   }
 }

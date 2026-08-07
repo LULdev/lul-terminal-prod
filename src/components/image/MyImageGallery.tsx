@@ -503,7 +503,9 @@ function GalleryListRow({
         <p className="text-[8px] font-mono text-slate-600">
           {mimeLabel(img.mime)} · {formatImageBytes(img.size)}
           {img.width && img.height ? ` · ${img.width}×${img.height}` : ''}
-          · {new Date(img.createdAt).toLocaleDateString('en-US')}
+          · {(Number.isFinite(Number(img.createdAt))
+            ? new Date(Number(img.createdAt)).toLocaleDateString('en-US')
+            : '—')}
         </p>
       </button>
       <div className="flex items-center gap-2 shrink-0">
