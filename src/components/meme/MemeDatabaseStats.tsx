@@ -55,8 +55,11 @@ function StatCard({ label, value, icon, accent, glow, sub, live }: StatCardProps
 }
 
 export function MemeDatabaseStats({ catalog, loading, memesCreated }: Props) {
+  const scrapedAt = Number(catalog?.scrapedAt);
   const scrapedLabel = catalog
-    ? `Sync ${new Date(catalog.scrapedAt).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}`
+    ? (Number.isFinite(scrapedAt) && scrapedAt > 0
+      ? `Sync ${new Date(scrapedAt).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}`
+      : 'Catalog loaded')
     : 'Loading catalog…';
 
   return (

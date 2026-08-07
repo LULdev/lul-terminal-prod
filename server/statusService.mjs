@@ -184,39 +184,53 @@ export async function buildSystemStatus() {
     probe('proxy-database', 'Proxy Database', 'network', '🗄️', async () => {
       const stats = await getDatabaseStats();
       const status = stats.inDatabase > 0 && stats.working === 0 ? 'degraded' : 'operational';
+      const working = Number.isFinite(Number(stats.working)) ? Math.max(0, Math.floor(Number(stats.working))) : 0;
+      const stored = Number.isFinite(Number(stats.inDatabase)) ? Math.max(0, Math.floor(Number(stats.inDatabase))) : 0;
       return {
         status,
-        message: `${stats.working ?? 0} working / ${stats.inDatabase ?? 0} stored`,
+        message: `${working} working / ${stored} stored`,
         metric: stats.nextDailyCheckDue ? 'check due' : 'checked',
       };
     }),
     probe('colon-db', 'Colon Scraper DB', 'network', '🔗', async () => {
       const stats = await getColonDbStats();
-      return { message: `${stats.total ?? 0} U:P entries`, metric: `${stats.websites ?? 0} sites` };
+      const total = Number.isFinite(Number(stats.total)) ? Math.max(0, Math.floor(Number(stats.total))) : 0;
+      const sites = Number.isFinite(Number(stats.websites)) ? Math.max(0, Math.floor(Number(stats.websites))) : 0;
+      return { message: `${total} U:P entries`, metric: `${sites} sites` };
     }),
     probe('persona-db', 'Persona Database', 'network', '🎭', async () => {
       const stats = await getPersonaStats();
-      return { message: `${stats.total ?? 0} personas`, metric: `${stats.countries?.length ?? 0} countries` };
+      const total = Number.isFinite(Number(stats.total)) ? Math.max(0, Math.floor(Number(stats.total))) : 0;
+      const countries = Array.isArray(stats.countries) ? stats.countries.length : 0;
+      return { message: `${total} personas`, metric: `${countries} countries` };
     }),
 
     probe('premium-vault', 'Premium Vault', 'vault', '👑', async () => {
       const stats = await getPublicAccountStats();
-      const total = (stats.premium ?? 0) + (stats.free ?? 0);
-      return { message: `${total} accounts in vault`, metric: `${stats.premium ?? 0} premium` };
+      const premium = Number.isFinite(Number(stats.premium)) ? Math.max(0, Math.floor(Number(stats.premium))) : 0;
+      const free = Number.isFinite(Number(stats.free)) ? Math.max(0, Math.floor(Number(stats.free))) : 0;
+      const total = premium + free;
+      return { message: `${total} accounts in vault`, metric: `${premium} premium` };
     }),
 
     probe('storage', 'Data Storage', 'storage', '💾', async () => {
       const map = await buildAdminStorageMap();
-      const mb = Math.round(map.totals.bytes / 1024 / 1024);
+      const files = Number.isFinite(Number(map.totals.files)) ? Math.max(0, Math.floor(Number(map.totals.files))) : 0;
+      const bytes = Number.isFinite(Number(map.totals.bytes)) ? Math.max(0, Number(map.totals.bytes)) : 0;
+      const stores = Number.isFinite(Number(map.totals.stores)) ? Math.max(0, Math.floor(Number(map.totals.stores))) : 0;
+      const mb = Math.round(bytes / 1024 / 1024);
       return {
-        message: `${map.totals.files} files · ${mb} MB`,
-        metric: `${map.totals.stores} stores`,
+        message: `${files} files · ${mb} MB`,
+        metric: `${stores} stores`,
       };
     }),
     probe('aggregates', 'Visitor Aggregates', 'storage', '🛰️', async () => {
       const agg = await loadAggregatesDb();
       const tabs = Object.keys(agg.tabHits ?? {}).length;
-      return { message: `${tabs} tabs in heatmap`, metric: String(agg.visitorStats?.returnVisits ?? 0) + ' returns' };
+      const returns = Number.isFinite(Number(agg.visitorStats?.returnVisits))
+        ? Math.max(0, Math.floor(Number(agg.visitorStats.returnVisits)))
+        : 0;
+      return { message: `${tabs} tabs in heatmap`, metric: `${returns} returns` };
     }),
   ]);
 

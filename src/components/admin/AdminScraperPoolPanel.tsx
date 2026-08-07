@@ -55,8 +55,14 @@ export function AdminScraperPoolPanel() {
               <div className="text-[8px] font-mono space-y-1 text-slate-500">
                 <div>Checked alive: <span className="text-emerald-400">{data.pool.checkedAlive}</span> / {data.pool.checkedTotal}</div>
                 <div>Dedup removed: {data.pool.dedupRemoved}</div>
-                <div>Last scrape: {data.pool.scrapedAt != null ? formatRelativeEn(typeof data.pool.scrapedAt === 'number' ? data.pool.scrapedAt : new Date(data.pool.scrapedAt).getTime()) : '—'}</div>
-                <div>Sources OK: <span className="text-cyan-300">{String(data.state.sourcesOk ?? 0)}</span> · Failed: {String(data.state.sourcesFailed ?? 0)}</div>
+                <div>Last scrape: {(() => {
+                  if (data.pool.scrapedAt == null) return '—';
+                  const t = typeof data.pool.scrapedAt === 'number'
+                    ? data.pool.scrapedAt
+                    : new Date(data.pool.scrapedAt).getTime();
+                  return Number.isFinite(t) ? formatRelativeEn(t) : '—';
+                })()}</div>
+                <div>Sources OK: <span className="text-cyan-300">{String(Number.isFinite(Number(data.state.sourcesOk)) ? data.state.sourcesOk : 0)}</span> · Failed: {String(Number.isFinite(Number(data.state.sourcesFailed)) ? data.state.sourcesFailed : 0)}</div>
               </div>
             </ToolCard>
             <ToolCard title="Sample proxies" icon="📋" accent="cyan">

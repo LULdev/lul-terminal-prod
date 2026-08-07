@@ -63,7 +63,9 @@ const KIND_STYLES: Record<string, { pill: string; accent: string }> = {
 };
 
 function formatTime(ts: number) {
-  return new Date(ts).toLocaleString('en-US', {
+  const t = Number(ts);
+  if (!Number.isFinite(t) || t <= 0) return '—';
+  return new Date(t).toLocaleString('en-US', {
     day: '2-digit',
     month: 'short',
     hour: '2-digit',
@@ -72,11 +74,13 @@ function formatTime(ts: number) {
 }
 
 function formatRelative(ts: number) {
-  const diff = Date.now() - ts;
-  if (diff < 60_000) return 'just now';
+  const t = Number(ts);
+  if (!Number.isFinite(t) || t <= 0) return '—';
+  const diff = Date.now() - t;
+  if (!Number.isFinite(diff) || diff < 60_000) return 'just now';
   if (diff < 3600_000) return `${Math.floor(diff / 60_000)}m ago`;
   if (diff < 86_400_000) return `${Math.floor(diff / 3600_000)}h ago`;
-  return formatTime(ts);
+  return formatTime(t);
 }
 
 function isBotLike(msg: ShoutboxMessage) {

@@ -9,8 +9,9 @@ import React from 'react';
 import type { AchievementDef, AchievementRarity } from '../../data/achievements';
 
 export function formatTrophyDate(ts?: number | null): string {
-  if (ts == null || !Number.isFinite(ts)) return '';
-  return new Date(ts).toLocaleDateString('en-US', {
+  const t = Number(ts);
+  if (!Number.isFinite(t) || t <= 0) return '';
+  return new Date(t).toLocaleDateString('en-US', {
     month: 'short',
     day: 'numeric',
     year: 'numeric',

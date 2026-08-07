@@ -38,8 +38,9 @@ type Props = {
 };
 
 function formatDate(ts: number | null) {
-  if (!ts) return '—';
-  return new Date(ts).toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' });
+  const t = Number(ts);
+  if (!Number.isFinite(t) || t <= 0) return '—';
+  return new Date(t).toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
 export function ProfileOverviewTab({

@@ -33,7 +33,9 @@ import type { LogLine } from '../../types';
 const DISPLAY_LIMIT = 200;
 
 function formatTime(ts: number) {
-  return new Date(ts).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
+  const t = Number(ts);
+  if (!Number.isFinite(t) || t <= 0) return '--:--';
+  return new Date(t).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
 }
 
 /** Classic [BOT] pill with admin right-click → Delete message. */

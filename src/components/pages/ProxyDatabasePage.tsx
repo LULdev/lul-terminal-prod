@@ -53,8 +53,9 @@ function StatCard({
 }
 
 function formatWhen(ts: number | null | undefined) {
-  if (!ts) return '—';
-  return new Date(ts).toLocaleString('en-US', { dateStyle: 'short', timeStyle: 'short' });
+  const t = Number(ts);
+  if (!Number.isFinite(t) || t <= 0) return '—';
+  return new Date(t).toLocaleString('en-US', { dateStyle: 'short', timeStyle: 'short' });
 }
 
 export function ProxyDatabasePage() {

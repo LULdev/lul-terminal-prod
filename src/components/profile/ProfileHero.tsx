@@ -442,8 +442,9 @@ export function ProfileHero({ user, isOwn = false, showCoins = true, onNavigateG
 }
 
 function formatDate(ts: number | null) {
-  if (!ts) return '—';
-  return new Date(ts).toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' });
+  const t = Number(ts);
+  if (!Number.isFinite(t) || t <= 0) return '—';
+  return new Date(t).toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
 function MetaChip({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {

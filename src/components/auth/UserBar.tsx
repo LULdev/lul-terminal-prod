@@ -248,11 +248,13 @@ export function UserBar({ onNavigate }: UserBarProps) {
                     <span className="userbar-hof__tip-meta">
                       {String(award.rarity).toUpperCase()}
                       {' · '}
-                      {new Date(award.earnedAt).toLocaleDateString('en-US', {
-                        month: 'short',
-                        day: 'numeric',
-                        year: 'numeric',
-                      }).toUpperCase()}
+                      {(Number.isFinite(Number(award.earnedAt))
+                        ? new Date(Number(award.earnedAt)).toLocaleDateString('en-US', {
+                          month: 'short',
+                          day: 'numeric',
+                          year: 'numeric',
+                        }).toUpperCase()
+                        : '—')}
                     </span>
                   </span>
                 </button>

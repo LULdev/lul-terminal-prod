@@ -51,7 +51,9 @@ const emptyCreate = (): CreateForm => ({
 });
 
 function formatTime(ts: number) {
-  return new Date(ts).toLocaleString('en-US', {
+  const t = Number(ts);
+  if (!Number.isFinite(t) || t <= 0) return '—';
+  return new Date(t).toLocaleString('en-US', {
     day: '2-digit',
     month: 'short',
     hour: '2-digit',
