@@ -25,6 +25,21 @@ import { isUserOnline } from './profileStats.mjs';
 
 const STARTED_AT = Date.now();
 
+/** Sum numeric values from a map/object, treating non-finite as 0 (avoids NaN metrics). */
+function finiteSum(values) {
+  let total = 0;
+  for (const v of values) {
+    const n = Number(v);
+    if (Number.isFinite(n)) total += n;
+  }
+  return total;
+}
+
+function finiteNonNeg(v) {
+  const n = Number(v);
+  return Number.isFinite(n) ? Math.max(0, Math.floor(n)) : 0;
+}
+
 /** Probes that expose operational intelligence — redacted on public /api/status. */
 const PUBLIC_REDACTED_CHECK_IDS = new Set([
   'sessions',
@@ -94,91 +109,107 @@ export async function buildSystemStatus() {
   const checks = await Promise.all([
     probe('auth', 'Auth & Users', 'core', '🔐', async () => {
       const db = await loadUsersDb();
-      const active = db.users.filter((u) => u.active !== false && u.role !== 'bot').length;
-      return { message: `${db.users.length} accounts`, metric: `${active} active` };
+      const accounts = Array.isArray(db.users) ? db.users.length : 0;
+      const active = Array.isArray(db.users)
+        ? db.users.filter((u) => u.active !== false && u.role !== 'bot').length
+        : 0;
+      return { message: `${accounts} accounts`, metric: `${active} active` };
     }),
     probe('sessions', 'Sessions', 'core', '🍪', async () => {
       const db = await loadSessionsDb();
-      const live = db.sessions.filter((s) => s.expiresAt > Date.now()).length;
+      const live = Array.isArray(db.sessions)
+        ? db.sessions.filter((s) => Number(s.expiresAt) > Date.now()).length
+        : 0;
       return { message: `${live} active sessions`, metric: String(live) };
     }),
     probe('analytics', 'Analytics Engine', 'core', '📊', async () => {
       const db = await loadEventsDb();
-      const count = db.events?.length ?? 0;
-      const status = count >= MAX_EVENTS * 0.95 ? 'degraded' : 'operational';
+      const count = Array.isArray(db.events) ? db.events.length : 0;
+      const cap = Number.isFinite(MAX_EVENTS) && MAX_EVENTS > 0 ? MAX_EVENTS : 1;
+      const status = count >= cap * 0.95 ? 'degraded' : 'operational';
+      const pct = Math.min(100, Math.max(0, Math.round((count / cap) * 100)));
       return {
         status,
         message: `${count} events stored`,
-        metric: `${Math.round((count / MAX_EVENTS) * 100)}% cap`,
+        metric: `${pct}% cap`,
       };
     }),
     probe('access-control', 'Page Visibility', 'core', '👁️', async () => {
       const db = await loadAccessControl();
-      const publicPages = Object.values(db.pages).filter((v) => v === 'public').length;
+      const publicPages = Object.values(db.pages ?? {}).filter((v) => v === 'public').length;
       return { message: `${publicPages} public pages`, metric: String(publicPages) };
     }),
     probe('terminal-stats', 'Terminal Stats API', 'core', '📡', async () => {
-      const [usersDb, eventsDb] = await Promise.all([loadUsersDb(), loadEventsDb()]);
-      const online = usersDb.users.filter((u) => isUserOnline(u)).length;
+      const [usersDb] = await Promise.all([loadUsersDb(), loadEventsDb()]);
+      const online = Array.isArray(usersDb.users) ? usersDb.users.filter((u) => isUserOnline(u)).length : 0;
       return { message: 'Stats pipeline ready', metric: `${online} online` };
     }),
 
     probe('shoutbox', 'Shoutbox / Chat', 'community', '💬', async () => {
       const db = await loadLobbyDb();
-      const count = db.messages?.length ?? 0;
+      const count = Array.isArray(db.messages) ? db.messages.length : 0;
       return { message: `${count} messages stored`, metric: String(count) };
     }),
     probe('leaderboards', 'Leaderboards', 'community', '🏆', async () => {
       const data = await buildLeaderboards();
-      const boards = data.boards?.length ?? 0;
+      const boards = Array.isArray(data.boards) ? data.boards.length : 0;
       return { message: `${boards} live boards`, metric: String(boards) };
     }),
     probe('news', 'News Feed', 'community', '📰', async () => {
       const feed = await listPublishedArticles();
-      return { message: `${feed.articles?.length ?? 0} articles`, metric: feed.feedVersion ?? '—' };
+      const articles = Array.isArray(feed.articles) ? feed.articles.length : 0;
+      return { message: `${articles} articles`, metric: feed.feedVersion ?? '—' };
     }),
     probe('post-views', 'Post View Tracking', 'community', '👀', async () => {
       const views = await getAllPostViews();
-      const total = Object.values(views.changelog ?? {}).reduce((a, b) => a + Number(b), 0)
-        + Object.values(views.news ?? {}).reduce((a, b) => a + Number(b), 0);
-      return { message: 'Changelog & news views', metric: String(total) };
+      const total = finiteSum(Object.values(views.changelog ?? {}))
+        + finiteSum(Object.values(views.news ?? {}));
+      return { message: 'Changelog & news views', metric: String(finiteNonNeg(total)) };
     }),
 
     probe('paste', 'Paste Service', 'content', '📋', async () => {
       const stats = await readPasteStats();
-      return { message: `${stats.total ?? 0} pastes`, metric: String(stats.activePastes ?? 0) + ' active' };
+      const total = finiteNonNeg(stats.total);
+      const active = finiteNonNeg(stats.activePastes);
+      return { message: `${total} pastes`, metric: `${active} active` };
     }),
     probe('image-host', 'Image Hosting', 'content', '☁️', async () => {
       const stats = await readImageStats();
+      const images = finiteNonNeg(stats.imagesHosted);
+      const viewsTotal = finiteNonNeg(stats.imageViewsTotal);
       return {
-        message: `${stats.imagesHosted ?? 0} images`,
-        metric: `${stats.imageViewsTotal ?? 0} views`,
+        message: `${images} images`,
+        metric: `${viewsTotal} views`,
       };
     }),
     probe('page-views', 'Page View Counter', 'content', '📄', async () => {
       const views = await getAllPageViews();
       const pages = Object.keys(views.pages ?? {}).length;
-      const total = Object.values(views.pages ?? {}).reduce((a, b) => a + Number(b), 0);
+      const total = finiteNonNeg(finiteSum(Object.values(views.pages ?? {})));
       return { message: `${pages} pages tracked`, metric: String(total) };
     }),
 
     probe('proxy-scraper', 'Proxy Scraper', 'network', '🕸️', async () => {
       const state = await loadProxyScraperState();
-      const pool = state.uniqueProxies ?? state.totalScraped ?? 0;
-      const status = (state.sourcesFailed ?? 0) > (state.sourcesOk ?? 0) ? 'degraded' : 'operational';
+      const pool = finiteNonNeg(state.uniqueProxies ?? state.totalScraped ?? 0);
+      const ok = finiteNonNeg(state.sourcesOk);
+      const failed = finiteNonNeg(state.sourcesFailed);
+      const status = failed > ok ? 'degraded' : 'operational';
       return {
         status,
-        message: `Pool ${pool} · ${state.sourcesOk ?? 0} sources OK`,
+        message: `Pool ${pool} · ${ok} sources OK`,
         metric: String(pool),
       };
     }),
     probe('proxy-checker', 'Proxy Checker', 'network', '✅', async () => {
       const state = await loadCheckerState();
-      const status = !state.lastCheckAt && (state.totalChecked ?? 0) === 0 ? 'degraded' : 'operational';
+      const checked = finiteNonNeg(state.totalChecked);
+      const alive = finiteNonNeg(state.alive);
+      const status = !state.lastCheckAt && checked === 0 ? 'degraded' : 'operational';
       return {
         status,
         message: state.lastCheckAt ? 'Last check recorded' : 'No checks yet',
-        metric: `${state.alive ?? 0} alive`,
+        metric: `${alive} alive`,
       };
     }),
     probe('proxy-database', 'Proxy Database', 'network', '🗄️', async () => {

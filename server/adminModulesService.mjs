@@ -93,12 +93,18 @@ export async function buildAdminHeatmap() {
     .map(([tab, count]) => ({ tab, count }));
 
   const dwellByTab = Object.entries(agg.dwellByTab ?? {})
-    .map(([tab, d]) => ({
-      tab,
-      avgSec: d.count ? Math.round(d.totalSec / d.count) : 0,
-      totalSec: d.totalSec ?? 0,
-      visits: d.count ?? 0,
-    }))
+    .map(([tab, d]) => {
+      const count = Number(d?.count);
+      const totalSec = Number(d?.totalSec);
+      const safeCount = Number.isFinite(count) ? count : 0;
+      const safeTotal = Number.isFinite(totalSec) ? totalSec : 0;
+      return {
+        tab,
+        avgSec: safeCount > 0 ? Math.round(safeTotal / safeCount) : 0,
+        totalSec: safeTotal,
+        visits: safeCount,
+      };
+    })
     .sort((a, b) => b.totalSec - a.totalSec);
 
   const vs = agg.visitorStats ?? {};

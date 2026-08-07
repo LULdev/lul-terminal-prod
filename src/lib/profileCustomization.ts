@@ -120,8 +120,10 @@ export function computeTenureBadge(createdAt: number): { label: string; emoji: s
 }
 
 export function computeSleepStyle(lastLoginAt: number | null | undefined): { label: string; emoji: string } | null {
-  if (!lastLoginAt) return null;
-  const h = new Date(lastLoginAt).getHours();
+  const t = Number(lastLoginAt);
+  if (!Number.isFinite(t) || t <= 0) return null;
+  const h = new Date(t).getHours();
+  if (!Number.isFinite(h)) return null;
   if (h >= 0 && h < 5) return { label: 'Night Owl', emoji: '🦉' };
   if (h >= 5 && h < 9) return { label: 'Early Bird', emoji: '🌅' };
   return null;

@@ -16,7 +16,10 @@ export function proxyKey(proxy) {
 }
 
 export function dayKey(ts = Date.now()) {
-  return new Date(ts).toISOString().slice(0, 10);
+  const t = Number(ts);
+  const d = new Date(Number.isFinite(t) ? t : Date.now());
+  if (Number.isNaN(d.getTime())) return new Date().toISOString().slice(0, 10);
+  return d.toISOString().slice(0, 10);
 }
 
 function emptyStats() {

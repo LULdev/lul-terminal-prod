@@ -20,10 +20,12 @@ type Props = {
 };
 
 function formatLockRemaining(lockedUntil: number | null | undefined): string {
-  if (!lockedUntil) return '';
-  const ms = lockedUntil - Date.now();
-  if (ms <= 0) return '';
+  const until = Number(lockedUntil);
+  if (!Number.isFinite(until) || until <= 0) return '';
+  const ms = until - Date.now();
+  if (!Number.isFinite(ms) || ms <= 0) return '';
   const hours = Math.ceil(ms / (60 * 60 * 1000));
+  if (!Number.isFinite(hours)) return '';
   if (hours >= 24) return '~24h';
   if (hours <= 1) {
     const mins = Math.max(1, Math.ceil(ms / 60_000));
@@ -63,9 +65,10 @@ export function PasteStarRating({
 
   // Re-enable stars when 24h lock expires (client-side)
   useEffect(() => {
-    if (!lockedUntil) return;
-    const ms = lockedUntil - Date.now();
-    if (ms <= 0) {
+    const until = Number(lockedUntil);
+    if (!Number.isFinite(until) || until <= 0) return;
+    const ms = until - Date.now();
+    if (!Number.isFinite(ms) || ms <= 0) {
       setAllowRate(true);
       setLockedUntil(null);
       return;

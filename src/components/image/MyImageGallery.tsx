@@ -510,7 +510,7 @@ function GalleryListRow({
       </button>
       <div className="flex items-center gap-2 shrink-0">
         <span className="text-[10px] font-mono text-violet-300 tabular-nums flex items-center gap-0.5">
-          <Eye size={10} /> {img.views ?? 0}
+          <Eye size={10} /> {(Number.isFinite(Number(img.views)) ? Math.max(0, Math.floor(Number(img.views))) : 0)}
         </span>
         <button type="button" title="Toggle favorite" aria-label="Toggle favorite" onClick={onFavorite} className="text-amber-400/80 hover:text-amber-300">
           <Star size={12} fill={img.favorite ? 'currentColor' : 'none'} />

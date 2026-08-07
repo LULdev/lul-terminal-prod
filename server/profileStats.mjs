@@ -9,7 +9,13 @@ export const ONLINE_WINDOW_MS = 5 * 60 * 1000;
 
 /** Local calendar midnight for "active today" counts (server local timezone). */
 export function localDayStart(ts = Date.now()) {
-  const d = new Date(ts);
+  const t = Number(ts);
+  const d = new Date(Number.isFinite(t) ? t : Date.now());
+  if (Number.isNaN(d.getTime())) {
+    const fallback = new Date();
+    fallback.setHours(0, 0, 0, 0);
+    return fallback.getTime();
+  }
   d.setHours(0, 0, 0, 0);
   return d.getTime();
 }

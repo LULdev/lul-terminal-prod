@@ -21,7 +21,23 @@ export type ChangelogEntry = {
   items: ChangelogItem[];
 };
 
-export const CHANGELOG: ChangelogEntry[
+export const CHANGELOG: ChangelogEntry[] = [
+  {
+    version: '3.77.0',
+    title: 'Full residual P3 audit Server+Client: analytics dates, toolVault time, status/view sums',
+    date: 'Aug 7, 2026',
+    highlight: true,
+    items: [
+      { priority: 'P3', text: 'P3 — formatAnalyticsDate finite-safe (Admin Analytics user detail no Invalid Date).' },
+      { priority: 'P3', text: 'P3 — computeSleepStyle lastLoginAt guard; PasteStarRating lock remaining/timer finite-safe (no ~NaNh).' },
+      { priority: 'P3', text: 'P3 — ToolVault time tools: Invalid date instead of Invalid Date/NaN (format DE/US, add hours/mins, iso↔unix, quarter, day-of-year, weekend, iso-week).' },
+      { priority: 'P3', text: 'P3 — StatusPage avgLatencyMs finite-safe; AdminStorage stores count; MyImageGallery views finite-safe.' },
+      { priority: 'P3', text: 'P3 — statusService residual probes finite-safe: post/page view sums, paste/image/scraper/checker/auth/analytics cap %.' },
+      { priority: 'P3', text: 'P3 — analyticsService/adminModules/terminalStats: finite view sums + dwell avgSec; dayKey NaN-safe.' },
+      { priority: 'P3', text: 'P3 — colon list sort invalid updatedAt → 0; news sort publishedAt NaN-safe; proxyDatabase dayKey + profileStats localDayStart finite-safe.' },
+      { priority: 'P9', text: 'P9 — Version 3.77.0; full residual P3 module audit after 3.76 (every fix listed).' },
+    ],
+  },
   {
     version: '3.76.0',
     title: 'Full P3 audit Server+Client: date/time NaN safety, status probe finite metrics',
@@ -34,7 +50,7 @@ export const CHANGELOG: ChangelogEntry[
       { priority: 'P3', text: 'P3 — AdminScraperPool last scrape + sources OK/failed finite-safe.' },
       { priority: 'P9', text: 'P9 — Version 3.76.0; full P3 module audit after 3.75 (every fix listed).' },
     ],
-  },] = [
+  },
   {
     version: '3.75.0',
     title: 'Full residual audit Server+Client: Retry-After on admin/games/premium 429, date display safety',

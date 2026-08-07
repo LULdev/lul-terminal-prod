@@ -82,7 +82,13 @@ export async function listColonDbEntries({ limit = 100, website, q } = {}) {
     );
   }
 
-  list.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+  list.sort((a, b) => {
+    const tb = Number(new Date(b.updatedAt).getTime());
+    const ta = Number(new Date(a.updatedAt).getTime());
+    const safeB = Number.isFinite(tb) ? tb : 0;
+    const safeA = Number.isFinite(ta) ? ta : 0;
+    return safeB - safeA;
+  });
   const total = list.length;
   return { entries: list.slice(0, Math.min(500, Math.max(1, limit))), total };
 }

@@ -138,8 +138,16 @@ export async function buildTerminalStats({ includeSensitive = false } = {}) {
 
   const shoutboxTotal = lobby.messages?.filter((m) => m.role !== 'bot').length ?? 0;
 
-  const changelogViews = Object.values(postViews.changelog ?? {}).reduce((a, b) => a + Number(b), 0);
-  const newsViews = Object.values(postViews.news ?? {}).reduce((a, b) => a + Number(b), 0);
+  const finiteSum = (values) => {
+    let total = 0;
+    for (const v of values) {
+      const n = Number(v);
+      if (Number.isFinite(n)) total += n;
+    }
+    return total;
+  };
+  const changelogViews = finiteSum(Object.values(postViews.changelog ?? {}));
+  const newsViews = finiteSum(Object.values(postViews.news ?? {}));
 
   const topTab = Object.entries(aggregates.tabHits ?? {})
     .sort((a, b) => b[1] - a[1])[0];

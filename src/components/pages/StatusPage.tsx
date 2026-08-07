@@ -154,7 +154,9 @@ export function StatusPage() {
                 </span>
                 <span className="flex items-center gap-1">
                   <Activity size={10} />
-                  Avg {data.summary.avgLatencyMs}ms
+                  Avg {Number.isFinite(Number(data.summary.avgLatencyMs))
+                    ? `${Math.max(0, Math.floor(Number(data.summary.avgLatencyMs)))}ms`
+                    : '—'}
                 </span>
                 <span>Updated {formatRelativeEn(data.generatedAt)}</span>
               </div>

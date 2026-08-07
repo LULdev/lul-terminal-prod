@@ -30,7 +30,27 @@ import {
 } from './visitorTracking.mjs';
 
 function dayKey(ts = Date.now()) {
-  return new Date(ts).toISOString().slice(0, 10);
+  const t = Number(ts);
+  const d = new Date(Number.isFinite(t) ? t : Date.now());
+  if (Number.isNaN(d.getTime())) return new Date().toISOString().slice(0, 10);
+  return d.toISOString().slice(0, 10);
+}
+
+function finiteSum(values) {
+  let total = 0;
+  for (const v of values) {
+    const n = Number(v);
+    if (Number.isFinite(n)) total += n;
+  }
+  return total;
+}
+
+function avgSecFromDwell(d) {
+  const count = Number(d?.count);
+  const totalSec = Number(d?.totalSec);
+  if (!Number.isFinite(count) || count <= 0) return 0;
+  if (!Number.isFinite(totalSec)) return 0;
+  return Math.round(totalSec / count);
 }
 
 export const ALLOWED_ANALYTICS_TYPES = new Set([
@@ -315,8 +335,8 @@ export async function buildAdminOverview() {
       tabVisits: d.tabVisits ?? 0,
     }));
 
-  const changelogViews = Object.values(postViews.changelog ?? {}).reduce((a, b) => a + Number(b), 0);
-  const newsViews = Object.values(postViews.news ?? {}).reduce((a, b) => a + Number(b), 0);
+  const changelogViews = finiteSum(Object.values(postViews.changelog ?? {}));
+  const newsViews = finiteSum(Object.values(postViews.news ?? {}));
 
   const leaderboard = users
     .map(userActivityRow)
@@ -327,9 +347,9 @@ export async function buildAdminOverview() {
   const dwellByTab = Object.entries(agg.dwellByTab ?? {})
     .map(([tab, d]) => ({
       tab,
-      avgSec: d.count ? Math.round(d.totalSec / d.count) : 0,
-      totalSec: d.totalSec ?? 0,
-      visits: d.count ?? 0,
+      avgSec: avgSecFromDwell(d),
+      totalSec: Number.isFinite(Number(d.totalSec)) ? Number(d.totalSec) : 0,
+      visits: Number.isFinite(Number(d.count)) ? Number(d.count) : 0,
     }))
     .sort((a, b) => b.totalSec - a.totalSec)
     .slice(0, 12);

@@ -289,8 +289,9 @@ export function formatRelativeTime(ts: number) {
 }
 
 export function formatAnalyticsDate(ts: number | null | undefined) {
-  if (!ts) return '—';
-  return new Date(ts).toLocaleString('en-US', {
+  const t = Number(ts);
+  if (!Number.isFinite(t) || t <= 0) return '—';
+  return new Date(t).toLocaleString('en-US', {
     month: 'short',
     day: 'numeric',
     year: 'numeric',

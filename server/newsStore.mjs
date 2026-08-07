@@ -72,9 +72,11 @@ function normalizeArticle(raw) {
 }
 
 function sortArticles(list) {
-  return [...list].sort(
-    (a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime(),
-  );
+  return [...list].sort((a, b) => {
+    const tb = Number(new Date(b.publishedAt).getTime());
+    const ta = Number(new Date(a.publishedAt).getTime());
+    return (Number.isFinite(tb) ? tb : 0) - (Number.isFinite(ta) ? ta : 0);
+  });
 }
 
 async function ensureStore() {

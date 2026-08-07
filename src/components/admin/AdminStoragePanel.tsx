@@ -44,7 +44,7 @@ export function AdminStoragePanel() {
             <div>
               <div className="text-[7px] font-mono uppercase text-slate-600">Total data footprint</div>
               <div className="text-xl font-mono font-bold text-teal-300">{formatBytes(data.totals.bytes)}</div>
-              <div className="text-[8px] font-mono text-slate-600">{(Number.isFinite(Number(data.totals.files)) ? Number(data.totals.files) : 0).toLocaleString('en-US')} files · {data.totals.stores} stores</div>
+              <div className="text-[8px] font-mono text-slate-600">{(Number.isFinite(Number(data.totals.files)) ? Number(data.totals.files) : 0).toLocaleString('en-US')} files · {(Number.isFinite(Number(data.totals.stores)) ? Number(data.totals.stores) : 0)} stores</div>
             </div>
           </div>
           <ToolCard title="Stores" icon="💾" accent="teal">
