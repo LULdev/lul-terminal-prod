@@ -226,19 +226,26 @@ function aggregateGlobalMoves(users) {
   return { totals, total, favorite };
 }
 
+function floorInc(user, key, by = 1) {
+  const cur = Math.max(0, Math.floor(Number(user[key]) || 0));
+  const add = Math.max(0, Math.floor(Number(by) || 0));
+  user[key] = cur + add;
+  return user[key];
+}
+
 function bumpStats(user, result, wonJackpot = false) {
-  user.gameRpsGames = (Number(user.gameRpsGames) || 0) + 1;
+  floorInc(user, 'gameRpsGames');
   if (result === 'win') {
-    user.gameRpsWins = (Number(user.gameRpsWins) || 0) + 1;
-    user.gameRpsStreak = (Number(user.gameRpsStreak) || 0) + 1;
-    user.gameRpsBestStreak = Math.max(Number(user.gameRpsBestStreak) || 0, user.gameRpsStreak);
+    floorInc(user, 'gameRpsWins');
+    const streak = floorInc(user, 'gameRpsStreak');
+    user.gameRpsBestStreak = Math.max(Math.max(0, Math.floor(Number(user.gameRpsBestStreak) || 0)), streak);
   } else if (result === 'loss') {
-    user.gameRpsLosses = (Number(user.gameRpsLosses) || 0) + 1;
+    floorInc(user, 'gameRpsLosses');
     user.gameRpsStreak = 0;
   } else {
-    user.gameRpsDraws = (Number(user.gameRpsDraws) || 0) + 1;
+    floorInc(user, 'gameRpsDraws');
   }
-  if (wonJackpot) user.gameJackpotsWon = (Number(user.gameJackpotsWon) || 0) + 1;
+  if (wonJackpot) floorInc(user, 'gameJackpotsWon');
 }
 
 function publicMatch(m) {
@@ -529,7 +536,7 @@ async function finalizeMatch(m) {
               amount: jackpotAmount,
               pendingId,
             });
-            u.gameJackpotsWon = (Number(u.gameJackpotsWon) || 0) + 1;
+            u.gameJackpotsWon = Math.max(0, Math.floor(Number(u.gameJackpotsWon) || 0)) + 1;
             u.updatedAt = Date.now();
             await saveUsersDb(db);
             credited = true;

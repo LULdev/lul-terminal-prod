@@ -489,7 +489,7 @@ export function applyActivityCtx(user, ctx = {}) {
     if (tab) {
       const isNewTab = !act.tabsVisited.includes(tab);
       if (isNewTab) {
-        act.pageVisits = Math.max(0, Number(act.pageVisits) || 0) + 1;
+        act.pageVisits = Math.max(0, Math.floor(Number(act.pageVisits) || 0)) + 1;
         act.tabsVisited.push(tab);
         touched = true;
       }
@@ -497,7 +497,7 @@ export function applyActivityCtx(user, ctx = {}) {
         const latest = getLatestChangelogVersion();
         const lastRead = act.changelogLastReadVersion ? String(act.changelogLastReadVersion) : null;
         if (lastRead !== latest) {
-          act.changelogReads = Math.max(0, Number(act.changelogReads) || 0) + 1;
+          act.changelogReads = Math.max(0, Math.floor(Number(act.changelogReads) || 0)) + 1;
           act.changelogLastReadVersion = latest;
           touched = true;
         }
@@ -511,7 +511,7 @@ export function applyActivityCtx(user, ctx = {}) {
         }
         const lastRead = act.newsLastReadVersion ? String(act.newsLastReadVersion) : null;
         if (latest !== '0.0.0' && lastRead !== latest) {
-          act.newsReads = Math.max(0, Number(act.newsReads) || 0) + 1;
+          act.newsReads = Math.max(0, Math.floor(Number(act.newsReads) || 0)) + 1;
           act.newsLastReadVersion = latest;
           touched = true;
         }
@@ -525,13 +525,13 @@ export function applyActivityCtx(user, ctx = {}) {
     const visitKey = target ? `profile_visit_${target}` : '';
     if (target && target !== selfUname && visitKey && !act.flags[visitKey]) {
       act.flags[visitKey] = true;
-      act.profileVisits = Math.max(0, Number(act.profileVisits) || 0) + 1;
+      act.profileVisits = Math.max(0, Math.floor(Number(act.profileVisits) || 0)) + 1;
       touched = true;
     }
   }
 
   if (ctx.incrementCommands) {
-    act.commandsRun += 1;
+    act.commandsRun = Math.max(0, Math.floor(Number(act.commandsRun) || 0)) + 1;
     touched = true;
   }
 

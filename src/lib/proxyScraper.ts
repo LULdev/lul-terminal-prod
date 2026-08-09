@@ -139,7 +139,8 @@ export async function addCustomProxies(body: {
 }
 
 export async function deleteCustomProxy(key: string): Promise<void> {
-  const res = await sessionFetch(`${API}/custom/${encodeURIComponent(key)}`, { method: 'DELETE' });
+  // soft401: admin list delete — flaky 401 must not wipe session mid-CRUD
+  const res = await sessionFetch(`${API}/custom/${encodeURIComponent(key)}`, { method: 'DELETE' }, { soft401: true });
   if (!res.ok) {
     const data = await res.json().catch(() => ({})) as { error?: string };
     throw new Error(data.error ?? 'Delete failed');
@@ -147,7 +148,8 @@ export async function deleteCustomProxy(key: string): Promise<void> {
 }
 
 export async function clearCustomProxies(): Promise<void> {
-  const res = await sessionFetch(`${API}/custom`, { method: 'DELETE' });
+  // soft401: bulk clear custom pool — flaky 401 must not wipe session
+  const res = await sessionFetch(`${API}/custom`, { method: 'DELETE' }, { soft401: true });
   if (!res.ok) {
     const data = await res.json().catch(() => ({})) as { error?: string };
     throw new Error(data.error ?? 'Clear failed');

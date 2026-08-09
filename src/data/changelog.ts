@@ -23,6 +23,20 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '3.82.0',
+    title: 'Full residual P0-P9 audit Server+Client: arcade/auth counter floors, paste pin + scraper soft401',
+    date: 'Aug 9, 2026',
+    highlight: true,
+    items: [
+      { priority: 'P0', text: 'P0 - gamesCore bumpGameStats + jackpot credit: floorInc integer counters (wins/losses/draws/streak/jackpots).' },
+      { priority: 'P0', text: 'P0 - rpsService/tttService bumpStats + deferred jackpot floorInc (parity with gamesCore).' },
+      { priority: 'P0', text: 'P0 - gamesBoot jackpot recovery floorInc; auth referralsCount + shoutboxSent floor; achievements page/changelog/news/profile/commands floor.' },
+      { priority: 'P1', text: 'P1 - updatePasteMeta soft401 (pin/title gallery toggles; flaky 401 no session wipe).' },
+      { priority: 'P1', text: 'P1 - proxyScraper custom DELETE single + clear-all soft401 (admin list CRUD flaky 401).' },
+      { priority: 'P9', text: 'P9 - Version 3.82.0; full residual complete-website audit after 3.81 (every fix listed).' },
+    ],
+  },
+  {
     version: '3.81.0',
     title: 'Full residual P0-P9 audit Server+Client: Retry-After parity, integer counters, job cancel soft401',
     date: 'Aug 7, 2026',

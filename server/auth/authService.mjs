@@ -117,7 +117,7 @@ export async function registerUser(payload, req) {
     const referrer = findReferrer(db, refCode);
     if (referrer && referrer.email !== email) {
       referredBy = referrer.id;
-      referrer.referralsCount = (Number(referrer.referralsCount) || 0) + 1;
+      referrer.referralsCount = Math.max(0, Math.floor(Number(referrer.referralsCount) || 0)) + 1;
       referrer.updatedAt = now;
     }
   }
@@ -1037,7 +1037,7 @@ export async function recordUserShoutboxSend(userId) {
     if (!user || user.role === 'bot') return [];
 
     const act = ensureActivity(user);
-    act.shoutboxSent = Math.max(0, Number(act.shoutboxSent) || 0) + 1;
+    act.shoutboxSent = Math.max(0, Math.floor(Number(act.shoutboxSent) || 0)) + 1;
 
     const newUnlocks = syncAchievements(user, { accountsSubmitted: preAccounts });
     user.updatedAt = Date.now();

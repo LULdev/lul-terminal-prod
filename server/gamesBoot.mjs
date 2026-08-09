@@ -64,7 +64,7 @@ async function settlePendingJackpotOnBoot(pending) {
       amount: pending.amount,
       pendingId: pending.id,
     });
-    user.gameJackpotsWon = (Number(user.gameJackpotsWon) || 0) + 1;
+    user.gameJackpotsWon = Math.max(0, Math.floor(Number(user.gameJackpotsWon) || 0)) + 1;
     user.updatedAt = Date.now();
     await saveUsersDb(db);
     return 'credited';

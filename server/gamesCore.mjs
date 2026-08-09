@@ -260,20 +260,27 @@ export function calcStreakBonus(bet, streak) {
   return Math.floor(Math.max(0, Number(bet) || 0) * rate);
 }
 
+function floorInc(user, key, by = 1) {
+  const cur = Math.max(0, Math.floor(Number(user[key]) || 0));
+  const add = Math.max(0, Math.floor(Number(by) || 0));
+  user[key] = cur + add;
+  return user[key];
+}
+
 export function bumpGameStats(user, statKey, result, wonJackpot = false) {
   const f = statFields(statKey);
-  user[f.games] = (Number(user[f.games]) || 0) + 1;
+  floorInc(user, f.games);
   if (result === 'win') {
-    user[f.wins] = (Number(user[f.wins]) || 0) + 1;
-    user[f.streak] = (Number(user[f.streak]) || 0) + 1;
-    user[f.bestStreak] = Math.max(Number(user[f.bestStreak]) || 0, user[f.streak]);
+    floorInc(user, f.wins);
+    const streak = floorInc(user, f.streak);
+    user[f.bestStreak] = Math.max(Math.max(0, Math.floor(Number(user[f.bestStreak]) || 0)), streak);
   } else if (result === 'loss') {
-    user[f.losses] = (Number(user[f.losses]) || 0) + 1;
+    floorInc(user, f.losses);
     user[f.streak] = 0;
   } else {
-    user[f.draws] = (Number(user[f.draws]) || 0) + 1;
+    floorInc(user, f.draws);
   }
-  if (wonJackpot) user.gameJackpotsWon = (Number(user.gameJackpotsWon) || 0) + 1;
+  if (wonJackpot) floorInc(user, 'gameJackpotsWon');
 }
 
 export function findUserMatch(activeMatches, userId) {
@@ -673,7 +680,7 @@ export async function settleMatch({
               amount: jackpotAmount,
               pendingId,
             });
-            u.gameJackpotsWon = (Number(u.gameJackpotsWon) || 0) + 1;
+            floorInc(u, 'gameJackpotsWon');
             u.updatedAt = Date.now();
             await saveUsersDb(db);
             credited = true;

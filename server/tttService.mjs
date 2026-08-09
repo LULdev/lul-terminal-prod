@@ -170,19 +170,26 @@ function calcStreakBonus(bet, streak) {
   return Math.floor(Math.max(0, Number(bet) || 0) * rate);
 }
 
+function floorInc(user, key, by = 1) {
+  const cur = Math.max(0, Math.floor(Number(user[key]) || 0));
+  const add = Math.max(0, Math.floor(Number(by) || 0));
+  user[key] = cur + add;
+  return user[key];
+}
+
 function bumpStats(user, result, wonJackpot = false) {
-  user.gameTttGames = (Number(user.gameTttGames) || 0) + 1;
+  floorInc(user, 'gameTttGames');
   if (result === 'win') {
-    user.gameTttWins = (Number(user.gameTttWins) || 0) + 1;
-    user.gameTttStreak = (Number(user.gameTttStreak) || 0) + 1;
-    user.gameTttBestStreak = Math.max(Number(user.gameTttBestStreak) || 0, user.gameTttStreak);
+    floorInc(user, 'gameTttWins');
+    const streak = floorInc(user, 'gameTttStreak');
+    user.gameTttBestStreak = Math.max(Math.max(0, Math.floor(Number(user.gameTttBestStreak) || 0)), streak);
   } else if (result === 'loss') {
-    user.gameTttLosses = (Number(user.gameTttLosses) || 0) + 1;
+    floorInc(user, 'gameTttLosses');
     user.gameTttStreak = 0;
   } else {
-    user.gameTttDraws = (Number(user.gameTttDraws) || 0) + 1;
+    floorInc(user, 'gameTttDraws');
   }
-  if (wonJackpot) user.gameJackpotsWon = (Number(user.gameJackpotsWon) || 0) + 1;
+  if (wonJackpot) floorInc(user, 'gameJackpotsWon');
 }
 
 function minimax(board, isMaximizing) {
@@ -489,7 +496,7 @@ async function finalizeMatch(m, boardState) {
               amount: jackpotAmount,
               pendingId,
             });
-            u.gameJackpotsWon = (Number(u.gameJackpotsWon) || 0) + 1;
+            u.gameJackpotsWon = Math.max(0, Math.floor(Number(u.gameJackpotsWon) || 0)) + 1;
             u.updatedAt = Date.now();
             await saveUsersDb(db);
             credited = true;

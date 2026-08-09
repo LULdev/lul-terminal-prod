@@ -449,10 +449,13 @@ export async function updatePasteMeta(
   id: string,
   patch: { pinned?: boolean; title?: string },
 ): Promise<PasteRecord> {
-  const res = await sessionFetch(`${API}/${id}`, {
-    method: 'PATCH',
-    body: JSON.stringify(patch),
-  });
+  // soft401: pin/title toggles are high-frequency gallery UI — flaky 401 must not wipe session
+  const res = await sessionFetch(
+    `${API}/${id}`,
+    { method: 'PATCH', body: JSON.stringify(patch) },
+    { soft401: true },
+  );
+  if (res.status === 401) throw new Error('Sign in required');
   if (!res.ok) throw new Error(await parseError(res));
   return res.json();
 }
