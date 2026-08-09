@@ -36,7 +36,8 @@
     "ops:setup": "node scripts/run-one-liner.mjs setup",
     "ops:deploy": "node scripts/run-one-liner.mjs deploy",
     "ops:backup": "node scripts/run-one-liner.mjs backup",
-    "ops:health": "node scripts/run-one-liner.mjs health"
+    "ops:health": "node scripts/run-one-liner.mjs health",
+    "ops:create-lul-admin": "node scripts/create-lul-admin.mjs"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",

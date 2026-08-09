@@ -21,9 +21,15 @@ npm shortcuts:
   npm run ops:deploy
   npm run ops:backup
   npm run ops:health
+  npm run ops:create-lul-admin   # create/update LUL admin on this host
 
 Canonical prod update:
   git pull && npm ci && npm run build && pm2 restart lul-terminal
+
+Create LUL admin (Ubuntu, from repo root):
+  node scripts/create-lul-admin.mjs
+  # or: bash scripts/one-liners.sh create-lul-admin
+  # password override: LUL_ADMIN_PASSWORD='…' node scripts/create-lul-admin.mjs
 
 First install:
   npm run ops:setup

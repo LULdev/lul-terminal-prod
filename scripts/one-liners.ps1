@@ -56,12 +56,14 @@ LUL Terminal one-liners (PowerShell)
   backup         Zip data/ and copy .env into backups/
   restore-hint   Print restore instructions
   version        Print app version
+  create-lul-admin  Create/update LUL admin (username lul, role admin)
 
 Examples:
   .\scripts\one-liners.ps1 setup
   .\scripts\one-liners.ps1 start
   .\scripts\one-liners.ps1 deploy
   .\scripts\one-liners.ps1 backup
+  .\scripts\one-liners.ps1 create-lul-admin
 "@
 }
 
@@ -252,6 +254,14 @@ function Cmd-Version {
   }
 }
 
+function Cmd-CreateLulAdmin {
+  Need-Node
+  Write-Lul "Create/update LUL admin account (data/auth/lul-auth.sqlite)..."
+  node scripts/create-lul-admin.mjs
+  if ($LASTEXITCODE -ne 0) { Die "create-lul-admin failed" }
+  Write-Ok "create-lul-admin done"
+}
+
 switch ($Command.ToLower()) {
   "help" { Cmd-Help }
   "doctor" { Cmd-Doctor }
@@ -270,5 +280,8 @@ switch ($Command.ToLower()) {
   "backup" { Cmd-Backup }
   "restore-hint" { Cmd-RestoreHint }
   "version" { Cmd-Version }
+  "create-lul-admin" { Cmd-CreateLulAdmin }
+  "create_lul_admin" { Cmd-CreateLulAdmin }
+  "lul-admin" { Cmd-CreateLulAdmin }
   default { Die "Unknown command: $Command (try: help)" }
 }

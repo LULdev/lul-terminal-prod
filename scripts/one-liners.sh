@@ -58,11 +58,14 @@ LUL Terminal one-liners
   backup         Tar data/ (+ copy .env) into backups/
   restore-hint   Print restore instructions
   version        Print app version
+  create-lul-admin  Create/update LUL admin (username lul, role admin)
 
 Examples:
   bash scripts/one-liners.sh setup && bash scripts/one-liners.sh start
   bash scripts/one-liners.sh deploy
   bash scripts/one-liners.sh backup
+  bash scripts/one-liners.sh create-lul-admin
+  LUL_ADMIN_PASSWORD='YourPass' bash scripts/one-liners.sh create-lul-admin
 EOF
 }
 
@@ -239,6 +242,13 @@ cmd_version() {
   grep -oE "[0-9]+\.[0-9]+\.[0-9]+" src/config/version.ts 2>/dev/null | head -1 || true
 }
 
+cmd_create_lul_admin() {
+  need_node
+  log "Create/update LUL admin account (data/auth/lul-auth.sqlite)…"
+  node scripts/create-lul-admin.mjs
+  ok "create-lul-admin done"
+}
+
 main() {
   local cmd="${1:-help}"
   shift || true
@@ -260,6 +270,7 @@ main() {
     backup) cmd_backup ;;
     restore-hint) cmd_restore_hint ;;
     version) cmd_version ;;
+    create-lul-admin|create_lul_admin|lul-admin) cmd_create_lul_admin ;;
     *) die "Unknown command: $cmd (try: help)" ;;
   esac
 }
