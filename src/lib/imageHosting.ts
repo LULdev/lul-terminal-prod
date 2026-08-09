@@ -335,10 +335,12 @@ export async function updateHostedImage(
 }
 
 export async function deleteHostedImage(id: string): Promise<void> {
-  const res = await sessionFetch(`${API}/${id}`, { method: 'DELETE' });
+  // soft401: gallery delete is owner action — flaky 401 must not wipe session (show error instead)
+  const res = await sessionFetch(`${API}/${id}`, { method: 'DELETE' }, { soft401: true });
+  if (res.status === 401) throw new Error('Sign in required');
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
-    throw new Error(body.error || 'Delete failed');
+    throw new Error((body as { error?: string }).error || 'Delete failed');
   }
 }
 

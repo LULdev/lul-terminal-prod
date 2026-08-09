@@ -23,8 +23,8 @@ export function syncStandardArcadeAchievements(user, act, now, grant) {
   for (const game of ARCADE_GAMES_META) {
     if (game.extendedAchievements) continue;
     const f = statFields(game.statKey);
-    const games = Math.max(0, Number(user[f.games]) || 0);
-    const wins = Math.max(0, Number(user[f.wins]) || 0);
+    const games = Math.max(0, Math.floor(Number(user[f.games]) || 0));
+    const wins = Math.max(0, Math.floor(Number(user[f.wins]) || 0));
     const flag = act.flags?.[game.flag];
 
     if ((flag || games >= 1) && grant(user, `${game.id}_first_play`, now)) {

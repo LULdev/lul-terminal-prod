@@ -414,17 +414,21 @@ export function normalizeActivity(raw) {
     ? raw.tabsVisited.map((t) => String(t).slice(0, 24)).filter(Boolean)
     : [];
   const flags = pruneActivityFlags(raw.flags);
+  const floor0 = (v) => {
+    const n = Math.floor(Number(v));
+    return Number.isFinite(n) && n > 0 ? n : 0;
+  };
   return {
-    loginCount: Math.max(0, Number(raw.loginCount) || 0),
-    commandsRun: Math.max(0, Number(raw.commandsRun) || 0),
-    pageVisits: Math.max(0, Number(raw.pageVisits) || 0),
-    profileVisits: Math.max(0, Number(raw.profileVisits) || 0),
-    shoutboxSent: Math.max(0, Number(raw.shoutboxSent) || 0),
-    changelogReads: Math.max(0, Number(raw.changelogReads) || 0),
+    loginCount: floor0(raw.loginCount),
+    commandsRun: floor0(raw.commandsRun),
+    pageVisits: floor0(raw.pageVisits),
+    profileVisits: floor0(raw.profileVisits),
+    shoutboxSent: floor0(raw.shoutboxSent),
+    changelogReads: floor0(raw.changelogReads),
     changelogLastReadVersion: raw.changelogLastReadVersion
       ? String(raw.changelogLastReadVersion).trim().slice(0, 32)
       : null,
-    newsReads: Math.max(0, Number(raw.newsReads) || 0),
+    newsReads: floor0(raw.newsReads),
     newsLastReadVersion: raw.newsLastReadVersion
       ? String(raw.newsLastReadVersion).trim().slice(0, 32)
       : null,
@@ -544,7 +548,7 @@ export function applyActivityCtx(user, ctx = {}) {
   }
 
   if (ctx.incrementLogin) {
-    act.loginCount += 1;
+    act.loginCount = Math.max(0, Math.floor(Number(act.loginCount) || 0)) + 1;
     touched = true;
   }
 
@@ -659,21 +663,21 @@ export function syncAchievements(user, ctx = {}) {
   for (const { count, id } of CHANGELOG_READ_MILESTONES) {
     if (act.changelogReads >= count && grant(user, id, now)) unlocked.push(id);
   }
-  const imagesUploaded = Math.max(0, Number(user.imagesUploaded) || 0);
+  const imagesUploaded = Math.max(0, Math.floor(Number(user.imagesUploaded) || 0));
   for (const { count, id } of IMAGE_UPLOAD_MILESTONES) {
     if (imagesUploaded >= count && grant(user, id, now)) unlocked.push(id);
   }
-  const onlineMinutes = Math.max(0, Number(user.onlineMinutes) || 0);
+  const onlineMinutes = Math.max(0, Math.floor(Number(user.onlineMinutes) || 0));
   for (const { count, id } of ONLINE_MINUTES_MILESTONES) {
     if (onlineMinutes >= count && grant(user, id, now)) unlocked.push(id);
   }
   if (act.flags.matrix && grant(user, 'matrix_rain', now)) unlocked.push('matrix_rain');
   if (act.flags.self_destruct && grant(user, 'self_destruct_init', now)) unlocked.push('self_destruct_init');
   if (act.flags.claw_victim && grant(user, 'claw_victim', now)) unlocked.push('claw_victim');
-  const rpsGames = Math.max(0, Number(user.gameRpsGames) || 0);
-  const rpsWins = Math.max(0, Number(user.gameRpsWins) || 0);
-  const rpsLosses = Math.max(0, Number(user.gameRpsLosses) || 0);
-  const rpsBestStreak = Math.max(0, Number(user.gameRpsBestStreak) || 0);
+  const rpsGames = Math.max(0, Math.floor(Number(user.gameRpsGames) || 0));
+  const rpsWins = Math.max(0, Math.floor(Number(user.gameRpsWins) || 0));
+  const rpsLosses = Math.max(0, Math.floor(Number(user.gameRpsLosses) || 0));
+  const rpsBestStreak = Math.max(0, Math.floor(Number(user.gameRpsBestStreak) || 0));
   const rpsMoves = user.gameRpsMoves && typeof user.gameRpsMoves === 'object' ? user.gameRpsMoves : {};
 
   if ((act.flags.rps_played || rpsGames >= 1) && grant(user, 'rps_first_play', now)) unlocked.push('rps_first_play');
@@ -690,10 +694,10 @@ export function syncAchievements(user, ctx = {}) {
   for (const { move, count, id } of RPS_MOVE_MILESTONES) {
     if ((Number(rpsMoves[move]) || 0) >= count && grant(user, id, now)) unlocked.push(id);
   }
-  const tttGames = Math.max(0, Number(user.gameTttGames) || 0);
-  const tttWins = Math.max(0, Number(user.gameTttWins) || 0);
-  const tttLosses = Math.max(0, Number(user.gameTttLosses) || 0);
-  const tttBestStreak = Math.max(0, Number(user.gameTttBestStreak) || 0);
+  const tttGames = Math.max(0, Math.floor(Number(user.gameTttGames) || 0));
+  const tttWins = Math.max(0, Math.floor(Number(user.gameTttWins) || 0));
+  const tttLosses = Math.max(0, Math.floor(Number(user.gameTttLosses) || 0));
+  const tttBestStreak = Math.max(0, Math.floor(Number(user.gameTttBestStreak) || 0));
 
   if ((act.flags.ttt_played || tttGames >= 1) && grant(user, 'ttt_first_play', now)) unlocked.push('ttt_first_play');
   for (const { count, id } of TTT_GAME_MILESTONES) {
@@ -705,18 +709,18 @@ export function syncAchievements(user, ctx = {}) {
   if (tttLosses >= 10 && grant(user, 'ttt_glutton_10', now)) unlocked.push('ttt_glutton_10');
   if (tttBestStreak >= 5 && grant(user, 'ttt_streak_5', now)) unlocked.push('ttt_streak_5');
   unlocked.push(...syncStandardArcadeAchievements(user, act, now, grant));
-  const jackpots = Math.max(0, Number(user.gameJackpotsWon) || 0);
+  const jackpots = Math.max(0, Math.floor(Number(user.gameJackpotsWon) || 0));
   if (jackpots >= 1 && grant(user, 'jackpot_hunter', now)) unlocked.push('jackpot_hunter');
   const coins = Math.max(0, Math.floor(Number(user.lulCoins) || 0));
   if (coins >= 5000 && grant(user, 'lul_coins_5000', now)) unlocked.push('lul_coins_5000');
   if (act.flags.image_host && grant(user, 'image_host', now)) unlocked.push('image_host');
   if (act.flags.paste_create && grant(user, 'paste_pioneer', now)) unlocked.push('paste_pioneer');
 
-  const pastesCreated = Math.max(0, Number(user.pastesCreated) || 0);
+  const pastesCreated = Math.max(0, Math.floor(Number(user.pastesCreated) || 0));
   for (const { count, id } of PASTE_CREATE_MILESTONES) {
     if (pastesCreated >= count && grant(user, id, now)) unlocked.push(id);
   }
-  const pasteViewsTotal = Math.max(0, Number(user.pasteViewsTotal) || 0);
+  const pasteViewsTotal = Math.max(0, Math.floor(Number(user.pasteViewsTotal) || 0));
   for (const { count, id } of PASTE_VIEWS_MILESTONES) {
     if (pasteViewsTotal >= count && grant(user, id, now)) unlocked.push(id);
   }

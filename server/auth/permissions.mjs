@@ -80,12 +80,12 @@ export function normalizeUserRecord(user) {
   return {
     ...user,
     verified: Boolean(user.verified),
-    profileViews: Number(user.profileViews) || 0,
-    referralsCount: Math.max(0, Number(user.referralsCount) || 0),
-    imagesUploaded: Math.max(0, Number(user.imagesUploaded) || 0),
-    memesCreated: Math.max(0, Number(user.memesCreated) || 0),
-    pastesCreated: Math.max(0, Number(user.pastesCreated) || 0),
-    pasteViewsTotal: Math.max(0, Number(user.pasteViewsTotal) || 0),
+    profileViews: Math.max(0, Math.floor(Number(user.profileViews) || 0)),
+    referralsCount: Math.max(0, Math.floor(Number(user.referralsCount) || 0)),
+    imagesUploaded: Math.max(0, Math.floor(Number(user.imagesUploaded) || 0)),
+    memesCreated: Math.max(0, Math.floor(Number(user.memesCreated) || 0)),
+    pastesCreated: Math.max(0, Math.floor(Number(user.pastesCreated) || 0)),
+    pasteViewsTotal: Math.max(0, Math.floor(Number(user.pasteViewsTotal) || 0)),
     website: String(user.website ?? '').trim().slice(0, 256),
     bio: String(user.bio ?? '').trim().slice(0, 160),
     socialLinks: normalizeSocialLinks(user.socialLinks),
@@ -116,9 +116,9 @@ export function publicUser(user) {
       return Number.isFinite(c) ? Math.max(0, c) : 1000;
     })(),
     ...extractPublicGameStats(u),
-    gameJackpotsWon: gameJackpotsWon ?? 0,
-    gameTotalWon: gameTotalWon ?? 0,
-    gameTotalLost: gameTotalLost ?? 0,
+    gameJackpotsWon: Math.max(0, Math.floor(Number(gameJackpotsWon) || 0)),
+    gameTotalWon: Math.max(0, Math.floor(Number(gameTotalWon) || 0)),
+    gameTotalLost: Math.max(0, Math.floor(Number(gameTotalLost) || 0)),
     socialLinks, achievements, referralCode: referralCode ?? '',
     profileCustomization: profileCustomizationForClient(u.profileCustomization, {
       lastSeenAt: u.lastSeenAt,
@@ -135,11 +135,11 @@ export function enrichUserForClient(user, accountsSubmitted = 0, reportedNotWork
   pub.achievements = computeDisplayAchievements(user, accountsSubmitted);
   pub.reportedNotWorkingAccounts = reportedNotWorkingAccounts;
   pub.profileStats = profileStats;
-  pub.changelogReads = Math.max(0, Number(act.changelogReads) || 0);
+  pub.changelogReads = Math.max(0, Math.floor(Number(act.changelogReads) || 0));
   pub.changelogLastReadVersion = act.changelogLastReadVersion
     ? String(act.changelogLastReadVersion).trim().slice(0, 32)
     : null;
-  pub.newsReads = Math.max(0, Number(act.newsReads) || 0);
+  pub.newsReads = Math.max(0, Math.floor(Number(act.newsReads) || 0));
   pub.newsLastReadVersion = act.newsLastReadVersion
     ? String(act.newsLastReadVersion).trim().slice(0, 32)
     : null;
@@ -215,9 +215,9 @@ export function publicProfileView(user, accountsSubmitted = 0, reportedNotWorkin
     } : {}),
     ...(showActivity ? extractPublicGameStats(u) : zeroGameStats()),
     ...(showCoins ? {
-      gameJackpotsWon: gameJackpotsWon ?? 0,
-      gameTotalWon: gameTotalWon ?? 0,
-      gameTotalLost: gameTotalLost ?? 0,
+      gameJackpotsWon: Math.max(0, Math.floor(Number(gameJackpotsWon) || 0)),
+      gameTotalWon: Math.max(0, Math.floor(Number(gameTotalWon) || 0)),
+      gameTotalLost: Math.max(0, Math.floor(Number(gameTotalLost) || 0)),
     } : {
       gameJackpotsWon: 0,
       gameTotalWon: 0,
@@ -230,7 +230,7 @@ export function publicProfileView(user, accountsSubmitted = 0, reportedNotWorkin
     profileStats: sanitizePublicProfileStats(profileStats, showActivity, customization.privacy.showLastSeen),
     profileCustomization: customization,
     ...(showEmail ? { email } : {}),
-    changelogReads: showActivity ? Math.max(0, Number(act.changelogReads) || 0) : 0,
-    newsReads: showActivity ? Math.max(0, Number(act.newsReads) || 0) : 0,
+    changelogReads: showActivity ? Math.max(0, Math.floor(Number(act.changelogReads) || 0)) : 0,
+    newsReads: showActivity ? Math.max(0, Math.floor(Number(act.newsReads) || 0)) : 0,
   };
 }

@@ -18,7 +18,7 @@ function minutesBetween(from, to) {
 
 function accrueOnlineMinutes(user, now) {
   const prev = Number(user.lastSeenAt) || 0;
-  user.onlineMinutes = Math.max(0, Number(user.onlineMinutes) || 0);
+  user.onlineMinutes = Math.max(0, Math.floor(Number(user.onlineMinutes) || 0));
 
   if (user.role === 'bot') {
     if (prev > 0) {
@@ -26,6 +26,7 @@ function accrueOnlineMinutes(user, now) {
     } else {
       user.onlineMinutes += 1;
     }
+    user.onlineMinutes = Math.max(0, Math.floor(Number(user.onlineMinutes) || 0));
     return;
   }
 
@@ -37,6 +38,7 @@ function accrueOnlineMinutes(user, now) {
   } else if (gap > SESSION_CONTINUITY_MS && gap <= ONLINE_WINDOW_MS) {
     user.onlineMinutes += 5;
   }
+  user.onlineMinutes = Math.max(0, Math.floor(Number(user.onlineMinutes) || 0));
 }
 
 export async function touchUserLastSeen(userId, { force = false } = {}) {
@@ -49,7 +51,7 @@ export async function touchUserLastSeen(userId, { force = false } = {}) {
     const now = Date.now();
     if (!force && user.lastSeenAt && now - user.lastSeenAt < TOUCH_THROTTLE_MS) return;
 
-    const prevMinutes = Math.max(0, Number(user.onlineMinutes) || 0);
+    const prevMinutes = Math.max(0, Math.floor(Number(user.onlineMinutes) || 0));
     accrueOnlineMinutes(user, now);
     user.lastSeenAt = now;
     user.updatedAt = now;
@@ -69,7 +71,7 @@ export async function incrementAbuseWarnings(userId, amount = 1) {
     const db = await loadUsersDb();
     const user = db.users.find((u) => u.id === userId);
     if (!user) return;
-    user.abuseWarnings = Math.max(0, (Number(user.abuseWarnings) || 0) + amount);
+    user.abuseWarnings = Math.max(0, Math.floor(Number(user.abuseWarnings) || 0) + Math.floor(Number(amount) || 0));
     user.updatedAt = Date.now();
     await saveUsersDb(db);
   });

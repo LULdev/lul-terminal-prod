@@ -122,9 +122,9 @@ export async function saveJackpot(db) {
 export async function addToJackpot(amount) {
   return withGamesAuxWrite(async () => {
     const db = await readJackpotFromDisk();
-    const n = Math.max(0, Number(amount) || 0);
-    db.pool = Math.max(0, Number(db.pool) || 0) + n;
-    db.totalCollected = (Number(db.totalCollected) || 0) + n;
+    const n = Math.max(0, Math.floor(Number(amount) || 0));
+    db.pool = Math.max(0, Math.floor(Number(db.pool) || 0)) + n;
+    db.totalCollected = Math.max(0, Math.floor(Number(db.totalCollected) || 0)) + n;
     await saveJackpot(db);
     return db;
   });
@@ -186,8 +186,8 @@ export async function payoutJackpot(winner, meta = {}) {
     };
     await atomicWriteJson(JACKPOT_PENDING_FILE, pending);
     db.pool = 0;
-    db.totalPaidOut = (Number(db.totalPaidOut) || 0) + amount;
-    db.hits = (Number(db.hits) || 0) + 1;
+    db.totalPaidOut = Math.max(0, Math.floor(Number(db.totalPaidOut) || 0)) + amount;
+    db.hits = Math.max(0, Math.floor(Number(db.hits) || 0)) + 1;
     db.lastWinner = winner;
     db.lastWonAt = Date.now();
     await saveJackpot(db);
@@ -289,9 +289,9 @@ export async function recoverJackpotPendingOnBoot(settle) {
     if (!still || still.id !== pending.id) return;
     if (outcome === 'restored') {
       const db = await readJackpotFromDisk();
-      db.pool = Math.max(0, Number(db.pool) || 0) + amount;
-      db.totalPaidOut = Math.max(0, (Number(db.totalPaidOut) || 0) - amount);
-      db.hits = Math.max(0, (Number(db.hits) || 0) - 1);
+      db.pool = Math.max(0, Math.floor(Number(db.pool) || 0)) + amount;
+      db.totalPaidOut = Math.max(0, Math.floor(Number(db.totalPaidOut) || 0) - amount);
+      db.hits = Math.max(0, Math.floor(Number(db.hits) || 0) - 1);
       await saveJackpot(db);
       console.warn('[games] Restored jackpot pending to pool', { amount, winner: pending.winner });
     } else if (outcome === 'credited') {

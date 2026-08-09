@@ -191,7 +191,7 @@ function trackUserMove(user, move) {
   if (!user.gameRpsMoves || typeof user.gameRpsMoves !== 'object') {
     user.gameRpsMoves = emptyMoves();
   }
-  user.gameRpsMoves[move] = (Number(user.gameRpsMoves[move]) || 0) + 1;
+  user.gameRpsMoves[move] = Math.max(0, Math.floor(Number(user.gameRpsMoves[move]) || 0)) + 1;
 }
 
 function recordMatchMoves(db, m) {

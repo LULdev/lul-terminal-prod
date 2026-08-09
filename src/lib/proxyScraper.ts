@@ -188,7 +188,13 @@ export async function addProxySource(source: Partial<ProxySource>): Promise<Prox
 }
 
 export async function deleteProxySource(id: string): Promise<void> {
-  const res = await sessionFetch(`${API}/sources/${encodeURIComponent(id)}`, { method: 'DELETE' });
+  // soft401: admin source delete — flaky 401 must not wipe session mid-CRUD
+  const res = await sessionFetch(
+    `${API}/sources/${encodeURIComponent(id)}`,
+    { method: 'DELETE' },
+    { soft401: true },
+  );
+  if (res.status === 401) throw new Error('Sign in required');
   if (!res.ok) {
     const data = await res.json().catch(() => ({})) as { error?: string };
     throw new Error(data.error ?? 'Delete failed');
