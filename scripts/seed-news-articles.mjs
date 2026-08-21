@@ -9,6 +9,7 @@
 import fs from 'fs/promises';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { BYPASS_LAUNCH_ARTICLE } from '../server/newsLaunchArticles.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const NEWS_FILE = path.join(__dirname, '..', 'data', 'feeds', 'news.json');
@@ -209,7 +210,7 @@ const featureArticles = FEATURES.map((f) =>
   }),
 );
 
-const allRaw = [...PLATFORM_NEWS, ...featureArticles, ...gameArticles];
+const allRaw = [BYPASS_LAUNCH_ARTICLE, ...PLATFORM_NEWS, ...featureArticles, ...gameArticles];
 
 const now = new Date().toISOString();
 

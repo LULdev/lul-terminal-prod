@@ -23,6 +23,17 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '3.97.0',
+    title: 'LUL Wire: German Bypass launch article',
+    date: 'Aug 21, 2026',
+    highlight: true,
+    items: [
+      { icon: '📰', text: 'LUL Wire — German feature launch for Bypass (Linkvertise, shorteners, pastes); members-only, one-click unlock.' },
+      { priority: 'P3', text: 'P3 - Missing launch article feat-bypass is inserted on news-store boot (does not overwrite an existing id).' },
+      { priority: 'P9', text: 'P9 - Version 3.97.0; Bypass news article shipped (every item listed).' },
+    ],
+  },
+  {
     version: '3.96.0',
     title: 'Bypass 10-round: LV warmup budget, catalog hosts, HTML extract cap',
     date: 'Aug 21, 2026',

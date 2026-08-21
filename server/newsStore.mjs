@@ -7,6 +7,7 @@ import fs from 'fs/promises';
 import path from 'path';
 import crypto from 'crypto';
 import { fileURLToPath } from 'url';
+import { BYPASS_LAUNCH_ARTICLE } from './newsLaunchArticles.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(__dirname, '..', 'data', 'feeds');
@@ -38,6 +39,9 @@ const SEED_ARTICLES = [
 ];
 
 const EMPTY = { version: 1, feedVersion: '0.0.0', updatedAt: null, articles: [] };
+
+/** Inserted once if missing — does not overwrite an existing id. */
+const LAUNCH_ARTICLES = [BYPASS_LAUNCH_ARTICLE];
 
 function sanitizeId(id) {
   return String(id ?? '').trim().slice(0, 48).replace(/[^a-zA-Z0-9._-]/g, '');
@@ -79,6 +83,37 @@ function sortArticles(list) {
   });
 }
 
+async function writeNewsFile(db) {
+  db.updatedAt = new Date().toISOString();
+  const tmp = `${NEWS_FILE}.tmp`;
+  await fs.writeFile(tmp, JSON.stringify(db, null, 2), 'utf8');
+  await fs.rename(tmp, NEWS_FILE);
+}
+
+async function upsertLaunchArticles() {
+  let data;
+  try {
+    data = JSON.parse(await fs.readFile(NEWS_FILE, 'utf8'));
+  } catch {
+    return;
+  }
+  const articles = Array.isArray(data.articles) ? data.articles : [];
+  const now = new Date().toISOString();
+  let changed = false;
+  for (const launch of LAUNCH_ARTICLES) {
+    if (articles.some((a) => a.id === launch.id)) continue;
+    articles.push(
+      normalizeArticle({ ...launch, active: true, createdAt: now, updatedAt: now }),
+    );
+    changed = true;
+  }
+  if (!changed) return;
+  data.articles = articles;
+  data.version = 1;
+  bumpFeedVersion(data);
+  await writeNewsFile(data);
+}
+
 async function ensureStore() {
   await fs.mkdir(ROOT, { recursive: true });
   try {
@@ -94,10 +129,9 @@ async function ensureStore() {
       updatedAt: now,
       articles,
     };
-    const tmp = `${NEWS_FILE}.tmp`;
-    await fs.writeFile(tmp, JSON.stringify(db, null, 2), 'utf8');
-    await fs.rename(tmp, NEWS_FILE);
+    await writeNewsFile(db);
   }
+  await upsertLaunchArticles();
 }
 
 async function readDb() {
@@ -119,10 +153,7 @@ async function readDb() {
 
 async function writeDb(db) {
   await ensureStore();
-  db.updatedAt = new Date().toISOString();
-  const tmp = `${NEWS_FILE}.tmp`;
-  await fs.writeFile(tmp, JSON.stringify(db, null, 2), 'utf8');
-  await fs.rename(tmp, NEWS_FILE);
+  await writeNewsFile(db);
 }
 
 let newsWriteChain = Promise.resolve();
