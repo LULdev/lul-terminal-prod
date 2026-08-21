@@ -48,7 +48,7 @@ export async function fetchBypassCatalog(): Promise<BypassServiceInfo[]> {
         ? s.hosts
             .filter((h) => typeof h === 'string' && h.length > 0 && h.length <= 128)
             .map((h) => h.slice(0, 64).toLowerCase())
-            .slice(0, 12)
+            .slice(0, 16)
         : [],
     }));
 }
@@ -201,7 +201,7 @@ function hostMatchesListed(host: string, listed: string): boolean {
 /** True when dest is still a locker/unlock host (false success). */
 export function isBypassLockerDest(url: string, catalog: BypassServiceInfo[] = []): boolean {
   try {
-    const host = new URL(url).hostname.replace(/^www\./, '').toLowerCase();
+    const host = new URL(url).hostname.replace(/^\[|\]$/g, '').replace(/^www\./, '').toLowerCase();
     if (LV_HOSTS.some((h) => hostMatchesListed(host, h))) return true;
     for (const s of catalog) {
       if (s.kind !== 'locker' && s.kind !== 'unlock') continue;
@@ -228,7 +228,7 @@ export function safeBypassOpenHref(href: string | null | undefined): string | nu
 
 export function guessServiceLabel(url: string, catalog: BypassServiceInfo[]): string | null {
   try {
-    const host = new URL(url).hostname.replace(/^www\./, '').toLowerCase();
+    const host = new URL(url).hostname.replace(/^\[|\]$/g, '').replace(/^www\./, '').toLowerCase();
     for (const svc of catalog) {
       if (svc.hosts.some((h) => host === h || host.endsWith(`.${h}`))) return svc.label;
     }

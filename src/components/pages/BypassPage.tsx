@@ -263,7 +263,7 @@ export function BypassPage() {
           ) : (
             <>
               <ul className="space-y-1.5">
-                {history.slice(0, 8).map((h, i) => (
+                {history.map((h, i) => (
                   <li key={`${h.at}-${i}`} className="text-[9px] font-mono text-slate-400">
                     <button
                       type="button"

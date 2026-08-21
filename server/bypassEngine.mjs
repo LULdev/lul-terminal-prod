@@ -133,7 +133,7 @@ export function catalogPublic() {
       id: String(s.id).slice(0, 32),
       label: String(s.label).slice(0, 64),
       kind: s.kind,
-      hosts: s.hosts.slice(0, 8).map((h) => String(h).slice(0, 64)),
+      hosts: s.hosts.slice(0, 16).map((h) => String(h).slice(0, 64)),
     }));
 }
 
@@ -229,7 +229,7 @@ function extractUrlsFromText(text) {
 }
 
 function extractDestFromHtml(html, pageUrl) {
-  const text = String(html ?? '');
+  const text = String(html ?? '').slice(0, 80_000);
   const meta = text.match(/http-equiv=["']refresh["'][^>]*content=["'][^"']*url=([^"']+)/i)
     || text.match(/content=["'][^"']*url=([^"']+)["'][^>]*http-equiv=["']refresh["']/i);
   if (meta?.[1]) {
@@ -622,15 +622,17 @@ async function resolveLinkvertise(url) {
       `/todo_impression?mobile=true&trafficOrigin=network`,
       `/click?trafficOrigin=network`,
     ];
-    for (const suffix of warmup) {
+    if (currentSignal()?.aborted) throw new Error('Aborted');
+    // Parallel — sequential 4×6s ate the 25s URL budget so POST never ran
+    await Promise.all(warmup.map(async (suffix) => {
       try {
         await request(
           `https://publisher.linkvertise.com/api/v1/redirect/link/${usedPath}${suffix}`,
           { headers: LV_HEADERS, jar },
-          { timeoutMs: 6_000, maxRedirects: 2 },
+          { timeoutMs: 4_000, maxRedirects: 2 },
         );
       } catch { /* warmup is best-effort */ }
-    }
+    }));
     const serial = lvSerial(linkId);
     const ut = userToken ? `?X-Linkvertise-UT=${encodeURIComponent(userToken)}` : '';
     const posted = await request(

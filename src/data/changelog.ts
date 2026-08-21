@@ -23,6 +23,19 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '3.96.0',
+    title: 'Bypass 10-round: LV warmup budget, catalog hosts, HTML extract cap',
+    date: 'Aug 21, 2026',
+    highlight: true,
+    items: [
+      { priority: 'P1', text: 'P1 - Linkvertise warmup runs in parallel (4s) so the 25s budget still reaches the publisher POST.' },
+      { priority: 'P2', text: 'P2 - catalog hosts raised to 16 so locker Open-block covers sub2unlock/leaks/paste tails.' },
+      { priority: 'P2', text: 'P2 - HTML dest extract capped at 80KB (regex on full 512KB bodies).' },
+      { priority: 'P3', text: 'P3 - Recent list shows all 20 local history items; locker host match strips IPv6 brackets.' },
+      { priority: 'P9', text: 'P9 - Version 3.96.0; 10-round Bypass residual (every item listed).' },
+    ],
+  },
+  {
     version: '3.95.0',
     title: 'Bypass 10-round: abort close race, IPv6 loopback, paste/history',
     date: 'Aug 21, 2026',
