@@ -56,8 +56,10 @@ export async function handleBypassRequest(req, res) {
       const userId = req.auth?.user?.id ?? clientIp(req);
       await checkRateLimit(`bypass:${userId}`, { max: 20, windowMs: 60_000 });
       const body = await readJsonBody(req, 16 * 1024);
-      const fromList = Array.isArray(body.urls) ? body.urls.map((u) => String(u ?? '')) : [];
-      const fromSingle = body.url != null ? [String(body.url)] : [];
+      const fromList = Array.isArray(body.urls)
+        ? body.urls.slice(0, MAX_URLS).map((u) => String(u ?? '').slice(0, 2048))
+        : [];
+      const fromSingle = body.url != null ? [String(body.url).slice(0, 2048)] : [];
       const raw = [...fromList, ...fromSingle].join('\n');
       const urls = parseInputUrls(raw);
       if (!urls.length) {

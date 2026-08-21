@@ -32,7 +32,20 @@ const API = '/api/bypass';
 
 export async function fetchBypassCatalog(): Promise<BypassServiceInfo[]> {
   const data = await sessionJson<{ services: BypassServiceInfo[] }>(`${API}/catalog`, undefined, { soft401: true });
-  return Array.isArray(data.services) ? data.services : [];
+  if (!Array.isArray(data.services)) return [];
+  return data.services
+    .filter((s) => s && typeof s.id === 'string' && typeof s.label === 'string')
+    .slice(0, 80)
+    .map((s) => ({
+      id: s.id.slice(0, 32),
+      label: s.label.slice(0, 64),
+      kind: (['locker', 'shortener', 'paste', 'unlock', 'generic'] as const).includes(
+        s.kind as BypassServiceKind,
+      )
+        ? (s.kind as BypassServiceKind)
+        : 'generic',
+      hosts: Array.isArray(s.hosts) ? s.hosts.filter((h) => typeof h === 'string').slice(0, 12) : [],
+    }));
 }
 
 function isAbortError(err: unknown): boolean {
@@ -54,7 +67,7 @@ function normalizeBypassResult(raw: BypassResult): BypassResult {
     hops,
     kind: raw?.kind === 'paste' || paste ? 'paste' : 'url',
     pasteText: paste,
-    error: ok ? null : (typeof raw?.error === 'string' ? raw.error : (dest && !openOk ? 'Destination is not allowed' : 'Bypass failed')),
+    error: ok ? null : (typeof raw?.error === 'string' ? raw.error.slice(0, 200) : (dest && !openOk ? 'Destination is not allowed' : 'Bypass failed')),
   };
 }
 
@@ -208,7 +221,7 @@ export function loadBypassHistory(): BypassHistoryItem[] {
 }
 
 export function pushBypassHistory(items: BypassHistoryItem[]): BypassHistoryItem[] {
-  const incoming = items.filter((x) => x && typeof x.input === 'string');
+  const incoming = items.filter((x) => x && typeof x.input === 'string' && x.input.length <= 2048);
   const seen = new Set(incoming.map((x) => x.input));
   const prev = loadBypassHistory().filter((p) => !seen.has(p.input));
   const next = [...incoming, ...prev].slice(0, HISTORY_MAX);

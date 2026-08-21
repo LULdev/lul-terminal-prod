@@ -296,7 +296,13 @@ function createJar() {
   return {
     apply(headers) {
       if (!map.size) return;
-      headers.Cookie = [...map.entries()].map(([k, v]) => `${k}=${v}`).join('; ');
+      let cookie = '';
+      for (const [k, v] of map.entries()) {
+        const next = cookie ? `${cookie}; ${k}=${v}` : `${k}=${v}`;
+        if (next.length > 4096) break;
+        cookie = next;
+      }
+      if (cookie) headers.Cookie = cookie;
     },
     eat(res) {
       const fromRes = typeof res.getSetCookie === 'function' ? res.getSetCookie() : [];
@@ -311,6 +317,7 @@ function createJar() {
         // Reject CTL / separators so Cookie cannot inject request headers
         if (!/^[!#$%&'*+\-.^_`|~0-9A-Za-z]{1,128}$/.test(name)) continue;
         if (val.length > 4096 || /[\x00-\x1f\x7f;,\\]/.test(val)) continue;
+        if (map.size >= 24 && !map.has(name)) continue;
         map.set(name, val);
       }
     },
@@ -821,7 +828,10 @@ async function resolveChain(inputUrl) {
     }
     if (resolved.dest && looksHttpUrl(resolved.dest) && !sameResource(resolved.dest, current) && !isJunkDest(resolved.dest, current)) {
       const pub = await asPublicDest(resolved.dest);
-      if (!pub) throw new Error('No destination found');
+      if (!pub) {
+        if (resolved.paste) break;
+        throw new Error('No destination found');
+      }
       if (hops.some((h) => sameHref(h, pub))) {
         throw new Error('No destination found');
       }

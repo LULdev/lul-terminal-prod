@@ -23,6 +23,18 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '3.92.0',
+    title: 'Bypass 10-round: urls[] DoS cap, paste hop, cookie/catalog sanitize',
+    date: 'Aug 9, 2026',
+    highlight: true,
+    items: [
+      { priority: 'P1', text: 'P1 - POST /api/bypass slices urls[] to 8×2048 before join (unbounded array DoS closed).' },
+      { priority: 'P1', text: 'P1 - asPublicDest fail on a hop keeps paste text instead of throwing away the whole resolve.' },
+      { priority: 'P2', text: 'P2 - cookie jar max 24 cookies / 4KB header; catalog + history + error strings sanitized/capped.' },
+      { priority: 'P9', text: 'P9 - Version 3.92.0; 10-round Bypass residual (every item listed).' },
+    ],
+  },
+  {
     version: '3.91.0',
     title: 'Bypass 10-round client+server: busy race, paste-only UI, dest fallback',
     date: 'Aug 9, 2026',
