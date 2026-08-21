@@ -32,11 +32,13 @@ export function BypassPage() {
   const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const mountedRef = useRef(true);
   const busyRef = useRef(false);
+  const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     mountedRef.current = true;
     return () => {
       mountedRef.current = false;
+      abortRef.current?.abort();
       if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
     };
   }, []);
@@ -73,13 +75,16 @@ export function BypassPage() {
       setError('Paste a Linkvertise (or other) URL first.');
       return;
     }
+    abortRef.current?.abort();
+    const ac = new AbortController();
+    abortRef.current = ac;
     busyRef.current = true;
     setBusy(true);
     setError('');
     setResults([]);
     try {
-      const out = await runBypass(list);
-      if (!mountedRef.current) return;
+      const out = await runBypass(list, ac.signal);
+      if (!mountedRef.current || ac.signal.aborted) return;
       setResults(out);
       const hist = pushBypassHistory(
         out.map((r) => ({
@@ -92,9 +97,11 @@ export function BypassPage() {
       );
       setHistory(hist);
     } catch (err) {
-      if (!mountedRef.current) return;
+      if (!mountedRef.current || ac.signal.aborted) return;
+      if ((err instanceof DOMException || err instanceof Error) && err.name === 'AbortError') return;
       setError(err instanceof Error ? err.message : 'Bypass failed');
     } finally {
+      if (abortRef.current === ac) abortRef.current = null;
       busyRef.current = false;
       if (mountedRef.current) setBusy(false);
     }
@@ -231,7 +238,11 @@ export function BypassPage() {
                     <button
                       type="button"
                       className="text-left w-full hover:text-cyan-300 transition"
-                      onClick={() => setInput(h.input)}
+                      onClick={() => {
+                        setInput(h.input);
+                        setResults([]);
+                        setError('');
+                      }}
                       title="Reuse original URL"
                     >
                       <span className={h.ok ? 'text-emerald-400' : 'text-rose-400'}>{h.ok ? '✓' : '✗'}</span>

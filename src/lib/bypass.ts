@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { sessionJson } from './sessionFetch';
+import { sessionFetch, sessionJson } from './sessionFetch';
 
 export type BypassServiceKind = 'locker' | 'shortener' | 'paste' | 'unlock' | 'generic';
 
@@ -34,14 +34,27 @@ export async function fetchBypassCatalog(): Promise<BypassServiceInfo[]> {
   return Array.isArray(data.services) ? data.services : [];
 }
 
-export async function runBypass(urls: string[]): Promise<BypassResult[]> {
+function isAbortError(err: unknown): boolean {
+  return (err instanceof DOMException || err instanceof Error) && err.name === 'AbortError';
+}
+
+export async function runBypass(urls: string[], signal?: AbortSignal): Promise<BypassResult[]> {
   try {
-    const data = await sessionJson<BypassResponse>(API, {
+    const res = await sessionFetch(API, {
       method: 'POST',
       body: JSON.stringify({ urls }),
+      signal,
     });
+    const data = (await res.json().catch(() => ({}))) as BypassResponse & { error?: string };
+    if (res.status === 429) throw new Error('Too many requests — wait a moment and try again.');
+    if (!res.ok) {
+      const msg = String(data.error ?? `HTTP ${res.status}`);
+      if (/permission denied|not logged|sign in/i.test(msg)) throw new Error('Sign in required');
+      throw new Error(msg);
+    }
     return Array.isArray(data.results) ? data.results : [];
   } catch (err) {
+    if (isAbortError(err) || signal?.aborted) throw err;
     const msg = err instanceof Error ? err.message : '';
     if (/permission denied|not logged|sign in/i.test(msg)) {
       throw new Error('Sign in required');
@@ -68,8 +81,12 @@ const LV_HOSTS = [
 export function parseLocalUrls(raw: string): string[] {
   const seen = new Set<string>();
   const out: string[] = [];
-  for (const part of raw.split(/\s+/).map((s) => s.trim().replace(/[,\s]+$/g, '')).filter(Boolean)) {
-    const candidate = /^https?:\/\//i.test(part) ? part : `https://${part}`;
+  for (const part of raw.split(/\s+/).map((s) => s.trim().replace(/^<|>$/g, '').replace(/[,\s]+$/g, '')).filter(Boolean)) {
+    let candidate = part;
+    if (!/^https?:\/\//i.test(candidate) && /^[\w.-]+\.[a-z]{2,}/i.test(candidate)) {
+      candidate = `https://${candidate}`;
+    }
+    if (!/^https?:\/\//i.test(candidate)) continue;
     try {
       const u = new URL(candidate);
       if (u.protocol !== 'http:' && u.protocol !== 'https:') continue;

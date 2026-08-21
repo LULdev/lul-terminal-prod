@@ -23,6 +23,21 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '3.87.0',
+    title: 'Bypass client+server: locker false-success, landing scrape, URL parse',
+    date: 'Aug 9, 2026',
+    highlight: true,
+    items: [
+      { priority: 'P0', text: 'P0 - hop cap no longer returns a locker URL as a successful destination.' },
+      { priority: 'P0', text: 'P0 - Linkvertise landing GET: if HTTP already left LV, use that URL; do not scrape dest-page ads.' },
+      { priority: 'P1', text: 'P1 - removed last-resort “any external link on the page” extractor (ad hijack).' },
+      { priority: 'P1', text: 'P1 - unlock/sub2unlock query dest unwrap; cycle detection in hop chain.' },
+      { priority: 'P2', text: 'P2 - client URL parse matches server (scheme gate, <url> unwrap); abort in-flight bypass on unmount/re-run.' },
+      { priority: 'P3', text: 'P3 - 429 copy; history reuse clears stale results.' },
+      { priority: 'P9', text: 'P9 - Version 3.87.0; Bypass client+server bugfix (every item listed).' },
+    ],
+  },
+  {
     version: '3.86.0',
     title: 'Bypass bugfix: POST Location, abort timeout, LV cookies/paths',
     date: 'Aug 9, 2026',

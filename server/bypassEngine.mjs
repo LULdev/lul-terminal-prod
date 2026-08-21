@@ -182,7 +182,12 @@ function unwrapQueryDest(urlStr) {
     if (q && !isJunkDest(q, urlStr)) return q;
   }
   const svc = identifyService(urlStr);
-  const allow = !svc || svc.kind === 'generic' || svc.kind === 'shortener' || svc.kind === 'locker' || svc.id === 'googl';
+  const allow = !svc
+    || svc.kind === 'generic'
+    || svc.kind === 'shortener'
+    || svc.kind === 'locker'
+    || svc.kind === 'unlock'
+    || svc.id === 'googl';
   if (!allow) return null;
   for (const key of DEST_PARAM_KEYS) {
     const raw = parsed.searchParams.get(key);
@@ -255,20 +260,6 @@ function extractDestFromHtml(html, pageUrl) {
     if (looksHttpUrl(raw) && !isJunkDest(raw, pageUrl) && !isLockerUrl(raw)) return raw;
   }
 
-  const urls = extractUrlsFromText(text);
-  try {
-    const pageHost = apexHost(new URL(pageUrl).hostname);
-    const external = urls.find((u) => {
-      try {
-        return apexHost(new URL(u).hostname) !== pageHost
-          && !identifyService(u)
-          && !isJunkDest(u, pageUrl);
-      } catch {
-        return false;
-      }
-    });
-    if (external) return external;
-  } catch { /* ignore */ }
   return null;
 }
 
@@ -488,7 +479,10 @@ async function resolveLinkvertise(url) {
       headers: { Accept: 'text/html,application/xhtml+xml' },
       jar,
     });
-    const fromPage = extractDestFromHtml(page.text, url);
+    if (page.url && usableDest(page.url, url) && !isLockerUrl(page.url)) {
+      return { dest: page.url, paste: null };
+    }
+    const fromPage = extractDestFromHtml(page.text, page.url || url);
     if (usableDest(fromPage, url) && !isLockerUrl(fromPage)) return { dest: fromPage, paste: null };
   } catch { /* landing HTML is best-effort */ }
 
@@ -783,6 +777,9 @@ async function resolveChain(inputUrl) {
       lastKind = 'paste';
     }
     if (resolved.dest && looksHttpUrl(resolved.dest) && !sameResource(resolved.dest, current) && !isJunkDest(resolved.dest, current)) {
+      if (hops.some((h) => sameResource(h, resolved.dest))) {
+        throw new Error('No destination found');
+      }
       hops.push(resolved.dest);
       current = resolved.dest;
       lastKind = resolved.paste && !looksHttpUrl(resolved.dest) ? 'paste' : 'url';
@@ -799,6 +796,9 @@ async function resolveChain(inputUrl) {
   if (!dest || (sameResource(dest, inputUrl) && !pasteText)) {
     throw new Error('No destination found');
   }
+  if (isLockerUrl(dest) && !pasteText) {
+    throw new Error('No destination found');
+  }
   return {
     service: serviceId,
     destination: dest,
@@ -810,7 +810,7 @@ async function resolveChain(inputUrl) {
 
 export function parseInputUrls(raw) {
   const text = String(raw ?? '');
-  const parts = text.split(/\s+/).map((s) => s.trim()).filter(Boolean);
+  const parts = text.split(/\s+/).map((s) => s.trim().replace(/^<|>$/g, '')).filter(Boolean);
   const urls = [];
   for (const part of parts) {
     let candidate = part.replace(/[,\s]+$/g, '');
