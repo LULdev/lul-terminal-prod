@@ -23,6 +23,19 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '3.90.0',
+    title: 'Bypass P0: Cookie CRLF, decimal-IP Open, paste dest gate',
+    date: 'Aug 9, 2026',
+    highlight: true,
+    items: [
+      { priority: 'P0', text: 'P0 - Cookie jar rejects CTL/;/, in Set-Cookie (no Cookie header injection on upstream fetches).' },
+      { priority: 'P0', text: 'P0 - final dest always asPublicDest before ok:true (DNS/private/userinfo).' },
+      { priority: 'P0', text: 'P0 - paste-extracted URLs must pass usableDest (no raw first-http from body).' },
+      { priority: 'P0', text: 'P0 - Open/parse block integer/hex/short/octal IPv4 hosts browsers treat as loopback (2130706433, 127.1, 0177.0.0.1).' },
+      { priority: 'P9', text: 'P9 - Version 3.90.0; residual Bypass P0 (every item listed).' },
+    ],
+  },
+  {
     version: '3.89.0',
     title: 'Bypass P0 x10: SSRF dests, CRLF path, Open-to-localhost',
     date: 'Aug 9, 2026',

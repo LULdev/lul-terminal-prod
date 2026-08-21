@@ -305,7 +305,13 @@ function createJar() {
       for (const c of all) {
         const nv = String(c).split(';')[0];
         const eq = nv.indexOf('=');
-        if (eq > 0) map.set(nv.slice(0, eq).trim(), nv.slice(eq + 1).trim());
+        if (eq <= 0) continue;
+        const name = nv.slice(0, eq).trim();
+        const val = nv.slice(eq + 1).trim();
+        // Reject CTL / separators so Cookie cannot inject request headers
+        if (!/^[!#$%&'*+\-.^_`|~0-9A-Za-z]{1,128}$/.test(name)) continue;
+        if (val.length > 4096 || /[\x00-\x1f\x7f;,\\]/.test(val)) continue;
+        map.set(name, val);
       }
     },
   };
@@ -702,7 +708,7 @@ async function resolvePaste(url, serviceId) {
         if (usableDest(dest, url)) return { dest, paste: null };
         continue;
       }
-      const urls = extractUrlsFromText(lastText).filter((u) => !isJunkDest(u, url));
+      const urls = extractUrlsFromText(lastText).filter((u) => usableDest(u, url));
       if (urls.length) return { dest: urls[0], paste: lastText.slice(0, MAX_PASTE_CHARS) };
       return { dest: null, paste: lastText.slice(0, MAX_PASTE_CHARS) };
     } catch { /* try next raw candidate */ }
@@ -877,11 +883,15 @@ export async function resolveMany(urlList) {
       const href = assertSafeFetchUrl(input);
       if (href.length > MAX_URL_LEN) throw new Error('URL too long');
       const resolved = await bypassCtx.run({ signal: ac.signal }, () => resolveChain(href));
+      const dest = resolved.pasteText && !resolved.destination
+        ? null
+        : await asPublicDest(resolved.destination);
+      if (!dest && !resolved.pasteText) throw new Error('No destination found');
       results.push({
         input: href,
         service: resolved.service,
         ok: true,
-        destination: resolved.destination,
+        destination: dest || resolved.destination,
         hops: resolved.hops,
         kind: resolved.kind,
         pasteText: resolved.pasteText || null,

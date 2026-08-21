@@ -106,20 +106,27 @@ export function parseLocalUrls(raw: string): string[] {
   return out;
 }
 
+function dottedPrivate(a: number, b: number): boolean {
+  if (a === 10 || a === 127 || a === 0) return true;
+  if (a === 169 && b === 254) return true;
+  if (a === 172 && b >= 16 && b <= 31) return true;
+  if (a === 192 && b === 168) return true;
+  if (a === 100 && b >= 64 && b <= 127) return true;
+  if (a >= 224) return true;
+  return false;
+}
+
 function isBlockedOpenHost(host: string): boolean {
   const h = host.replace(/^\[|\]$/g, '').toLowerCase();
   if (!h || h === 'localhost' || h === '::1' || h === '0.0.0.0' || h.endsWith('.localhost')) return true;
-  if (h.endsWith('.local') || h.endsWith('.internal')) return true;
+  if (h.endsWith('.local') || h.endsWith('.internal') || h === 'metadata' || h.endsWith('.metadata.google.internal')) return true;
+  // Integer / hex / short / octal IPv4 — browsers may map these to loopback
+  if (/^0x[0-9a-f]+$/i.test(h) || /^\d+$/.test(h)) return true;
+  if (/^\d+\.\d+$/.test(h) || /^\d+\.\d+\.\d+$/.test(h)) return true;
   const m = /^(\d+)\.(\d+)\.(\d+)\.(\d+)$/.exec(h);
   if (m) {
-    const a = Number(m[1]);
-    const b = Number(m[2]);
-    if (a === 10 || a === 127 || a === 0) return true;
-    if (a === 169 && b === 254) return true;
-    if (a === 172 && b >= 16 && b <= 31) return true;
-    if (a === 192 && b === 168) return true;
-    if (a === 100 && b >= 64 && b <= 127) return true;
-    if (a >= 224) return true;
+    if (m.slice(1).some((p) => /^0\d+$/.test(p))) return true; // 0177.0.0.1
+    return dottedPrivate(Number(m[1]), Number(m[2]));
   }
   if (h.includes(':')) {
     if (h.startsWith('fe80:') || h.startsWith('fc') || h.startsWith('fd') || h.startsWith('ff')) return true;
