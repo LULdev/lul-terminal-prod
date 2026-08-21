@@ -109,6 +109,13 @@ export const FEATURE_GATE_COPY: Partial<Record<TabId, FeatureGateInfo>> = {
     description: 'Only signed-in members can access the free & premium account vault and submit working logins.',
     perks: ['Curated premium logins', 'Quick-add accounts', 'VIP-protected entries'],
   },
+  bypass: {
+    title: 'Bypass',
+    icon: '🔓',
+    accent: 'cyan',
+    description: 'Only signed-in members can skip Linkvertise and other locker / shortener walls in one click.',
+    perks: ['All Linkvertise domains', 'Work.ink · lootlabs · shorteners', 'Paste hosts & social unlocks'],
+  },
   invite: {
     title: 'Invite Friends',
     icon: '🎁',

@@ -27,6 +27,7 @@ export const ImageHostingPage = lazyPage(() => import('./ImageHostingPage'), 'Im
 export const PastePage = lazyPage(() => import('./PastePage'), 'PastePage');
 export const ProxyDatabasePage = lazyPage(() => import('./ProxyDatabasePage'), 'ProxyDatabasePage');
 export const FreePremiumAccountsPage = lazyPage(() => import('./FreePremiumAccountsPage'), 'FreePremiumAccountsPage');
+export const BypassPage = lazyPage(() => import('./BypassPage'), 'BypassPage');
 export const ProfilePage = lazyPage(() => import('./ProfilePage'), 'ProfilePage');
 export const AdminDashboardPage = lazyPage(() => import('./AdminDashboardPage'), 'AdminDashboardPage');
 export const UserDashboardPage = lazyPage(() => import('./UserDashboardPage'), 'UserDashboardPage');

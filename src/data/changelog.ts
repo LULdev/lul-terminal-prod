@@ -23,6 +23,21 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '3.84.0',
+    title: 'Bypass module: Linkvertise-first locker unlocker for members',
+    date: 'Aug 9, 2026',
+    highlight: true,
+    items: [
+      { icon: '🔓', text: 'New Bypass page in the member menu — paste a locker URL, one click to the destination (Copy / Open / batch).' },
+      { priority: 'P1', text: 'P1 — POST /api/bypass and GET /api/bypass/catalog require a signed-in member (requireMemberTab bypass).' },
+      { priority: 'P1', text: 'P1 — SSRF-safe fetch (safeFetch) for every hop; private IPs and non-http(s) rejected.' },
+      { icon: '🔗', text: 'Linkvertise resolver covers all known LV domains (publisher API + serial target + paste type + query unwrap).' },
+      { icon: '🌐', text: 'Also: work.ink, lootlabs, AdMaven, shorteners, paste hosts, sub2unlock / social unlock, dest-param resolvers.' },
+      { priority: 'P3', text: 'P3 — Ctrl/Cmd+Enter submit, service chip, local history (20), copy-all, members-only login gate copy.' },
+      { priority: 'P9', text: 'P9 — Version 3.84.0; Bypass module shipped (every item listed).' },
+    ],
+  },
+  {
     version: '3.83.0',
     title: 'Full residual P0-P9 audit Server+Client: activity/profile floors, jackpot ints, soft401 deletes',
     date: 'Aug 9, 2026',

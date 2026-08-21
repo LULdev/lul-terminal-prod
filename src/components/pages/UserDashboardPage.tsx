@@ -313,6 +313,7 @@ export function UserDashboardPage({ onNavigate }: UserDashboardPageProps) {
               {permissions.premiumView && <QuickLink icon="👑" label="Premium Accounts" onClick={() => nav('premiumaccounts')} />}
               <QuickLink icon="☁️" label="Image Hosting" onClick={() => nav('imagehost')} />
               <QuickLink icon="🗄️" label="Proxy Database" onClick={() => nav('proxydatabase')} />
+              <QuickLink icon="🔓" label="Bypass" onClick={() => nav('bypass')} />
               <QuickLink icon="🛠️" label="Net Toolkit" onClick={() => nav('tools')} />
               <QuickLink icon="📜" label="Changelog" onClick={() => nav('changelog')} />
             </div>

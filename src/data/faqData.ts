@@ -459,6 +459,10 @@ export const FAQ_SECTIONS: FaqSection[] = [
         a: 'VIP vault — see Premium FAQ section.',
       },
       {
+        q: 'Bypass',
+        a: 'Members-only locker unlocker. Paste a Linkvertise (or work.ink, lootlabs, shortener, paste host) URL and get the destination in one click. Sign-in required.',
+      },
+      {
         q: 'FAQ',
         a: 'This page — searchable help across all features, roles, admin tools, and achievements.',
       },
@@ -492,6 +496,10 @@ export const FAQ_SECTIONS: FaqSection[] = [
       {
         q: 'Tool Vault',
         a: '480+ searchable micro-tools: hashing, encoding, converters, generators, reference tables. Filter by category. CLI flag achievements when visiting all labs.',
+      },
+      {
+        q: 'Bypass (menu)',
+        a: 'Member menu item “Bypass”. Paste one or more locker URLs (Linkvertise first-class), click Bypass, copy or open the destination. Ctrl/Cmd+Enter submits. Recent results stay in this browser. API is members-only.',
       },
       {
         q: 'Do labs require login?',

@@ -19,6 +19,7 @@ export type TabId =
   | 'paste'
   | 'proxydatabase'
   | 'premiumaccounts'
+  | 'bypass'
   | 'tools'
   | 'identity'
   | 'textlab'
@@ -44,7 +45,7 @@ export type MenuItem = {
 
 export const ALL_TAB_IDS: TabId[] = [
   'dashboard', 'stats', 'status', 'leaderboard', 'games', 'news', 'fun', 'faq', 'invite', 'changelog',
-  'memegen', 'imagehost', 'paste', 'proxydatabase', 'premiumaccounts', 'tools', 'identity', 'textlab',
+  'memegen', 'imagehost', 'paste', 'proxydatabase', 'premiumaccounts', 'bypass', 'tools', 'identity', 'textlab',
   'colorlab', 'meme', 'toolvault', 'profile', 'activity', 'admin',
 ];
 
@@ -72,6 +73,7 @@ export const MAIN_MENU_ITEMS: MenuItem[] = [
   { id: 'paste', icon: '📋', label: 'Paste', group: 'main', accent: 'emerald', tagline: 'Share Code · Syntax · Expiry · Password' },
   { id: 'proxydatabase', icon: '🗄️', label: 'Proxy Database', group: 'main', accent: 'indigo', tagline: 'Working Proxies · Daily Check · Auto-Purge' },
   { id: 'premiumaccounts', icon: '👑', label: 'Free Premium Accounts', group: 'main', accent: 'amber', tagline: 'Premium Logins · VIP Protection · Quick Add', vipBadge: true },
+  { id: 'bypass', icon: '🔓', label: 'Bypass', group: 'main', accent: 'cyan', tagline: 'Linkvertise · Work.ink · Shorteners · Pastes' },
 ];
 
 export const LAB_MENU_ITEMS: MenuItem[] = [

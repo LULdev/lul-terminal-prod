@@ -18,7 +18,7 @@ export const LOCKED_MEMBERS_TABS = new Set(['admin']);
 
 export const ALL_MANAGEABLE_TAB_IDS = [
   'dashboard', 'stats', 'status', 'leaderboard', 'games', 'news', 'fun', 'faq', 'invite', 'changelog', 'memegen', 'imagehost', 'paste',
-  'proxydatabase', 'premiumaccounts', 'tools', 'identity', 'textlab', 'colorlab',
+  'proxydatabase', 'premiumaccounts', 'bypass', 'tools', 'identity', 'textlab', 'colorlab',
   'meme', 'toolvault', 'profile', 'activity', 'admin',
 ];
 
@@ -39,6 +39,7 @@ export const DEFAULT_VISIBILITY = {
   paste: 'members',
   proxydatabase: 'members',
   premiumaccounts: 'members',
+  bypass: 'members',
   tools: 'members',
   identity: 'members',
   textlab: 'members',

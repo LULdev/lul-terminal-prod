@@ -23,6 +23,7 @@ import { createXmlLinkScraperMiddleware } from './xmlLinkScraperApi.mjs';
 import { createAdminMiddleware } from './adminApi.mjs';
 import { createStatusMiddleware } from './statusApi.mjs';
 import { createGamesMiddleware } from './gamesApi.mjs';
+import { createBypassMiddleware } from './bypassApi.mjs';
 import { ensureGamesBootstrapped, isGamesBootReady } from './gamesBoot.mjs';
 import { startRegistrationChallengePurge } from './auth/registrationChallenge.mjs';
 import { startLeaderboardSyncScheduler } from './leaderboardService.mjs';
@@ -60,6 +61,7 @@ export function createServerMiddleware() {
   const admin = createAdminMiddleware();
   const status = createStatusMiddleware();
   const games = createGamesMiddleware();
+  const bypass = createBypassMiddleware();
 
   return (req, res, next) => {
     const pathname = req.url?.split('?')[0] ?? '';
@@ -117,6 +119,10 @@ export function createServerMiddleware() {
     }
     if (pathname === '/api/status') {
       status(req, res, next);
+      return;
+    }
+    if (pathname.startsWith('/api/bypass')) {
+      bypass(req, res, next);
       return;
     }
     if (pathname.startsWith('/api/games')) {

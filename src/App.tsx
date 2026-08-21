@@ -37,6 +37,7 @@ import { useAuth } from './context/AuthContext';
 import {
   NewsPanel,
   AdminDashboardPage,
+  BypassPage,
   ChaosGeneratorPage,
   ColorLabPage,
   FAQPage,
@@ -80,7 +81,7 @@ const MAX_AUTO_REGRABS = 2;
 
 const ALL_TAB_IDS = new Set<TabId>([
   'dashboard', 'stats', 'status', 'leaderboard', 'games', 'news', 'fun', 'faq', 'invite', 'changelog', 'memegen', 'imagehost', 'paste',
-  'proxydatabase', 'premiumaccounts', 'tools', 'identity', 'textlab', 'colorlab',
+  'proxydatabase', 'premiumaccounts', 'bypass', 'tools', 'identity', 'textlab', 'colorlab',
   'meme', 'toolvault', 'profile', 'activity', 'admin',
 ]);
 
@@ -1017,6 +1018,7 @@ export default function App() {
                   highlightAccountId={premiumDeepLink.account}
                 />
               )}
+              {renderTab === 'bypass' && <BypassPage />}
               {renderTab === 'profile' && (
                 <ProfilePage
                   routeUsername={profileUsername ?? undefined}
