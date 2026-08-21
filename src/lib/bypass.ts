@@ -64,7 +64,7 @@ function normalizeBypassResult(raw: BypassResult): BypassResult {
   const hops = Array.isArray(raw?.hops)
     ? raw.hops.filter((h) => typeof h === 'string').map((h) => h.slice(0, 2048)).slice(0, 8)
     : [];
-  const openOk = dest ? Boolean(safeBypassOpenHref(dest)) : false;
+  const openOk = dest ? Boolean(safeBypassOpenHref(dest)) && !isBypassLockerDest(dest) : false;
   const ok = Boolean(raw?.ok) && (openOk || Boolean(paste));
   return {
     input,
@@ -90,12 +90,16 @@ export async function runBypass(urls: string[], signal?: AbortSignal): Promise<B
       const sec = Math.max(1, Math.ceil(parseRetryAfterMs(res.headers.get('Retry-After')) / 1000));
       throw new Error(`Too many requests — retry in ${sec}s.`);
     }
+    const ct = String(res.headers.get('content-type') ?? '').toLowerCase();
     if (!res.ok) {
       const msg = String(data.error ?? `HTTP ${res.status}`).slice(0, 200);
       if (/permission denied|not logged|sign in/i.test(msg)) throw new Error('Sign in required');
       throw new Error(msg);
     }
-    return (Array.isArray(data.results) ? data.results : []).slice(0, 8).map(normalizeBypassResult);
+    if (!ct.includes('json')) throw new Error('Bypass failed');
+    const list = (Array.isArray(data.results) ? data.results : []).slice(0, 8).map(normalizeBypassResult);
+    if (!list.length) throw new Error('Bypass failed');
+    return list;
   } catch (err) {
     if (isAbortError(err) || signal?.aborted) throw err;
     if (err instanceof Error && err.name === 'SessionExpiredError') throw new Error('Sign in required');
@@ -173,6 +177,23 @@ function isBlockedOpenHost(host: string): boolean {
     if (h.startsWith('fe80:') || h.startsWith('fc') || h.startsWith('fd') || h.startsWith('ff')) return true;
     if (h.startsWith('::ffff:')) return isBlockedOpenHost(h.slice(7));
   }
+  return false;
+}
+
+function hostMatchesListed(host: string, listed: string): boolean {
+  return host === listed || host.endsWith(`.${listed}`);
+}
+
+/** True when dest is still a locker/unlock host (false success). */
+export function isBypassLockerDest(url: string, catalog: BypassServiceInfo[] = []): boolean {
+  try {
+    const host = new URL(url).hostname.replace(/^www\./, '').toLowerCase();
+    if (LV_HOSTS.some((h) => hostMatchesListed(host, h))) return true;
+    for (const s of catalog) {
+      if (s.kind !== 'locker' && s.kind !== 'unlock') continue;
+      if (s.hosts.some((h) => hostMatchesListed(host, h))) return true;
+    }
+  } catch { /* ignore */ }
   return false;
 }
 

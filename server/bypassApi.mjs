@@ -24,6 +24,24 @@ function sendJson(res, status, body) {
   res.end(JSON.stringify(body));
 }
 
+function attachClientAbort(req) {
+  const ac = new AbortController();
+  const onAbort = () => ac.abort();
+  if (req.aborted || req.destroyed) {
+    ac.abort();
+    return { signal: ac.signal, dispose() {} };
+  }
+  req.once('aborted', onAbort);
+  req.once('close', onAbort);
+  return {
+    signal: ac.signal,
+    dispose() {
+      req.off('aborted', onAbort);
+      req.off('close', onAbort);
+    },
+  };
+}
+
 export async function handleBypassRequest(req, res) {
   const url = new URL(req.url, 'http://localhost');
   const pathname = url.pathname;
@@ -65,8 +83,14 @@ export async function handleBypassRequest(req, res) {
       if (!urls.length) {
         return sendJson(res, 400, { error: 'Paste at least one http(s) URL' });
       }
-      const results = await resolveMany(urls.slice(0, MAX_URLS));
-      return sendJson(res, 200, { results });
+      const gate = attachClientAbort(req);
+      try {
+        const results = await resolveMany(urls.slice(0, MAX_URLS), gate.signal);
+        if (gate.signal.aborted || req.aborted || res.writableEnded) return;
+        return sendJson(res, 200, { results });
+      } finally {
+        gate.dispose();
+      }
     }
 
     return sendJson(res, 404, { error: 'Not found' });

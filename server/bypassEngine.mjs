@@ -487,20 +487,25 @@ async function followShort(url) {
   const canUnwrap = stillLocker || svc?.kind === 'generic' || svc?.kind === 'shortener' || svc?.id === 'googl';
   if (canUnwrap) {
     const q = unwrapQueryDest(landed);
-    if (usableDest(q, landed)) return { dest: q, hops: [...hops, q], html: res.text, json: res.json, finalUrl: landed };
+    if (usableDest(q, landed) && (!stillLocker || identifyService(q))) {
+      return { dest: q, hops: [...hops, q], html: res.text, json: res.json, finalUrl: landed };
+    }
   }
 
   if (redirected && !stillLocker) {
     return { dest: landed, hops, html: res.text, json: res.json, finalUrl: landed };
   }
 
-  const htmlDest = extractDestFromHtml(res.text, landed);
-  if (usableDest(htmlDest, url) && !sameResource(htmlDest, landed)) {
-    return { dest: htmlDest, hops: [...hops, htmlDest], html: res.text, json: res.json, finalUrl: landed };
-  }
-  if (res.json) {
-    const jd = extractJsonDest(res.json);
-    if (usableDest(jd, url)) return { dest: jd, hops: [...hops, jd], html: res.text, json: res.json, finalUrl: landed };
+  // Locker landings are ad-heavy — do not scrape HTML/JSON for a dest
+  if (!stillLocker) {
+    const htmlDest = extractDestFromHtml(res.text, landed);
+    if (usableDest(htmlDest, url) && !sameResource(htmlDest, landed)) {
+      return { dest: htmlDest, hops: [...hops, htmlDest], html: res.text, json: res.json, finalUrl: landed };
+    }
+    if (res.json) {
+      const jd = extractJsonDest(res.json);
+      if (usableDest(jd, url)) return { dest: jd, hops: [...hops, jd], html: res.text, json: res.json, finalUrl: landed };
+    }
   }
   if (redirected) {
     return { dest: landed, hops, html: res.text, json: res.json, finalUrl: landed };
@@ -555,7 +560,7 @@ const LV_HEADERS = {
 
 async function resolveLinkvertise(url) {
   const queryDest = unwrapQueryDest(url);
-  if (usableDest(queryDest, url) && !isLockerUrl(queryDest)) return { dest: queryDest, paste: null };
+  if (usableDest(queryDest, url) && isLockerUrl(queryDest)) return { dest: queryDest, paste: null };
 
   const jar = createJar();
   try {
@@ -741,7 +746,9 @@ async function resolvePaste(url, serviceId) {
       const res = await request(cand, {}, { timeoutMs: TIMEOUT_MS, maxRedirects: 5 });
       lastText = res.text || '';
       if (!res.ok || !lastText.trim()) continue;
-      if (/<!doctype html|<html/i.test(lastText.replace(/^\uFEFF/, '').trimStart().slice(0, 400))) {
+      const ct = String(res.headers?.get?.('content-type') ?? '');
+      const head = lastText.replace(/^\uFEFF/, '').trimStart().slice(0, 2048);
+      if (/html|xhtml|xml/i.test(ct) || /<!doctype html|<html|<head|<body/i.test(head)) {
         const dest = extractDestFromHtml(lastText, res.url);
         if (usableDest(dest, url)) return { dest, paste: null };
         continue;
@@ -752,8 +759,15 @@ async function resolvePaste(url, serviceId) {
     } catch { /* try next raw candidate */ }
   }
   if (lastText.trim()) {
-    const dest = extractDestFromHtml(lastText, url);
-    return { dest: usableDest(dest, url) ? dest : null, paste: lastText.slice(0, MAX_PASTE_CHARS) };
+    const head = lastText.replace(/^\uFEFF/, '').trimStart().slice(0, 2048);
+    if (/<!doctype html|<html|<head|<body/i.test(head)) {
+      const dest = extractDestFromHtml(lastText, url);
+      if (usableDest(dest, url)) return { dest, paste: null };
+      throw new Error('Could not read paste');
+    }
+    const urls = extractUrlsFromText(lastText).filter((u) => usableDest(u, url));
+    if (urls.length) return { dest: urls[0], paste: lastText.slice(0, MAX_PASTE_CHARS) };
+    return { dest: null, paste: lastText.slice(0, MAX_PASTE_CHARS) };
   }
   throw new Error('Could not read paste');
 }
@@ -788,7 +802,10 @@ async function tryPublicBypassApis(url) {
 async function resolveKnown(url, service) {
   const q = unwrapQueryDest(url);
   if (usableDest(q, url)) {
-    return { dest: q, paste: null };
+    const fromLocker = service.kind === 'locker' || service.kind === 'unlock';
+    if (!fromLocker || identifyService(q)) {
+      return { dest: q, paste: null };
+    }
   }
 
   if (service.id === 'linkvertise') {
@@ -814,18 +831,14 @@ async function resolveKnown(url, service) {
 
   const followed = await followShort(url);
   if (usableDest(followed.dest, url)) return { dest: followed.dest, paste: null };
-  if (followed.json) {
+  const landedLocker = isLockerUrl(followed.finalUrl || url);
+  if (followed.json && !landedLocker) {
     const jd = extractJsonDest(followed.json);
-    if (usableDest(jd, url)) return { dest: jd, paste: null };
+    if (usableDest(jd, url) && !isLockerUrl(jd)) return { dest: jd, paste: null };
   }
 
   const apiDest = await tryPublicBypassApis(url);
   if (apiDest) return { dest: apiDest, paste: null };
-
-  if (followed.html) {
-    const htmlDest = extractDestFromHtml(followed.html, followed.finalUrl || url);
-    if (usableDest(htmlDest, url)) return { dest: htmlDest, paste: null };
-  }
 
   throw new Error(`Could not bypass ${service.label}`);
 }
@@ -921,18 +934,31 @@ export function parseInputUrls(raw) {
   return urls;
 }
 
-export async function resolveMany(urlList) {
+export async function resolveMany(urlList, outerSignal) {
   const urls = Array.isArray(urlList) ? urlList.slice(0, MAX_URLS) : [];
   const results = [];
   for (const input of urls) {
+    if (outerSignal?.aborted) break;
     const ac = new AbortController();
+    const onOuter = () => ac.abort();
+    if (outerSignal) {
+      if (outerSignal.aborted) {
+        ac.abort();
+      } else {
+        outerSignal.addEventListener('abort', onOuter, { once: true });
+      }
+    }
     const timer = setTimeout(() => ac.abort(), URL_BUDGET_MS);
     if (typeof timer.unref === 'function') timer.unref();
     try {
       const href = assertSafeFetchUrl(input);
       if (href.length > MAX_URL_LEN) throw new Error('URL too long');
       const resolved = await bypassCtx.run({ signal: ac.signal }, () => resolveChain(href));
-      const dest = resolved.destination ? await asPublicDest(resolved.destination) : null;
+      let dest = resolved.destination ? await asPublicDest(resolved.destination) : null;
+      if (dest && isLockerUrl(dest)) {
+        if (!resolved.pasteText) throw new Error('No destination found');
+        dest = null;
+      }
       if (!dest && !resolved.pasteText) throw new Error('No destination found');
       results.push({
         input: href.slice(0, MAX_URL_LEN),
@@ -948,6 +974,7 @@ export async function resolveMany(urlList) {
         error: null,
       });
     } catch (err) {
+      if (outerSignal?.aborted) break;
       const msg = err instanceof Error ? err.message : 'Bypass failed';
       const timedOut = ac.signal.aborted || /aborted|timeout/i.test(msg);
       const safe = timedOut
@@ -967,6 +994,7 @@ export async function resolveMany(urlList) {
       });
     } finally {
       clearTimeout(timer);
+      if (outerSignal) outerSignal.removeEventListener('abort', onOuter);
     }
   }
   return results;

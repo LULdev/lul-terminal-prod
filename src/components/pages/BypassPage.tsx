@@ -9,6 +9,7 @@ import {
   clearBypassHistory,
   fetchBypassCatalog,
   guessServiceLabel,
+  isBypassLockerDest,
   loadBypassHistory,
   parseLocalUrls,
   pushBypassHistory,
@@ -93,7 +94,11 @@ export function BypassPage() {
     setError('');
     setResults([]);
     try {
-      const out = await runBypass(list, ac.signal);
+      const out = (await runBypass(list, ac.signal)).map((r) => {
+        if (!r.destination || !isBypassLockerDest(r.destination, catalog)) return r;
+        if (r.pasteText) return { ...r, destination: null, kind: 'paste' as const };
+        return { ...r, ok: false, destination: null, error: r.error || 'No destination found' };
+      });
       if (!mountedRef.current || ac.signal.aborted) return;
       setResults(out);
       const hist = pushBypassHistory(
@@ -117,7 +122,7 @@ export function BypassPage() {
         if (mountedRef.current) setBusy(false);
       }
     }
-  }, [input]);
+  }, [input, catalog]);
 
   const copyAll = useCallback(() => {
     const dests = results.filter((r) => r.ok && r.destination).map((r) => r.destination as string);

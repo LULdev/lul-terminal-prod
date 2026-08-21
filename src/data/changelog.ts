@@ -23,6 +23,21 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '3.94.0',
+    title: 'Bypass P1: locker dest hijack, paste HTML, abort, empty JSON',
+    date: 'Aug 21, 2026',
+    highlight: true,
+    items: [
+      { priority: 'P1', text: 'P1 - locker landings no longer scrape HTML/JSON or tracking query params as dest (ad hijack); last-resort HTML extract removed.' },
+      { priority: 'P1', text: 'P1 - Linkvertise query unwrap is hop-only (nested locker); final dest comes from the publisher API.' },
+      { priority: 'P1', text: 'P1 - paste Content-Type/HTML is not treated as text; first page URL (CDN/ads) is no longer the destination.' },
+      { priority: 'P1', text: 'P1 - client abort/close cancels in-flight Bypass fetches; remaining URLs in the batch are not started.' },
+      { priority: 'P1', text: 'P1 - ok:true never returns a locker host as destination (paste-only if a locker remains).' },
+      { priority: 'P1', text: 'P1 - client rejects non-JSON / empty results as failure; Open/copy drops locker dests (catalog + Linkvertise hosts).' },
+      { priority: 'P9', text: 'P9 - Version 3.94.0; 10-round Bypass P1-only audit (every item listed).' },
+    ],
+  },
+  {
     version: '3.93.0',
     title: 'Bypass 10-round: gzip bomb, LV header/ads, hop cycle, paste dest',
     date: 'Aug 21, 2026',
