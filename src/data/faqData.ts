@@ -30,7 +30,7 @@ export const FAQ_SECTIONS: FaqSection[] = [
       },
       {
         q: 'Can I open a specific page via URL?',
-        a: 'Yes. Use ?tab=paste, ?tab=stats, ?tab=status, ?tab=admin, etc. Premium Vault also supports ?category=streaming and ?account={id} for deep links. Profile URLs: /profile/username.',
+        a: 'Yes. Use ?tab=paste, ?tab=bypass, ?tab=stats, ?tab=status, ?tab=admin, etc. Premium Vault also supports ?category=streaming and ?account={id} for deep links. Profile URLs: /profile/username.',
       },
       {
         q: 'Where can I find the version history?',
@@ -53,7 +53,7 @@ export const FAQ_SECTIONS: FaqSection[] = [
     items: [
       {
         q: 'Which pages are public by default?',
-        a: 'Terminal Pulse, System Status, Hall of Fame, News, FAQ, Change Log, Fun & Trap, and public profile links. Everything else defaults to members-only until an admin changes it.',
+        a: 'Terminal Pulse, System Status, Hall of Fame, News, FAQ, Change Log, Fun & Trap, and public profile links. Everything else (including Bypass, Paste, Labs, Dashboard) defaults to members-only until an admin changes it. Bypass still requires a signed-in session even if the tab is marked public.',
       },
       {
         q: 'What happens when a page is members-only?',
@@ -362,15 +362,91 @@ export const FAQ_SECTIONS: FaqSection[] = [
     items: [
       {
         q: 'What is Bypass?',
-        a: 'Menu "Bypass" (🔓) — signed-in members paste a Linkvertise or other locker / shortener / paste URL and get the destination in one click. No ads, no timers. Copy or Open the result; several URLs work one per line (up to 8).',
+        a: 'Menu "Bypass" (🔓) — a members-only unlocker. Paste a Linkvertise, locker, shortener, social-unlock, or paste URL and get the real destination in one click: no ads, no countdown, no extra tabs. Copy the URL, open it, or (for paste bodies) copy the text. Direct link: ?tab=bypass. Dashboard also has a Bypass quick link.',
       },
       {
-        q: 'Which sites does Bypass support?',
-        a: 'Every known Linkvertise domain first (publisher API). Also work.ink, lootlabs, AdFoc.us, shorteners (bit.ly, t.co, tinyurl, …), paste hosts, and social unlock pages. The page lists supported services with a filter.',
+        q: 'How do I use it?',
+        a: 'Sign in → Bypass. Paste one URL (or several, one per line). Click Bypass or press Ctrl / ⌘ + Enter. A chip shows the detected service (e.g. Linkvertise). Results appear below: Copy, Copy paste (when there is body text), Open (new tab), and the hop chain if there was more than one step.',
       },
       {
-        q: 'Do I need an account?',
-        a: 'Yes. Bypass is members-only even if an admin later marks the tab public — the API still requires a signed-in session.',
+        q: 'Do I need an account? What if the tab is public?',
+        a: 'Yes — you must be signed in with an active account. Guests see the members-only gate. Even if an admin later marks the Bypass tab public in Page Visibility, POST /api/bypass and GET /api/bypass/catalog still require a logged-in session. Banned or inactive accounts are rejected.',
+      },
+      {
+        q: 'Why is Linkvertise the most important target?',
+        a: 'Most locker links in the wild are Linkvertise (or a sibling domain). Bypass talks to the Linkvertise publisher API — including paste-type links and nested lockers — instead of sitting through the ad landing page. It is the first path the engine tries.',
+      },
+      {
+        q: 'Which Linkvertise domains work?',
+        a: 'linkvertise.com, linkvertise.net, link-to.net, linkvertise.download, direct-link.net, up-to-down.net, file-link.net, link-center.net, link-target.net, link-hub.net, lvturbo.com, and linkvertise.io (including typical www / subdomains). If the chip says Linkvertise, you are on a supported host.',
+      },
+      {
+        q: 'What else can it unlock besides Linkvertise?',
+        a: 'Lockers: Work.ink (work.ink, wrk.ink, pastework.ink, …), Lootlabs / lootlinks / lootdest, AdFoc.us, AdMaven. Unlock / social: Boost.ink, Bstlar, Rekonise, Social Unlock, Sub2Unlock and related hosts (sub2unlock.com/.me/.net, sub4unlock.io, sub2get, unlocknow, ytsubme, …). Leak/vault style lockers (vaultlinks, leakslinks, and similar) are in the catalog too. The on-page list is the live source — expand "Supported sites" and filter.',
+      },
+      {
+        q: 'Which shorteners and paste hosts?',
+        a: 'Shorteners: bit.ly / bitly / j.mp, TinyURL / tiny.cc, t.co, goo.gl and Google /url?q= unwraps, is.gd / v.gd, t.ly, Rebrandly, Cuttly / shorte.st. Pastes: Pastebin, Rentry, Hastebin, JustPaste, ControlC, n0paste, Paste Drop, Paster, Telegraph, PrivateBin, and a group of paste-* hosts. Raw paste endpoints are preferred over the HTML viewer.',
+      },
+      {
+        q: 'What will Bypass not do?',
+        a: 'It does not break paywalls, logins, shop checkouts, or captchas behind an account. It does not treat google.com or toptal.com as a whole-site shortener (only /url and hastebin paths). Random websites that are not lockers/shorteners/pastes usually fail. PrivateBin-style encrypted pastes cannot be decrypted without the key — you get an error or unreadable body, not the secret.',
+      },
+      {
+        q: 'How many URLs at once? What formats are accepted?',
+        a: 'Up to 8 unique http(s) URLs per run. One per line (whitespace split). Quotes, angle brackets, and trailing commas are stripped. A host without a scheme (linkvertise.com/…) gets https:// prepended. Duplicate lines are ignored. ftp:, javascript:, and credential URLs (user:pass@host) are dropped before the request.',
+      },
+      {
+        q: 'What do Ready vs Failed mean?',
+        a: 'Ready = a public http(s) destination and/or paste text. Failed = could not resolve (timeout, blocked host, locker with no dest, empty result). The error line is the reason. A locker URL is never shown as a successful destination — if the only leftover is still Linkvertise/Work.ink/etc., the card fails (unless there is paste text).',
+      },
+      {
+        q: 'Copy, Copy all, Copy paste, Open — what is the difference?',
+        a: 'Copy = the destination URL. Copy all = every successful destination in the batch, one per line. Copy paste = the paste body when the result is text. Open = new tab to the destination (noopener). Open is hidden if the URL is not http(s), has credentials, or points at loopback/private/locker hosts. If the clipboard is blocked by the browser, Bypass tells you to select and copy manually.',
+      },
+      {
+        q: 'What is a hop chain?',
+        a: 'Some links wrap another locker or shortener (Linkvertise → paste → bit.ly → file). Bypass follows a short chain (capped) and shows the steps under the result. Cycles and ad-page scrapes are not treated as the destination. Query unwraps like Google /url?q= count as a hop when they actually change the target.',
+      },
+      {
+        q: 'Where is history stored? Is it private?',
+        a: 'Last 20 runs stay in this browser (localStorage). The server does not keep a per-user unlock log. History shows the original locker URL you pasted (and a safe dest if one existed). Click a row to reuse the original URL. Clear history removes it from this device only. Another browser or a private window starts empty.',
+      },
+      {
+        q: 'Why did I get "Sign in required"?',
+        a: 'The session cookie is missing, expired, or the account is not active. Sign in again. Catalog load uses a soft 401 (it will not log you out by itself); running Bypass on a dead session does require a fresh login.',
+      },
+      {
+        q: 'Why "Too many requests"?',
+        a: 'Rate limit: 20 Bypass runs per member per minute (catalog is 60/min). Wait for the seconds shown and retry. This is per account, not a global "site is down".',
+      },
+      {
+        q: 'Why "Bypass timed out" or "Bypass failed"?',
+        a: 'Each URL has a ~25s budget. Slow lockers, dead hosts, or a long hop chain can expire. "Bypass failed" / "No destination found" means the engine could not extract a public dest (service down, changed API, or unsupported page). Try again later or paste a different URL. Closing the tab or starting a new run aborts in-flight hops.',
+      },
+      {
+        q: 'Why "URL is not allowed" / "Destination is not allowed"?',
+        a: 'The input or the resolved dest is not a public http(s) host. Loopback (127.0.0.1, [::1], 0:0:0:0:0:0:0:1), private LAN, link-local, .local / .localhost, metadata hosts, and URLs with usernames/passwords are blocked on both the server and the Open button. That is intentional — Bypass is not a proxy into your network.',
+      },
+      {
+        q: 'Does Bypass send my links to third parties?',
+        a: 'The Terminal fetches the locker/shortener/paste itself (SSRF-safe, public IPs only). If the native resolver cannot finish, it may try public bypass APIs as a fallback. Do not paste secrets, session cookies, or internal URLs. Destinations are not written to the auth database; only this browser keeps Recent.',
+      },
+      {
+        q: 'Can I run it while another bypass is in progress?',
+        a: 'Yes — Bypass / Ctrl+Enter restarts: the previous request is aborted and a new one starts with the current field. Leaving the page also aborts. The button shows "Bypassing…" while a run is in flight.',
+      },
+      {
+        q: 'The supported-sites list is empty or filtered to nothing.',
+        a: 'The catalog loads after sign-in (one retry). If you are logged out it stays empty — you can still paste URLs; Linkvertise is recognized even without the catalog. Type in the filter to search labels/hosts; "No services match" means the filter is too narrow. Clear the filter or hide the list.',
+      },
+      {
+        q: 'Is this the same as LUL Paste?',
+        a: 'No. Paste (📋) is LUL Terminal’s own pastebin (create/share snippets). Bypass (🔓) reads other people’s locker/shortener/paste URLs and returns the destination. A Bypass paste result is content from an external paste host, not a paste you created here.',
+      },
+      {
+        q: 'Bypass API endpoints?',
+        a: 'GET /api/bypass/catalog — supported services (signed in). POST /api/bypass — JSON { urls: string[] } or { url: string }, max 8 URLs × 2048 chars. 401 not logged in · 403 tab/permission · 429 rate limit · 400 no valid URL. Results: ok, destination, pasteText, hops, error. Members-only; not a public unauthenticated API.',
       },
     ],
   },

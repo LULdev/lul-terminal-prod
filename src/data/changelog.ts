@@ -23,6 +23,17 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '3.98.0',
+    title: 'FAQ: full Bypass section',
+    date: 'Aug 21, 2026',
+    highlight: true,
+    items: [
+      { icon: '❓', text: 'FAQ — Bypass section covers use, Linkvertise domains, lockers/shorteners/pastes, results, history, errors, safety, and API.' },
+      { priority: 'P3', text: 'P3 - Getting Started / Page Visibility mention Bypass members-only API even if the tab is marked public.' },
+      { priority: 'P9', text: 'P9 - Version 3.98.0; Bypass FAQ complete (every item listed).' },
+    ],
+  },
+  {
     version: '3.97.0',
     title: 'LUL Wire: German Bypass launch article',
     date: 'Aug 21, 2026',
