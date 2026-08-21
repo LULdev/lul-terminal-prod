@@ -26,7 +26,7 @@ const MAX_PASTE_CHARS = 8_000;
 
 const DEST_PARAM_KEYS = ['url', 'r', 'u', 'q', 'target', 'dest', 'destination', 'redirect', 'link', 'goto', 'out', 'to'];
 
-const JUNK_HOST_RE = /(google-analytics|googletagmanager|doubleclick|googlesyndication|googleadservices|facebook\.net|fbcdn|gstatic\.com|googleapis\.com|cloudflareinsights|scorecardresearch|hotjar|sentry\.io|newrelic|adnxs|adsystem|taboola|outbrain|quantserve)/i;
+const JUNK_HOST_RE = /(google-analytics|googletagmanager|doubleclick|googlesyndication|googleadservices|facebook\.net|fbcdn|gstatic\.com|cloudflareinsights|scorecardresearch|hotjar|sentry\.io|newrelic|adnxs|adsystem|taboola|outbrain|quantserve)/i;
 
 /** @typedef {{ id: string, label: string, kind: 'locker'|'shortener'|'paste'|'unlock'|'generic', hosts: string[] }} BypassService */
 
@@ -362,10 +362,10 @@ async function request(url, init = {}, { timeoutMs = TIMEOUT_MS, maxRedirects } 
 
   let json = null;
   const ct = String(res.headers.get('content-type') ?? '');
-  const trimmed = text.trim();
+  const trimmed = text.replace(/^\uFEFF/, '').trim();
   if (ct.includes('json') || trimmed.startsWith('{') || trimmed.startsWith('[')) {
     try {
-      json = JSON.parse(text);
+      json = JSON.parse(trimmed);
     } catch { /* ignore */ }
   }
   return { ok: res.ok, status: res.status, url: finalUrl, text, json, headers: res.headers };
@@ -377,6 +377,18 @@ function sameResource(a, b) {
     const ub = new URL(b);
     return ua.hostname.replace(/^www\./, '') === ub.hostname.replace(/^www\./, '')
       && ua.pathname.replace(/\/+$/, '') === ub.pathname.replace(/\/+$/, '');
+  } catch {
+    return a === b;
+  }
+}
+
+function sameHref(a, b) {
+  try {
+    const ua = new URL(a);
+    const ub = new URL(b);
+    ua.hash = '';
+    ub.hash = '';
+    return ua.href === ub.href;
   } catch {
     return a === b;
   }
@@ -708,7 +720,7 @@ async function tryPublicBypassApis(url) {
 
 async function resolveKnown(url, service) {
   const q = unwrapQueryDest(url);
-  if (usableDest(q, url) && identifyService(q)?.id !== service.id) {
+  if (usableDest(q, url)) {
     return { dest: q, paste: null };
   }
 
@@ -777,7 +789,7 @@ async function resolveChain(inputUrl) {
       lastKind = 'paste';
     }
     if (resolved.dest && looksHttpUrl(resolved.dest) && !sameResource(resolved.dest, current) && !isJunkDest(resolved.dest, current)) {
-      if (hops.some((h) => sameResource(h, resolved.dest))) {
+      if (hops.some((h) => sameHref(h, resolved.dest))) {
         throw new Error('No destination found');
       }
       hops.push(resolved.dest);
@@ -810,7 +822,7 @@ async function resolveChain(inputUrl) {
 
 export function parseInputUrls(raw) {
   const text = String(raw ?? '');
-  const parts = text.split(/\s+/).map((s) => s.trim().replace(/^<|>$/g, '')).filter(Boolean);
+  const parts = text.split(/\s+/).map((s) => s.trim().replace(/^["'<\[]+|["'>\]]+$/g, '')).filter(Boolean);
   const urls = [];
   for (const part of parts) {
     let candidate = part.replace(/[,\s]+$/g, '');

@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import { parseRetryAfterMs } from './retryAfter';
 import { sessionFetch, sessionJson } from './sessionFetch';
 
 export type BypassServiceKind = 'locker' | 'shortener' | 'paste' | 'unlock' | 'generic';
@@ -46,7 +47,10 @@ export async function runBypass(urls: string[], signal?: AbortSignal): Promise<B
       signal,
     });
     const data = (await res.json().catch(() => ({}))) as BypassResponse & { error?: string };
-    if (res.status === 429) throw new Error('Too many requests — wait a moment and try again.');
+    if (res.status === 429) {
+      const sec = Math.max(1, Math.ceil(parseRetryAfterMs(res.headers.get('Retry-After')) / 1000));
+      throw new Error(`Too many requests — retry in ${sec}s.`);
+    }
     if (!res.ok) {
       const msg = String(data.error ?? `HTTP ${res.status}`);
       if (/permission denied|not logged|sign in/i.test(msg)) throw new Error('Sign in required');
@@ -81,7 +85,7 @@ const LV_HOSTS = [
 export function parseLocalUrls(raw: string): string[] {
   const seen = new Set<string>();
   const out: string[] = [];
-  for (const part of raw.split(/\s+/).map((s) => s.trim().replace(/^<|>$/g, '').replace(/[,\s]+$/g, '')).filter(Boolean)) {
+  for (const part of raw.split(/\s+/).map((s) => s.trim().replace(/^["'<\[]+|["'>\]]+$/g, '').replace(/[,\s]+$/g, '')).filter(Boolean)) {
     let candidate = part;
     if (!/^https?:\/\//i.test(candidate) && /^[\w.-]+\.[a-z]{2,}/i.test(candidate)) {
       candidate = `https://${candidate}`;
@@ -138,8 +142,10 @@ export function loadBypassHistory(): BypassHistoryItem[] {
 }
 
 export function pushBypassHistory(items: BypassHistoryItem[]): BypassHistoryItem[] {
-  const prev = loadBypassHistory();
-  const next = [...items, ...prev].slice(0, HISTORY_MAX);
+  const incoming = items.filter((x) => x && typeof x.input === 'string');
+  const seen = new Set(incoming.map((x) => x.input));
+  const prev = loadBypassHistory().filter((p) => !seen.has(p.input));
+  const next = [...incoming, ...prev].slice(0, HISTORY_MAX);
   try {
     localStorage.setItem(HISTORY_KEY, JSON.stringify(next));
   } catch { /* quota */ }

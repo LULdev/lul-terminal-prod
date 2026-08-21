@@ -23,6 +23,22 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '3.88.0',
+    title: 'Bypass 10-round client+server audit',
+    date: 'Aug 9, 2026',
+    highlight: true,
+    items: [
+      { priority: 'P1', text: 'P1 - Bypass API guests get 401 Not logged in (not 403 Permission denied / no stale session).' },
+      { priority: 'P1', text: 'P1 - hop cycle uses full href (google.com/url?q= different targets no longer collide).' },
+      { priority: 'P1', text: 'P1 - same-service query unwrap (LV ?r= nested locker hops); googleapis dests no longer junked.' },
+      { priority: 'P1', text: 'P1 - busy Bypass click/Ctrl+Enter aborts and restarts (button no longer dead while running).' },
+      { priority: 'P2', text: 'P2 - pinnedRequest settle-once + abort listener cleanup; JSON BOM strip before parse.' },
+      { priority: 'P2', text: 'P2 - 429 shows Retry-After seconds; catalog one retry; history deduped by input.' },
+      { priority: 'P3', text: 'P3 - quote/bracket unwrap on paste; POST /api/bypass/catalog 405.' },
+      { priority: 'P9', text: 'P9 - Version 3.88.0; 10-round Bypass audit (every item listed).' },
+    ],
+  },
+  {
     version: '3.87.0',
     title: 'Bypass client+server: locker false-success, landing scrape, URL parse',
     date: 'Aug 9, 2026',

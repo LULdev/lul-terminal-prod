@@ -171,6 +171,15 @@ function pinnedRequest(parsed, address, family, { method, headers, body, signal,
   }
 
   return new Promise((resolve, reject) => {
+    let settled = false;
+    let onAbort = () => {};
+    const finish = (fn, value) => {
+      if (settled) return;
+      settled = true;
+      if (signal) signal.removeEventListener('abort', onAbort);
+      fn(value);
+    };
+
     const req = lib.request(
       {
         protocol: parsed.protocol,
@@ -195,7 +204,7 @@ function pinnedRequest(parsed, address, family, { method, headers, body, signal,
           total += c.length;
           if (total > maxBytes) {
             req.destroy(new Error('Response too large'));
-            reject(new Error('Response too large'));
+            finish(reject, new Error('Response too large'));
             return;
           }
           chunks.push(c);
@@ -214,7 +223,7 @@ function pinnedRequest(parsed, address, family, { method, headers, body, signal,
             if (Array.isArray(v)) v.forEach((item) => headersMap.append(k, item));
             else headersMap.set(k, v);
           }
-          resolve({
+          finish(resolve, {
             status: res.statusCode || 0,
             statusText: res.statusMessage || '',
             ok: (res.statusCode || 0) >= 200 && (res.statusCode || 0) < 300,
@@ -232,13 +241,13 @@ function pinnedRequest(parsed, address, family, { method, headers, body, signal,
             },
           });
         });
-        res.on('error', reject);
+        res.on('error', (err) => finish(reject, err));
       },
     );
 
-    const onAbort = () => {
+    onAbort = () => {
       req.destroy(new Error('Aborted'));
-      reject(new Error('Aborted'));
+      finish(reject, new Error('Aborted'));
     };
     if (signal) {
       if (signal.aborted) {
@@ -250,9 +259,9 @@ function pinnedRequest(parsed, address, family, { method, headers, body, signal,
 
     req.setTimeout(timeoutMs, () => {
       req.destroy(new Error('Request timeout'));
-      reject(new Error('Request timeout'));
+      finish(reject, new Error('Request timeout'));
     });
-    req.on('error', reject);
+    req.on('error', (err) => finish(reject, err));
 
     if (body != null && body !== '') {
       req.write(body);

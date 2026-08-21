@@ -44,11 +44,22 @@ export function BypassPage() {
   }, []);
 
   useEffect(() => {
-    void fetchBypassCatalog()
-      .then((list) => {
-        if (mountedRef.current) setCatalog(list);
-      })
-      .catch(() => { /* catalog is optional chrome */ });
+    let cancelled = false;
+    let retryTimer: ReturnType<typeof setTimeout> | null = null;
+    const load = (attempt: number) => {
+      void fetchBypassCatalog()
+        .then((list) => {
+          if (!cancelled && mountedRef.current) setCatalog(list);
+        })
+        .catch(() => {
+          if (!cancelled && attempt < 1) retryTimer = setTimeout(() => load(attempt + 1), 800);
+        });
+    };
+    load(0);
+    return () => {
+      cancelled = true;
+      if (retryTimer) clearTimeout(retryTimer);
+    };
   }, []);
 
   const urls = useMemo(() => parseLocalUrls(input), [input]);
@@ -69,7 +80,6 @@ export function BypassPage() {
   }, []);
 
   const run = useCallback(async () => {
-    if (busyRef.current) return;
     const list = parseLocalUrls(input);
     if (!list.length) {
       setError('Paste a Linkvertise (or other) URL first.');
@@ -152,7 +162,7 @@ export function BypassPage() {
           />
           </div>
           <div className="mt-2 flex flex-wrap items-center gap-2">
-            <ActionButton onClick={() => void run()} variant="cyan" disabled={busy || urls.length === 0}>
+            <ActionButton onClick={() => void run()} variant="cyan" disabled={urls.length === 0}>
               {busy ? 'Bypassing…' : urls.length > 1 ? `Bypass ${urls.length} links` : 'Bypass'}
             </ActionButton>
             {firstLabel && (

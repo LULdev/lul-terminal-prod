@@ -4,10 +4,19 @@
  */
 
 import { respondApiError, wrapAsyncHandler } from './asyncMiddleware.mjs';
+import { attachAuth } from './auth/authApi.mjs';
+import { isEffectivelyActive } from './auth/permissions.mjs';
 import { requireMemberTab } from './tabAccessGuard.mjs';
 import { checkRateLimit, clientIp } from './rateLimit.mjs';
 import { readJsonBody } from './readJsonBody.mjs';
 import { catalogPublic, parseInputUrls, resolveMany, MAX_URLS } from './bypassEngine.mjs';
+
+async function requireBypassAccess(req) {
+  await attachAuth(req);
+  const user = req.auth?.user;
+  if (!user || !isEffectivelyActive(user)) throw new Error('Not logged in');
+  await requireMemberTab(req, 'bypass');
+}
 
 function sendJson(res, status, body) {
   res.statusCode = status;
@@ -27,9 +36,14 @@ export async function handleBypassRequest(req, res) {
     }
 
     if (req.method === 'GET' && pathname === '/api/bypass/catalog') {
-      await requireMemberTab(req, 'bypass');
+      await requireBypassAccess(req);
       await checkRateLimit(`bypass-cat:${req.auth?.user?.id ?? clientIp(req)}`, { max: 60, windowMs: 60_000 });
       return sendJson(res, 200, { services: catalogPublic() });
+    }
+
+    if (pathname === '/api/bypass/catalog' && req.method !== 'GET') {
+      res.setHeader('Allow', 'GET, OPTIONS');
+      return sendJson(res, 405, { error: 'Method not allowed' });
     }
 
     if (pathname === '/api/bypass' && req.method !== 'POST') {
@@ -38,7 +52,7 @@ export async function handleBypassRequest(req, res) {
     }
 
     if (req.method === 'POST' && pathname === '/api/bypass') {
-      await requireMemberTab(req, 'bypass');
+      await requireBypassAccess(req);
       const userId = req.auth?.user?.id ?? clientIp(req);
       await checkRateLimit(`bypass:${userId}`, { max: 20, windowMs: 60_000 });
       const body = await readJsonBody(req, 16 * 1024);
