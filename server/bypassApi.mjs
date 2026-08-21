@@ -31,13 +31,16 @@ function attachClientAbort(req) {
     ac.abort();
     return { signal: ac.signal, dispose() {} };
   }
+  // Do not listen to IncomingMessage 'close' — it fires after the body is
+  // consumed (readJsonBody) and would abort a healthy POST.
   req.once('aborted', onAbort);
-  req.once('close', onAbort);
+  const sock = req.socket;
+  sock?.once('close', onAbort);
   return {
     signal: ac.signal,
     dispose() {
       req.off('aborted', onAbort);
-      req.off('close', onAbort);
+      sock?.off('close', onAbort);
     },
   };
 }
@@ -86,7 +89,8 @@ export async function handleBypassRequest(req, res) {
       const gate = attachClientAbort(req);
       try {
         const results = await resolveMany(urls.slice(0, MAX_URLS), gate.signal);
-        if (gate.signal.aborted || req.aborted || res.writableEnded) return;
+        gate.dispose();
+        if (req.aborted || res.writableEnded) return;
         return sendJson(res, 200, { results });
       } finally {
         gate.dispose();

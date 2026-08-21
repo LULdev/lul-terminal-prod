@@ -20,9 +20,20 @@ const BLOCKED_HOSTS = new Set([
   'metadata',
 ]);
 
+function mapped6RestToV4(rest) {
+  if (rest.includes('.')) return rest;
+  const hex = rest.split(':');
+  if (hex.length === 2 && hex.every((p) => /^[0-9a-f]{1,4}$/i.test(p))) {
+    const n = ((Number.parseInt(hex[0], 16) << 16) + Number.parseInt(hex[1], 16)) >>> 0;
+    return `${(n >>> 24) & 255}.${(n >>> 16) & 255}.${(n >>> 8) & 255}.${n & 255}`;
+  }
+  return rest;
+}
+
 export function isPrivateIp(ip) {
-  if (net.isIPv4(ip)) {
-    const parts = ip.split('.').map(Number);
+  const raw = String(ip ?? '').replace(/^\[|\]$/g, '');
+  if (net.isIPv4(raw)) {
+    const parts = raw.split('.').map(Number);
     const [a, b] = parts;
     if (a === 10 || a === 127 || a === 0) return true;
     if (a === 169 && b === 254) return true; // link-local
@@ -32,12 +43,15 @@ export function isPrivateIp(ip) {
     if (a === 198 && (b === 18 || b === 19)) return true; // benchmarking 198.18.0.0/15
     if (a >= 224) return true; // multicast + reserved
   }
-  if (net.isIPv6(ip)) {
-    const lower = ip.toLowerCase().replace(/^\[|\]$/g, '');
+  if (net.isIPv6(raw)) {
+    const lower = raw.toLowerCase();
     if (lower === '::' || lower === '::1') return true;
+    if (/^(0+:){7}0$/.test(lower) || /^(0+:){7}1$/.test(lower)) return true;
     if (lower.startsWith('fe80:') || lower.startsWith('fc') || lower.startsWith('fd')) return true;
     if (lower.startsWith('ff')) return true; // multicast
-    if (lower.startsWith('::ffff:')) return isPrivateIp(lower.slice(7));
+    if (lower.startsWith('::ffff:')) return isPrivateIp(mapped6RestToV4(lower.slice(7)));
+    const mapped = /(?:^|:)ffff:(.+)$/.exec(lower);
+    if (mapped) return isPrivateIp(mapped6RestToV4(mapped[1]));
   }
   return false;
 }
@@ -88,9 +102,10 @@ function normalizeDottedIpv4(host) {
 }
 
 function assertHostAllowed(host) {
+  const stripped = String(host ?? '').replace(/^\[|\]$/g, '').toLowerCase();
   let decoded;
   try {
-    decoded = normalizeDottedIpv4(decodeIpLiteral(host));
+    decoded = normalizeDottedIpv4(decodeIpLiteral(stripped));
   } catch {
     throw new Error('Blocked URL host');
   }
@@ -121,7 +136,7 @@ export function assertSafeFetchUrl(urlStr) {
 export async function resolveSafeFetchTarget(urlStr) {
   const href = assertSafeFetchUrl(urlStr);
   const parsed = new URL(href);
-  const host = parsed.hostname;
+  const host = parsed.hostname.replace(/^\[|\]$/g, '');
 
   if (net.isIP(host)) {
     if (isPrivateIp(host)) throw new Error('Blocked private IP');

@@ -199,7 +199,7 @@ export function BypassPage() {
             <div className="flex flex-col gap-2">
               {results.map((r, i) => {
                 const dest = r.ok ? (r.destination ?? '') : '';
-                const href = dest ? safeBypassOpenHref(dest) : null;
+                const href = dest && !isBypassLockerDest(dest, catalog) ? safeBypassOpenHref(dest) : null;
                 return (
                   <div
                     key={`${r.input}-${i}`}

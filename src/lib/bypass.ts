@@ -60,7 +60,8 @@ function isAbortError(err: unknown): boolean {
 function normalizeBypassResult(raw: BypassResult): BypassResult {
   const input = typeof raw?.input === 'string' ? raw.input.slice(0, 2048) : '';
   const dest = typeof raw?.destination === 'string' ? raw.destination.slice(0, 2048) : null;
-  const paste = typeof raw?.pasteText === 'string' ? raw.pasteText.slice(0, 8000) : null;
+  const pasteRaw = typeof raw?.pasteText === 'string' ? raw.pasteText.slice(0, 8000) : null;
+  const paste = pasteRaw && pasteRaw.trim() ? pasteRaw : null;
   const hops = Array.isArray(raw?.hops)
     ? raw.hops.filter((h) => typeof h === 'string').map((h) => h.slice(0, 2048)).slice(0, 8)
     : [];
@@ -161,6 +162,16 @@ function dottedPrivate(a: number, b: number): boolean {
   return false;
 }
 
+function mapped6RestToV4(rest: string): string {
+  if (rest.includes('.')) return rest;
+  const hex = rest.split(':');
+  if (hex.length === 2 && hex.every((p) => /^[0-9a-f]{1,4}$/i.test(p))) {
+    const n = ((Number.parseInt(hex[0], 16) << 16) + Number.parseInt(hex[1], 16)) >>> 0;
+    return `${(n >>> 24) & 255}.${(n >>> 16) & 255}.${(n >>> 8) & 255}.${n & 255}`;
+  }
+  return rest;
+}
+
 function isBlockedOpenHost(host: string): boolean {
   const h = host.replace(/^\[|\]$/g, '').toLowerCase();
   if (!h || h === 'localhost' || h === '::1' || h === '0.0.0.0' || h.endsWith('.localhost')) return true;
@@ -174,8 +185,11 @@ function isBlockedOpenHost(host: string): boolean {
     return dottedPrivate(Number(m[1]), Number(m[2]));
   }
   if (h.includes(':')) {
+    if (h === '::' || h === '::1' || /^(0+:){7}0$/.test(h) || /^(0+:){7}1$/.test(h)) return true;
     if (h.startsWith('fe80:') || h.startsWith('fc') || h.startsWith('fd') || h.startsWith('ff')) return true;
-    if (h.startsWith('::ffff:')) return isBlockedOpenHost(h.slice(7));
+    if (h.startsWith('::ffff:')) return isBlockedOpenHost(mapped6RestToV4(h.slice(7)));
+    const mapped = /(?:^|:)ffff:(.+)$/.exec(h);
+    if (mapped) return isBlockedOpenHost(mapped6RestToV4(mapped[1]));
   }
   return false;
 }
@@ -242,14 +256,15 @@ export function loadBypassHistory(): BypassHistoryItem[] {
     const parsed = JSON.parse(raw) as BypassHistoryItem[];
     if (!Array.isArray(parsed)) return [];
     return parsed
-      .filter((x) => x && typeof x === 'object' && typeof x.input === 'string' && x.input.length <= 2048)
+      .filter((x) => x && typeof x === 'object' && typeof x.input === 'string' && x.input.length > 0 && x.input.length <= 2048)
       .slice(0, HISTORY_MAX)
       .map((x) => {
         const dest = typeof x.destination === 'string' ? x.destination.slice(0, 2048) : null;
+        const safeDest = dest && safeBypassOpenHref(dest) && !isBypassLockerDest(dest) ? dest : null;
         return {
           at: typeof x.at === 'number' && Number.isFinite(x.at) ? x.at : 0,
           input: x.input.slice(0, 2048),
-          destination: dest && safeBypassOpenHref(dest) ? dest : null,
+          destination: safeDest,
           ok: Boolean(x.ok),
           service: typeof x.service === 'string' ? x.service.slice(0, 32) : 'unknown',
         };
@@ -261,13 +276,14 @@ export function loadBypassHistory(): BypassHistoryItem[] {
 
 export function pushBypassHistory(items: BypassHistoryItem[]): BypassHistoryItem[] {
   const incoming = items
-    .filter((x) => x && typeof x.input === 'string' && x.input.length <= 2048)
+    .filter((x) => x && typeof x.input === 'string' && x.input.length > 0 && x.input.length <= 2048)
     .map((x) => {
       const dest = typeof x.destination === 'string' ? x.destination.slice(0, 2048) : null;
+      const safeDest = dest && safeBypassOpenHref(dest) && !isBypassLockerDest(dest) ? dest : null;
       return {
         at: typeof x.at === 'number' && Number.isFinite(x.at) ? x.at : Date.now(),
         input: x.input.slice(0, 2048),
-        destination: dest && safeBypassOpenHref(dest) ? dest : null,
+        destination: safeDest,
         ok: Boolean(x.ok),
         service: typeof x.service === 'string' ? x.service.slice(0, 32) : 'unknown',
       };

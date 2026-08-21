@@ -23,6 +23,19 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '3.95.0',
+    title: 'Bypass 10-round: abort close race, IPv6 loopback, paste/history',
+    date: 'Aug 21, 2026',
+    highlight: true,
+    items: [
+      { priority: 'P1', text: 'P1 - POST /api/bypass no longer aborts on IncomingMessage close after the body is read (healthy requests were cancelled).' },
+      { priority: 'P1', text: 'P1 - bracketed/expanded IPv6 loopback blocked on dest fetch and Open ([::1], 0:0:0:0:0:0:0:1, ::ffff:7f00:1).' },
+      { priority: 'P2', text: 'P2 - whitespace-only paste is not ok:true; paste URL extract capped at 32 links.' },
+      { priority: 'P2', text: 'P2 - history drops empty inputs and locker dests; Open re-checks catalog locker hosts.' },
+      { priority: 'P9', text: 'P9 - Version 3.95.0; 10-round Bypass residual (every item listed).' },
+    ],
+  },
+  {
     version: '3.94.0',
     title: 'Bypass P1: locker dest hijack, paste HTML, abort, empty JSON',
     date: 'Aug 21, 2026',

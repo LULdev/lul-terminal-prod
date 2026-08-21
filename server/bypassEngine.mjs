@@ -223,6 +223,7 @@ function extractUrlsFromText(text) {
       continue;
     }
     if (!out.includes(u)) out.push(u);
+    if (out.length >= 32) break;
   }
   return out;
 }
@@ -959,7 +960,9 @@ export async function resolveMany(urlList, outerSignal) {
         if (!resolved.pasteText) throw new Error('No destination found');
         dest = null;
       }
-      if (!dest && !resolved.pasteText) throw new Error('No destination found');
+      const paste = resolved.pasteText ? String(resolved.pasteText).slice(0, MAX_PASTE_CHARS) : null;
+      const pasteOk = Boolean(paste && paste.trim());
+      if (!dest && !pasteOk) throw new Error('No destination found');
       results.push({
         input: href.slice(0, MAX_URL_LEN),
         service: String(resolved.service || 'unknown').slice(0, 32),
@@ -969,8 +972,8 @@ export async function resolveMany(urlList, outerSignal) {
           .filter((h) => typeof h === 'string')
           .map((h) => h.slice(0, MAX_URL_LEN))
           .slice(0, MAX_HOPS + 1),
-        kind: resolved.kind === 'paste' || resolved.pasteText ? 'paste' : 'url',
-        pasteText: resolved.pasteText ? String(resolved.pasteText).slice(0, MAX_PASTE_CHARS) : null,
+        kind: resolved.kind === 'paste' || pasteOk ? 'paste' : 'url',
+        pasteText: pasteOk ? paste : null,
         error: null,
       });
     } catch (err) {
