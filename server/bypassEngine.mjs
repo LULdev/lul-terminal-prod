@@ -23,6 +23,7 @@ const MAX_HOPS = 6;
 const MAX_URLS = 8;
 const MAX_URL_LEN = 2048;
 const MAX_PASTE_CHARS = 8_000;
+const MAX_DECODED_BYTES = 512 * 1024;
 
 const DEST_PARAM_KEYS = ['url', 'r', 'u', 'q', 'target', 'dest', 'destination', 'redirect', 'link', 'goto', 'out', 'to'];
 
@@ -128,7 +129,12 @@ export function identifyService(urlStr) {
 export function catalogPublic() {
   return BYPASS_SERVICES
     .filter((s) => s.id !== 'generic')
-    .map((s) => ({ id: s.id, label: s.label, kind: s.kind, hosts: s.hosts.slice(0, 8) }));
+    .map((s) => ({
+      id: String(s.id).slice(0, 32),
+      label: String(s.label).slice(0, 64),
+      kind: s.kind,
+      hosts: s.hosts.slice(0, 8).map((h) => String(h).slice(0, 64)),
+    }));
 }
 
 function looksHttpUrl(value) {
@@ -290,6 +296,24 @@ function extractJsonDest(obj, depth = 0) {
   return null;
 }
 
+function asHeaderToken(value) {
+  if (typeof value !== 'string') return null;
+  const s = value.trim();
+  if (!s || s.length > 2048 || /[\x00-\x1f\x7f]/.test(s)) return null;
+  return s;
+}
+
+function sanitizeHeaders(headers) {
+  const out = {};
+  for (const [k, v] of Object.entries(headers || {})) {
+    if (typeof k !== 'string' || !/^[!#$%&'*+\-.^_`|~0-9A-Za-z]+$/.test(k)) continue;
+    const val = String(v ?? '');
+    if (!val || val.length > 8192 || /[\x00-\x1f\x7f]/.test(val)) continue;
+    out[k] = val;
+  }
+  return out;
+}
+
 function createJar() {
   /** @type {Map<string, string>} */
   const map = new Map();
@@ -329,14 +353,15 @@ async function request(url, init = {}, { timeoutMs = TIMEOUT_MS, maxRedirects } 
   if (signal?.aborted) throw new Error('Aborted');
   const href = assertSafeFetchUrl(url);
   const method = String(init.method ?? 'GET').toUpperCase();
-  const headers = {
+  const headers = sanitizeHeaders({
     'User-Agent': UA,
     Accept: 'text/html,application/json,application/xhtml+xml,*/*;q=0.8',
     'Accept-Language': 'en-US,en;q=0.9',
     ...(init.headers ?? {}),
-  };
-  headers['Accept-Encoding'] = 'identity';
+    'Accept-Encoding': 'identity',
+  });
   if (init.jar) init.jar.apply(headers);
+  if (headers.Cookie && /[\x00-\x1f\x7f]/.test(headers.Cookie)) delete headers.Cookie;
   const body = init.body;
   if (body != null && body !== '' && !headers['Content-Length'] && !headers['content-length']) {
     headers['Content-Length'] = String(Buffer.byteLength(String(body)));
@@ -365,13 +390,18 @@ async function request(url, init = {}, { timeoutMs = TIMEOUT_MS, maxRedirects } 
   if (encoding.includes('gzip') || encoding.includes('deflate')) {
     const buf = Buffer.from(await res.arrayBuffer());
     try {
-      text = (encoding.includes('gzip') ? zlib.gunzipSync(buf) : zlib.inflateSync(buf)).toString('utf8');
+      const decoded = encoding.includes('gzip')
+        ? zlib.gunzipSync(buf, { maxOutputLength: MAX_DECODED_BYTES })
+        : zlib.inflateSync(buf, { maxOutputLength: MAX_DECODED_BYTES });
+      text = decoded.toString('utf8');
     } catch {
-      text = buf.toString('utf8');
+      // Compressed garbage must not be scanned for dest URLs
+      text = '';
     }
   } else {
     text = await res.text();
   }
+  if (text.length > MAX_DECODED_BYTES) text = text.slice(0, MAX_DECODED_BYTES);
 
   let json = null;
   const ct = String(res.headers.get('content-type') ?? '');
@@ -418,6 +448,8 @@ function usableDest(dest, fromUrl) {
     const href = assertSafeFetchUrl(dest);
     const u = new URL(href);
     if (u.username || u.password) return false;
+    const host = u.hostname.toLowerCase();
+    if (host === 'localhost' || host.endsWith('.localhost')) return false;
     return true;
   } catch {
     return false;
@@ -435,6 +467,8 @@ async function asPublicDest(urlStr) {
       u.password = '';
     }
     if (u.protocol !== 'http:' && u.protocol !== 'https:') return null;
+    const host = u.hostname.toLowerCase();
+    if (host === 'localhost' || host.endsWith('.localhost')) return null;
     return u.href;
   } catch {
     return null;
@@ -532,8 +566,7 @@ async function resolveLinkvertise(url) {
     if (page.url && usableDest(page.url, url) && !isLockerUrl(page.url)) {
       return { dest: page.url, paste: null };
     }
-    const fromPage = extractDestFromHtml(page.text, page.url || url);
-    if (usableDest(fromPage, url) && !isLockerUrl(fromPage)) return { dest: fromPage, paste: null };
+    // Still on Linkvertise — do not scrape landing HTML (ad / tracker dest hijack)
   } catch { /* landing HTML is best-effort */ }
 
   const path = lvPathFromUrl(url);
@@ -558,39 +591,40 @@ async function resolveLinkvertise(url) {
       { headers: LV_HEADERS, jar },
     );
     link = staticRes.json?.data?.link ?? staticRes.json?.link ?? null;
-    userToken = staticRes.json?.user_token ?? staticRes.json?.data?.user_token ?? userToken;
+    userToken = asHeaderToken(staticRes.json?.user_token)
+      || asHeaderToken(staticRes.json?.data?.user_token)
+      || userToken;
     if (link?.id) {
       usedPath = p;
       break;
     }
   }
 
-  if (!userToken) {
+  if (!userToken && link?.id) {
     const acc = await request('https://publisher.linkvertise.com/api/v1/account', { headers: LV_HEADERS, jar });
-    userToken = acc.json?.user_token ?? acc.json?.data?.user_token ?? null;
+    userToken = asHeaderToken(acc.json?.user_token) || asHeaderToken(acc.json?.data?.user_token) || null;
   }
 
   const typeRaw = String(link?.target_type ?? 'URL').toUpperCase();
   const type = typeRaw === 'PASTE' ? 'paste' : 'target';
   const linkId = link?.id;
 
-  const warmup = [
-    `/captcha`,
-    `/countdown_impression?trafficOrigin=network`,
-    `/todo_impression?mobile=true&trafficOrigin=network`,
-    `/click?trafficOrigin=network`,
-  ];
-  for (const suffix of warmup) {
-    try {
-      await request(
-        `https://publisher.linkvertise.com/api/v1/redirect/link/${usedPath}${suffix}`,
-        { headers: LV_HEADERS, jar },
-        { timeoutMs: 6_000, maxRedirects: 2 },
-      );
-    } catch { /* warmup is best-effort */ }
-  }
-
   if (linkId) {
+    const warmup = [
+      `/captcha`,
+      `/countdown_impression?trafficOrigin=network`,
+      `/todo_impression?mobile=true&trafficOrigin=network`,
+      `/click?trafficOrigin=network`,
+    ];
+    for (const suffix of warmup) {
+      try {
+        await request(
+          `https://publisher.linkvertise.com/api/v1/redirect/link/${usedPath}${suffix}`,
+          { headers: LV_HEADERS, jar },
+          { timeoutMs: 6_000, maxRedirects: 2 },
+        );
+      } catch { /* warmup is best-effort */ }
+    }
     const serial = lvSerial(linkId);
     const ut = userToken ? `?X-Linkvertise-UT=${encodeURIComponent(userToken)}` : '';
     const posted = await request(
@@ -625,9 +659,6 @@ async function resolveLinkvertise(url) {
     if (usableDest(dest2, url)) return { dest: dest2, paste: null };
   }
 
-  const htmlDest = staticRes ? extractDestFromHtml(staticRes.text, url) : null;
-  if (usableDest(htmlDest, url) && !isLockerUrl(htmlDest)) return { dest: htmlDest, paste: null };
-
   throw new Error('Linkvertise did not return a destination');
 }
 
@@ -652,7 +683,7 @@ async function resolveWorkink(url) {
   for (const api of apis) {
     try {
       const res = await request(api, {
-        headers: { Accept: 'application/json', Referer: url, Origin: 'https://work.ink' },
+        headers: { Accept: 'application/json', Referer: 'https://work.ink/', Origin: 'https://work.ink' },
       }, { timeoutMs: 8_000, maxRedirects: 3 });
       const dest = res.json?.destination || res.json?.data?.destination || extractJsonDest(res.json);
       if (usableDest(dest, url) && !isLockerUrl(dest)) return { dest, paste: null };
@@ -710,7 +741,7 @@ async function resolvePaste(url, serviceId) {
       const res = await request(cand, {}, { timeoutMs: TIMEOUT_MS, maxRedirects: 5 });
       lastText = res.text || '';
       if (!res.ok || !lastText.trim()) continue;
-      if (/<!doctype html|<html/i.test(lastText.slice(0, 400))) {
+      if (/<!doctype html|<html/i.test(lastText.replace(/^\uFEFF/, '').trimStart().slice(0, 400))) {
         const dest = extractDestFromHtml(lastText, res.url);
         if (usableDest(dest, url)) return { dest, paste: null };
         continue;
@@ -833,7 +864,7 @@ async function resolveChain(inputUrl) {
         throw new Error('No destination found');
       }
       if (hops.some((h) => sameHref(h, pub))) {
-        throw new Error('No destination found');
+        break;
       }
       hops.push(pub);
       current = pub;
@@ -848,17 +879,20 @@ async function resolveChain(inputUrl) {
   }
 
   const dest = hops[hops.length - 1];
-  if (!dest || (sameResource(dest, inputUrl) && !pasteText)) {
+  const destIsOrigin = Boolean(dest) && (sameHref(dest, inputUrl) || sameResource(dest, inputUrl));
+  const destIsLocker = Boolean(dest) && isLockerUrl(dest);
+  if (destIsLocker && !pasteText) {
     throw new Error('No destination found');
   }
-  if (isLockerUrl(dest) && !pasteText) {
+  if ((!dest || destIsOrigin) && !pasteText) {
     throw new Error('No destination found');
   }
+  const finalDest = pasteText && (destIsOrigin || destIsLocker || !dest) ? null : dest;
   return {
     service: serviceId,
-    destination: dest,
+    destination: finalDest,
     hops,
-    kind: pasteText && (!dest || dest === inputUrl) ? 'paste' : lastKind,
+    kind: pasteText && !finalDest ? 'paste' : lastKind,
     pasteText,
   };
 }
@@ -875,6 +909,8 @@ export function parseInputUrls(raw) {
     try {
       const parsed = new URL(candidate);
       if (parsed.username || parsed.password) continue;
+      const host = parsed.hostname.toLowerCase();
+      if (host === 'localhost' || host.endsWith('.localhost')) continue;
       const href = parsed.href;
       if (href.length > MAX_URL_LEN) continue;
       assertSafeFetchUrl(href);
@@ -899,13 +935,16 @@ export async function resolveMany(urlList) {
       const dest = resolved.destination ? await asPublicDest(resolved.destination) : null;
       if (!dest && !resolved.pasteText) throw new Error('No destination found');
       results.push({
-        input: href,
-        service: resolved.service,
+        input: href.slice(0, MAX_URL_LEN),
+        service: String(resolved.service || 'unknown').slice(0, 32),
         ok: true,
         destination: dest,
-        hops: resolved.hops,
-        kind: resolved.kind,
-        pasteText: resolved.pasteText || null,
+        hops: (Array.isArray(resolved.hops) ? resolved.hops : [href])
+          .filter((h) => typeof h === 'string')
+          .map((h) => h.slice(0, MAX_URL_LEN))
+          .slice(0, MAX_HOPS + 1),
+        kind: resolved.kind === 'paste' || resolved.pasteText ? 'paste' : 'url',
+        pasteText: resolved.pasteText ? String(resolved.pasteText).slice(0, MAX_PASTE_CHARS) : null,
         error: null,
       });
     } catch (err) {

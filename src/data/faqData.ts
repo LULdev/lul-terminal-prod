@@ -18,11 +18,11 @@ export const FAQ_SECTIONS: FaqSection[] = [
       },
       {
         q: 'How do I navigate the site?',
-        a: 'The left sidebar has the main menu (Dashboard, Terminal Pulse, System Status, Hall of Fame, Games, News, FAQ, Paste, Proxy Database, Premium Accounts …) and below that the Creative Labs. Click a menu item — content appears in the center. At the bottom: Sign In/Register or your profile link. The console on the right accepts terminal commands with ! (e.g. !commands) or shoutbox chat without ! when logged in.',
+        a: 'The left sidebar has the main menu (Dashboard, Terminal Pulse, System Status, Hall of Fame, Games, News, FAQ, Paste, Bypass, Proxy Database, Premium Accounts …) and below that the Creative Labs. Click a menu item — content appears in the center. At the bottom: Sign In/Register or your profile link. The console on the right accepts terminal commands with ! (e.g. !commands) or shoutbox chat without ! when logged in.',
       },
       {
         q: 'Do I need an account?',
-        a: 'Some pages are public (News, FAQ, Change Log, Fun & Trap, profiles, Terminal Pulse, System Status, Hall of Fame — depending on admin settings). Most tools (Paste, Image Hosting, Proxy Database, Premium Vault, Labs, Dashboard) require sign-in. Admins can switch any page between public and members-only in Page Visibility.',
+        a: 'Some pages are public (News, FAQ, Change Log, Fun & Trap, profiles, Terminal Pulse, System Status, Hall of Fame — depending on admin settings). Most tools (Paste, Bypass, Image Hosting, Proxy Database, Premium Vault, Labs, Dashboard) require sign-in. Admins can switch any page between public and members-only in Page Visibility.',
       },
       {
         q: 'What is the Member Dashboard?',
@@ -352,6 +352,25 @@ export const FAQ_SECTIONS: FaqSection[] = [
       {
         q: 'Does the BOT announce new pastes?',
         a: 'Yes — public and protected pastes trigger a shoutbox message with a clickable link. Private pastes are not announced.',
+      },
+    ],
+  },
+  {
+    id: 'bypass',
+    icon: '🔓',
+    title: 'Bypass — Unlockers & Shorteners',
+    items: [
+      {
+        q: 'What is Bypass?',
+        a: 'Menu "Bypass" (🔓) — signed-in members paste a Linkvertise or other locker / shortener / paste URL and get the destination in one click. No ads, no timers. Copy or Open the result; several URLs work one per line (up to 8).',
+      },
+      {
+        q: 'Which sites does Bypass support?',
+        a: 'Every known Linkvertise domain first (publisher API). Also work.ink, lootlabs, AdFoc.us, shorteners (bit.ly, t.co, tinyurl, …), paste hosts, and social unlock pages. The page lists supported services with a filter.',
+      },
+      {
+        q: 'Do I need an account?',
+        a: 'Yes. Bypass is members-only even if an admin later marks the tab public — the API still requires a signed-in session.',
       },
     ],
   },

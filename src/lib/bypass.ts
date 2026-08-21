@@ -44,7 +44,12 @@ export async function fetchBypassCatalog(): Promise<BypassServiceInfo[]> {
       )
         ? (s.kind as BypassServiceKind)
         : 'generic',
-      hosts: Array.isArray(s.hosts) ? s.hosts.filter((h) => typeof h === 'string').slice(0, 12) : [],
+      hosts: Array.isArray(s.hosts)
+        ? s.hosts
+            .filter((h) => typeof h === 'string' && h.length > 0 && h.length <= 128)
+            .map((h) => h.slice(0, 64).toLowerCase())
+            .slice(0, 12)
+        : [],
     }));
 }
 
@@ -56,7 +61,9 @@ function normalizeBypassResult(raw: BypassResult): BypassResult {
   const input = typeof raw?.input === 'string' ? raw.input.slice(0, 2048) : '';
   const dest = typeof raw?.destination === 'string' ? raw.destination.slice(0, 2048) : null;
   const paste = typeof raw?.pasteText === 'string' ? raw.pasteText.slice(0, 8000) : null;
-  const hops = Array.isArray(raw?.hops) ? raw.hops.filter((h) => typeof h === 'string').slice(0, 8) : [];
+  const hops = Array.isArray(raw?.hops)
+    ? raw.hops.filter((h) => typeof h === 'string').map((h) => h.slice(0, 2048)).slice(0, 8)
+    : [];
   const openOk = dest ? Boolean(safeBypassOpenHref(dest)) : false;
   const ok = Boolean(raw?.ok) && (openOk || Boolean(paste));
   return {
@@ -84,11 +91,11 @@ export async function runBypass(urls: string[], signal?: AbortSignal): Promise<B
       throw new Error(`Too many requests — retry in ${sec}s.`);
     }
     if (!res.ok) {
-      const msg = String(data.error ?? `HTTP ${res.status}`);
+      const msg = String(data.error ?? `HTTP ${res.status}`).slice(0, 200);
       if (/permission denied|not logged|sign in/i.test(msg)) throw new Error('Sign in required');
       throw new Error(msg);
     }
-    return (Array.isArray(data.results) ? data.results : []).map(normalizeBypassResult);
+    return (Array.isArray(data.results) ? data.results : []).slice(0, 8).map(normalizeBypassResult);
   } catch (err) {
     if (isAbortError(err) || signal?.aborted) throw err;
     if (err instanceof Error && err.name === 'SessionExpiredError') throw new Error('Sign in required');
@@ -145,6 +152,7 @@ function dottedPrivate(a: number, b: number): boolean {
   if (a === 172 && b >= 16 && b <= 31) return true;
   if (a === 192 && b === 168) return true;
   if (a === 100 && b >= 64 && b <= 127) return true;
+  if (a === 198 && (b === 18 || b === 19)) return true;
   if (a >= 224) return true;
   return false;
 }
@@ -214,14 +222,35 @@ export function loadBypassHistory(): BypassHistoryItem[] {
     if (!Array.isArray(parsed)) return [];
     return parsed
       .filter((x) => x && typeof x === 'object' && typeof x.input === 'string' && x.input.length <= 2048)
-      .slice(0, HISTORY_MAX);
+      .slice(0, HISTORY_MAX)
+      .map((x) => {
+        const dest = typeof x.destination === 'string' ? x.destination.slice(0, 2048) : null;
+        return {
+          at: typeof x.at === 'number' && Number.isFinite(x.at) ? x.at : 0,
+          input: x.input.slice(0, 2048),
+          destination: dest && safeBypassOpenHref(dest) ? dest : null,
+          ok: Boolean(x.ok),
+          service: typeof x.service === 'string' ? x.service.slice(0, 32) : 'unknown',
+        };
+      });
   } catch {
     return [];
   }
 }
 
 export function pushBypassHistory(items: BypassHistoryItem[]): BypassHistoryItem[] {
-  const incoming = items.filter((x) => x && typeof x.input === 'string' && x.input.length <= 2048);
+  const incoming = items
+    .filter((x) => x && typeof x.input === 'string' && x.input.length <= 2048)
+    .map((x) => {
+      const dest = typeof x.destination === 'string' ? x.destination.slice(0, 2048) : null;
+      return {
+        at: typeof x.at === 'number' && Number.isFinite(x.at) ? x.at : Date.now(),
+        input: x.input.slice(0, 2048),
+        destination: dest && safeBypassOpenHref(dest) ? dest : null,
+        ok: Boolean(x.ok),
+        service: typeof x.service === 'string' ? x.service.slice(0, 32) : 'unknown',
+      };
+    });
   const seen = new Set(incoming.map((x) => x.input));
   const prev = loadBypassHistory().filter((p) => !seen.has(p.input));
   const next = [...incoming, ...prev].slice(0, HISTORY_MAX);

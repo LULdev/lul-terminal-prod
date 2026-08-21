@@ -23,6 +23,23 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '3.93.0',
+    title: 'Bypass 10-round: gzip bomb, LV header/ads, hop cycle, paste dest',
+    date: 'Aug 21, 2026',
+    highlight: true,
+    items: [
+      { priority: 'P0', text: 'P0 - outbound Bypass headers (LV token, Referer, Cookie) reject CTL so hop fetches cannot inject request headers.' },
+      { priority: 'P1', text: 'P1 - gzip/deflate decode caps at 512KB (zip bomb); failed decode is empty, not scanned as dest URLs.' },
+      { priority: 'P1', text: 'P1 - Linkvertise landing HTML is not scraped for dest (ad hijack); publisher error pages no longer become dest.' },
+      { priority: 'P1', text: 'P1 - LV warmup/account skipped without a link id so the 25s budget still reaches public-API fallback.' },
+      { priority: 'P1', text: 'P1 - hop cycle keeps the last public dest / paste instead of throwing No destination found.' },
+      { priority: 'P2', text: 'P2 - paste-only results no longer Open the paste host as the destination; locker+paste drops the locker dest.' },
+      { priority: 'P2', text: 'P2 - *.localhost blocked on dest/parse; Open also blocks 198.18/15; hops/catalog/history/errors capped.' },
+      { priority: 'P3', text: 'P3 - supported-sites empty filter copy; catalog 0 no longer reads “all”; Bypass FAQ section.' },
+      { priority: 'P9', text: 'P9 - Version 3.93.0; 10-round Bypass residual (every item listed).' },
+    ],
+  },
+  {
     version: '3.92.0',
     title: 'Bypass 10-round: urls[] DoS cap, paste hop, cookie/catalog sanitize',
     date: 'Aug 9, 2026',

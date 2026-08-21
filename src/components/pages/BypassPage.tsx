@@ -109,7 +109,7 @@ export function BypassPage() {
     } catch (err) {
       if (!mountedRef.current || ac.signal.aborted) return;
       if ((err instanceof DOMException || err instanceof Error) && err.name === 'AbortError') return;
-      setError(err instanceof Error ? err.message : 'Bypass failed');
+      setError(err instanceof Error ? err.message.slice(0, 200) : 'Bypass failed');
     } finally {
       if (abortRef.current === ac) {
         abortRef.current = null;
@@ -175,7 +175,11 @@ export function BypassPage() {
             )}
             <span className="text-[9px] font-mono text-slate-600">Ctrl / ⌘ + Enter</span>
           </div>
-          {error && <p className="mt-2 text-[11px] font-mono text-rose-300">{error}</p>}
+          {error && (
+            <p className="mt-2 text-[11px] font-mono text-rose-300" role="alert">
+              {error.slice(0, 200)}
+            </p>
+          )}
         </ToolCard>
 
         {results.length > 0 && (
@@ -296,7 +300,7 @@ export function BypassPage() {
             className="text-[10px] font-mono text-amber-300 hover:underline"
             onClick={() => setShowSites((v) => !v)}
           >
-            {showSites ? 'Hide list' : `Show ${catalog.length || 'all'} supported services`}
+            {showSites ? 'Hide list' : catalog.length ? `Show ${catalog.length} supported services` : 'Show supported services'}
           </button>
           {showSites && (
             <div className="mt-2">
@@ -308,15 +312,19 @@ export function BypassPage() {
                 className="bg-[#0b0c10] border border-slate-800 text-[10px] font-mono rounded px-2.5 py-1.5 text-slate-200 w-full focus:outline-none focus:border-amber-500/60 mb-2"
               />
               <div className="flex flex-wrap gap-1.5">
-                {filteredSites.map((s) => (
-                  <span
-                    key={s.id}
-                    className="text-[9px] font-mono px-2 py-0.5 rounded border border-slate-700 text-slate-400 bg-black/30"
-                    title={s.hosts.join(', ')}
-                  >
-                    {s.label}
-                  </span>
-                ))}
+                {filteredSites.length === 0 ? (
+                  <p className="text-[9px] font-mono text-slate-500">No services match that filter.</p>
+                ) : (
+                  filteredSites.map((s) => (
+                    <span
+                      key={s.id}
+                      className="text-[9px] font-mono px-2 py-0.5 rounded border border-slate-700 text-slate-400 bg-black/30"
+                      title={s.hosts.join(', ')}
+                    >
+                      {s.label}
+                    </span>
+                  ))
+                )}
               </div>
             </div>
           )}
