@@ -23,6 +23,21 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '3.86.0',
+    title: 'Bypass bugfix: POST Location, abort timeout, LV cookies/paths',
+    date: 'Aug 9, 2026',
+    highlight: true,
+    items: [
+      { priority: 'P0', text: 'P0 - safeFetch stopOnRedirect: POST 302 Location is the destination (was thrown as Too many redirects).' },
+      { priority: 'P1', text: 'P1 - pinnedRequest preserves Set-Cookie arrays (getSetCookie); Linkvertise jar no longer drops cookies.' },
+      { priority: 'P1', text: 'P1 - 25s budget aborts in-flight fetches (no orphan requests / unhandled timeout races).' },
+      { priority: 'P1', text: 'P1 - Linkvertise: landing HTML/JSON target, unencoded+id path variants, POST Location dest.' },
+      { priority: 'P2', text: 'P2 - shortener dest must pass usableDest (no second fetch); \\u002F JSON dest unescape.' },
+      { priority: 'P3', text: 'P3 - trailing comma on pasted URLs; clipboard-blocked hint.' },
+      { priority: 'P9', text: 'P9 - Version 3.86.0; Bypass residual bugfix (every item listed).' },
+    ],
+  },
+  {
     version: '3.85.0',
     title: 'Bypass bugfix: wrong dest after redirect, Linkvertise session, URL parse',
     date: 'Aug 9, 2026',

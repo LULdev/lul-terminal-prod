@@ -68,7 +68,7 @@ const LV_HOSTS = [
 export function parseLocalUrls(raw: string): string[] {
   const seen = new Set<string>();
   const out: string[] = [];
-  for (const part of raw.split(/\s+/).map((s) => s.trim()).filter(Boolean)) {
+  for (const part of raw.split(/\s+/).map((s) => s.trim().replace(/[,\s]+$/g, '')).filter(Boolean)) {
     const candidate = /^https?:\/\//i.test(part) ? part : `https://${part}`;
     try {
       const u = new URL(candidate);

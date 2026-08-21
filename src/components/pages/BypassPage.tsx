@@ -55,12 +55,15 @@ export function BypassPage() {
   const copyText = useCallback((text: string, id: string) => {
     void navigator.clipboard.writeText(text).then(() => {
       if (!mountedRef.current) return;
+      setError('');
       setCopied(id);
       if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
       copyTimerRef.current = setTimeout(() => {
         if (mountedRef.current) setCopied(null);
       }, 1400);
-    }).catch(() => { /* clipboard blocked */ });
+    }).catch(() => {
+      if (mountedRef.current) setError('Clipboard blocked — select the URL and copy manually.');
+    });
   }, []);
 
   const run = useCallback(async () => {

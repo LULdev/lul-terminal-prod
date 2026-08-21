@@ -7,7 +7,13 @@
  */
 
 import zlib from 'zlib';
+import { AsyncLocalStorage } from 'node:async_hooks';
 import { assertSafeFetchUrl, safeFetch } from './assertSafeFetchUrl.mjs';
+
+const bypassCtx = new AsyncLocalStorage();
+function currentSignal() {
+  return bypassCtx.getStore()?.signal;
+}
 
 const UA =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36';
@@ -238,6 +244,17 @@ function extractDestFromHtml(html, pageUrl) {
     }
   }
 
+  const jsonUrl = text.match(/"(?:target|destination|dest_url|final_url)"\s*:\s*"((?:https?:|\\u002F\\u002F)[^"]+)"/i);
+  if (jsonUrl?.[1]) {
+    let raw = jsonUrl[1];
+    try {
+      raw = JSON.parse(`"${raw}"`);
+    } catch {
+      raw = raw.replace(/\\u002f/gi, '/').replace(/\\\//g, '/');
+    }
+    if (looksHttpUrl(raw) && !isJunkDest(raw, pageUrl) && !isLockerUrl(raw)) return raw;
+  }
+
   const urls = extractUrlsFromText(text);
   try {
     const pageHost = apexHost(new URL(pageUrl).hostname);
@@ -291,11 +308,9 @@ function createJar() {
       headers.Cookie = [...map.entries()].map(([k, v]) => `${k}=${v}`).join('; ');
     },
     eat(res) {
-      const list = typeof res.headers.getSetCookie === 'function'
-        ? res.headers.getSetCookie()
-        : [];
-      const single = res.headers.get('set-cookie');
-      const all = list.length ? list : (single ? [single] : []);
+      const fromRes = typeof res.getSetCookie === 'function' ? res.getSetCookie() : [];
+      const fromHeaders = typeof res.headers?.getSetCookie === 'function' ? res.headers.getSetCookie() : [];
+      const all = (fromRes && fromRes.length) ? fromRes : (fromHeaders || []);
       for (const c of all) {
         const nv = String(c).split(';')[0];
         const eq = nv.indexOf('=');
@@ -306,27 +321,40 @@ function createJar() {
 }
 
 async function request(url, init = {}, { timeoutMs = TIMEOUT_MS, maxRedirects } = {}) {
+  const signal = init.signal || currentSignal();
+  if (signal?.aborted) throw new Error('Aborted');
   const href = assertSafeFetchUrl(url);
   const method = String(init.method ?? 'GET').toUpperCase();
   const headers = {
     'User-Agent': UA,
     Accept: 'text/html,application/json,application/xhtml+xml,*/*;q=0.8',
     'Accept-Language': 'en-US,en;q=0.9',
-    'Accept-Encoding': 'identity',
     ...(init.headers ?? {}),
   };
+  headers['Accept-Encoding'] = 'identity';
   if (init.jar) init.jar.apply(headers);
   const body = init.body;
   if (body != null && body !== '' && !headers['Content-Length'] && !headers['content-length']) {
     headers['Content-Length'] = String(Buffer.byteLength(String(body)));
   }
-  const hops = maxRedirects ?? (method === 'POST' || method === 'PUT' ? 0 : 6);
+  const isWrite = method === 'POST' || method === 'PUT' || method === 'PATCH';
+  const hops = maxRedirects ?? (isWrite ? 0 : 6);
   const res = await safeFetch(
     href,
-    { method, headers, body },
-    { maxRedirects: hops, timeoutMs },
+    { method, headers, body, signal },
+    { maxRedirects: hops, timeoutMs, stopOnRedirect: isWrite || hops === 0 },
   );
   if (init.jar) init.jar.eat(res);
+
+  let finalUrl = res.url || href;
+  if (res.status >= 300 && res.status < 400) {
+    const loc = res.headers.get('location');
+    if (loc) {
+      try {
+        finalUrl = assertSafeFetchUrl(new URL(loc, href).href);
+      } catch { /* keep finalUrl */ }
+    }
+  }
 
   const encoding = String(res.headers.get('content-encoding') ?? '').toLowerCase();
   let text;
@@ -349,7 +377,7 @@ async function request(url, init = {}, { timeoutMs = TIMEOUT_MS, maxRedirects } 
       json = JSON.parse(text);
     } catch { /* ignore */ }
   }
-  return { ok: res.ok, status: res.status, url: res.url || href, text, json, headers: res.headers };
+  return { ok: res.ok, status: res.status, url: finalUrl, text, json, headers: res.headers };
 }
 
 function sameResource(a, b) {
@@ -454,6 +482,16 @@ async function resolveLinkvertise(url) {
   const queryDest = unwrapQueryDest(url);
   if (usableDest(queryDest, url) && !isLockerUrl(queryDest)) return { dest: queryDest, paste: null };
 
+  const jar = createJar();
+  try {
+    const page = await request(url, {
+      headers: { Accept: 'text/html,application/xhtml+xml' },
+      jar,
+    });
+    const fromPage = extractDestFromHtml(page.text, url);
+    if (usableDest(fromPage, url) && !isLockerUrl(fromPage)) return { dest: fromPage, paste: null };
+  } catch { /* landing HTML is best-effort */ }
+
   const path = lvPathFromUrl(url);
   if (!path) {
     const followed = await followShort(url);
@@ -461,8 +499,11 @@ async function resolveLinkvertise(url) {
     throw new Error('Could not parse Linkvertise URL');
   }
 
-  const jar = createJar();
-  const pathVariants = [...new Set([path, path.split('/')[0]])];
+  const idOnly = path.split('/')[0];
+  let rawPath = path;
+  const slash = path.indexOf('/');
+  if (slash > 0) rawPath = `${path.slice(0, slash)}/${safeDecodeUri(path.slice(slash + 1))}`;
+  const pathVariants = [...new Set([path, rawPath, idOnly])];
 
   let link = null;
   let userToken = null;
@@ -523,8 +564,11 @@ async function resolveLinkvertise(url) {
         jar,
       },
     );
-    const dest = posted.json?.data?.target || posted.json?.data?.paste || extractJsonDest(posted.json);
-    if (usableDest(dest, url) || (dest && looksHttpUrl(dest) && !isJunkDest(dest, url))) {
+    const dest = posted.json?.data?.target
+      || posted.json?.data?.paste
+      || extractJsonDest(posted.json)
+      || (posted.status >= 300 && posted.status < 400 && looksHttpUrl(posted.url) ? posted.url : null);
+    if (usableDest(dest, url) || (dest && looksHttpUrl(dest) && !isJunkDest(dest, url) && !isLockerUrl(dest))) {
       const paste = type === 'paste' && posted.json?.data?.paste && !looksHttpUrl(String(posted.json.data.paste))
         ? String(posted.json.data.paste)
         : null;
@@ -694,10 +738,6 @@ async function resolveKnown(url, service) {
   }
   if (service.id === 'adfoc') return resolveAdfoc(url);
   if (service.kind === 'paste') return resolvePaste(url, service.id);
-  if (service.kind === 'shortener' || service.kind === 'generic') {
-    const followed = await followShort(url);
-    if (followed.dest) return { dest: followed.dest, paste: null };
-  }
 
   const followed = await followShort(url);
   if (usableDest(followed.dest, url)) return { dest: followed.dest, paste: null };
@@ -788,24 +828,16 @@ export function parseInputUrls(raw) {
   return urls;
 }
 
-function withTimeout(promise, ms, message) {
-  let timer;
-  return Promise.race([
-    promise,
-    new Promise((_, reject) => {
-      timer = setTimeout(() => reject(new Error(message)), ms);
-    }),
-  ]).finally(() => clearTimeout(timer));
-}
-
 export async function resolveMany(urlList) {
   const urls = Array.isArray(urlList) ? urlList.slice(0, MAX_URLS) : [];
   const results = [];
   for (const input of urls) {
+    const ac = new AbortController();
+    const timer = setTimeout(() => ac.abort(), URL_BUDGET_MS);
     try {
       const href = assertSafeFetchUrl(input);
       if (href.length > MAX_URL_LEN) throw new Error('URL too long');
-      const resolved = await withTimeout(resolveChain(href), URL_BUDGET_MS, 'Bypass timed out');
+      const resolved = await bypassCtx.run({ signal: ac.signal }, () => resolveChain(href));
       results.push({
         input: href,
         service: resolved.service,
@@ -818,9 +850,12 @@ export async function resolveMany(urlList) {
       });
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Bypass failed';
-      const safe = /blocked|private|invalid url|protocol/i.test(msg)
-        ? 'URL is not allowed'
-        : (msg.length > 140 ? 'Bypass failed' : msg);
+      const timedOut = ac.signal.aborted || /aborted|timeout/i.test(msg);
+      const safe = timedOut
+        ? 'Bypass timed out'
+        : (/blocked|private|invalid url|protocol/i.test(msg)
+          ? 'URL is not allowed'
+          : (msg.length > 140 ? 'Bypass failed' : msg));
       results.push({
         input,
         service: identifyService(input)?.id ?? 'unknown',
@@ -831,6 +866,8 @@ export async function resolveMany(urlList) {
         pasteText: null,
         error: safe,
       });
+    } finally {
+      clearTimeout(timer);
     }
   }
   return results;

@@ -204,8 +204,13 @@ function pinnedRequest(parsed, address, family, { method, headers, body, signal,
           const buf = Buffer.concat(chunks);
           // Minimal Response-like object compatible with callers expecting fetch Response
           const headersMap = new Headers();
+          const setCookies = [];
           for (const [k, v] of Object.entries(res.headers)) {
             if (v == null) continue;
+            if (String(k).toLowerCase() === 'set-cookie') {
+              if (Array.isArray(v)) setCookies.push(...v);
+              else setCookies.push(String(v));
+            }
             if (Array.isArray(v)) v.forEach((item) => headersMap.append(k, item));
             else headersMap.set(k, v);
           }
@@ -215,6 +220,7 @@ function pinnedRequest(parsed, address, family, { method, headers, body, signal,
             ok: (res.statusCode || 0) >= 200 && (res.statusCode || 0) < 300,
             headers: headersMap,
             url: parsed.href,
+            getSetCookie: () => setCookies.slice(),
             async arrayBuffer() {
               return buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength);
             },
@@ -259,7 +265,7 @@ function pinnedRequest(parsed, address, family, { method, headers, body, signal,
  * Fetch with manual redirect walking + IP pinning.
  * Re-validates each hop; connects only to pre-validated public IPs (anti DNS rebinding).
  */
-export async function safeFetch(urlStr, init = {}, { maxRedirects = 5, timeoutMs = 30_000 } = {}) {
+export async function safeFetch(urlStr, init = {}, { maxRedirects = 5, timeoutMs = 30_000, stopOnRedirect = false } = {}) {
   let current = String(urlStr);
   const baseHeaders = { ...(init.headers ?? {}) };
   const { signal, method, body } = init;
@@ -291,6 +297,7 @@ export async function safeFetch(urlStr, init = {}, { maxRedirects = 5, timeoutMs
     }
 
     if (res.status >= 300 && res.status < 400) {
+      if (stopOnRedirect) return res;
       const loc = res.headers.get('location');
       if (!loc) throw new Error('Redirect without Location');
       current = new URL(loc, target.href).href;
