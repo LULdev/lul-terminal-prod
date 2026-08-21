@@ -166,12 +166,12 @@ export function BypassPage() {
               )}
             </div>
             <div className="flex flex-col gap-2">
-              {results.map((r) => {
+              {results.map((r, i) => {
                 const dest = r.ok ? (r.destination ?? '') : '';
                 const href = dest ? safeHref(dest) : null;
                 return (
                   <div
-                    key={r.input}
+                    key={`${r.input}-${i}`}
                     className={`rounded-lg border p-3 ${r.ok ? 'border-emerald-500/25 bg-emerald-500/5' : 'border-rose-500/25 bg-rose-500/5'}`}
                   >
                     <span className={`text-[9px] font-mono uppercase tracking-wider ${r.ok ? 'text-emerald-300' : 'text-rose-300'}`}>
@@ -228,8 +228,8 @@ export function BypassPage() {
                     <button
                       type="button"
                       className="text-left w-full hover:text-cyan-300 transition"
-                      onClick={() => setInput(h.ok && h.destination ? h.destination : h.input)}
-                      title="Reuse"
+                      onClick={() => setInput(h.input)}
+                      title="Reuse original URL"
                     >
                       <span className={h.ok ? 'text-emerald-400' : 'text-rose-400'}>{h.ok ? '✓' : '✗'}</span>
                       {' '}

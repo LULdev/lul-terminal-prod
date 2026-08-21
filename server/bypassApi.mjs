@@ -20,10 +20,21 @@ export async function handleBypassRequest(req, res) {
   const pathname = url.pathname;
 
   try {
+    if (req.method === 'OPTIONS' && pathname.startsWith('/api/bypass')) {
+      res.statusCode = 204;
+      res.end();
+      return;
+    }
+
     if (req.method === 'GET' && pathname === '/api/bypass/catalog') {
-      await checkRateLimit(`bypass-cat:${clientIp(req)}`, { max: 60, windowMs: 60_000 });
       await requireMemberTab(req, 'bypass');
+      await checkRateLimit(`bypass-cat:${req.auth?.user?.id ?? clientIp(req)}`, { max: 60, windowMs: 60_000 });
       return sendJson(res, 200, { services: catalogPublic() });
+    }
+
+    if (pathname === '/api/bypass' && req.method !== 'POST') {
+      res.setHeader('Allow', 'POST, OPTIONS');
+      return sendJson(res, 405, { error: 'Method not allowed' });
     }
 
     if (req.method === 'POST' && pathname === '/api/bypass') {

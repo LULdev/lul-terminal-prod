@@ -35,28 +35,52 @@ export async function fetchBypassCatalog(): Promise<BypassServiceInfo[]> {
 }
 
 export async function runBypass(urls: string[]): Promise<BypassResult[]> {
-  const data = await sessionJson<BypassResponse>(API, {
-    method: 'POST',
-    body: JSON.stringify({ urls }),
-  });
-  return Array.isArray(data.results) ? data.results : [];
+  try {
+    const data = await sessionJson<BypassResponse>(API, {
+      method: 'POST',
+      body: JSON.stringify({ urls }),
+    });
+    return Array.isArray(data.results) ? data.results : [];
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : '';
+    if (/permission denied|not logged|sign in/i.test(msg)) {
+      throw new Error('Sign in required');
+    }
+    throw err;
+  }
 }
 
+const LV_HOSTS = [
+  'linkvertise.com',
+  'linkvertise.net',
+  'link-to.net',
+  'linkvertise.download',
+  'direct-link.net',
+  'up-to-down.net',
+  'file-link.net',
+  'link-center.net',
+  'link-target.net',
+  'link-hub.net',
+  'lvturbo.com',
+  'linkvertise.io',
+];
+
 export function parseLocalUrls(raw: string): string[] {
-  return raw
-    .split(/[\s,;]+/)
-    .map((s) => s.trim())
-    .filter(Boolean)
-    .map((s) => (/^https?:\/\//i.test(s) ? s : `https://${s}`))
-    .filter((s) => {
-      try {
-        const u = new URL(s);
-        return u.protocol === 'http:' || u.protocol === 'https:';
-      } catch {
-        return false;
-      }
-    })
-    .slice(0, 8);
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const part of raw.split(/\s+/).map((s) => s.trim()).filter(Boolean)) {
+    const candidate = /^https?:\/\//i.test(part) ? part : `https://${part}`;
+    try {
+      const u = new URL(candidate);
+      if (u.protocol !== 'http:' && u.protocol !== 'https:') continue;
+      if (u.href.length > 2048) continue;
+      if (seen.has(u.href)) continue;
+      seen.add(u.href);
+      out.push(u.href);
+    } catch { /* skip */ }
+    if (out.length >= 8) break;
+  }
+  return out;
 }
 
 export function guessServiceLabel(url: string, catalog: BypassServiceInfo[]): string | null {
@@ -65,6 +89,7 @@ export function guessServiceLabel(url: string, catalog: BypassServiceInfo[]): st
     for (const svc of catalog) {
       if (svc.hosts.some((h) => host === h || host.endsWith(`.${h}`))) return svc.label;
     }
+    if (LV_HOSTS.some((h) => host === h || host.endsWith(`.${h}`))) return 'Linkvertise';
   } catch { /* ignore */ }
   return null;
 }
@@ -82,10 +107,14 @@ export type BypassHistoryItem = {
 
 export function loadBypassHistory(): BypassHistoryItem[] {
   try {
+    if (typeof localStorage === 'undefined') return [];
     const raw = localStorage.getItem(HISTORY_KEY);
     if (!raw) return [];
     const parsed = JSON.parse(raw) as BypassHistoryItem[];
-    return Array.isArray(parsed) ? parsed.slice(0, HISTORY_MAX) : [];
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .filter((x) => x && typeof x === 'object' && typeof x.input === 'string')
+      .slice(0, HISTORY_MAX);
   } catch {
     return [];
   }

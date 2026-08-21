@@ -23,6 +23,22 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '3.85.0',
+    title: 'Bypass bugfix: wrong dest after redirect, Linkvertise session, URL parse',
+    date: 'Aug 9, 2026',
+    highlight: true,
+    items: [
+      { priority: 'P0', text: 'P0 - followShort no longer scrapes the landing page for random external links after a real HTTP redirect (bit.ly/tinyurl dest hijack).' },
+      { priority: 'P0', text: 'P0 - Accept-Encoding identity + gzip/deflate decode so Linkvertise JSON is not parsed as binary.' },
+      { priority: 'P1', text: 'P1 - google.com / toptal.com no longer match the whole site as a shortener/paste (only /url and hastebin paths).' },
+      { priority: 'P1', text: 'P1 - Linkvertise cookie jar + Content-Length on POST + POST no-follow + slug decodeURIComponent try/catch.' },
+      { priority: 'P1', text: 'P1 - extractJsonDest only walks object keys (no random CDN/ad URLs); junk-host filter on HTML dests.' },
+      { priority: 'P2', text: 'P2 - parse URLs on whitespace only (query commas no longer split); 25s per-URL timeout; 405 on GET /api/bypass.' },
+      { priority: 'P3', text: 'P3 - History reuses the original locker URL; unique result keys; Sign in required mapping; LV chip without catalog.' },
+      { priority: 'P9', text: 'P9 - Version 3.85.0; Bypass bugfix pass (every item listed).' },
+    ],
+  },
+  {
     version: '3.84.0',
     title: 'Bypass module: Linkvertise-first locker unlocker for members',
     date: 'Aug 9, 2026',

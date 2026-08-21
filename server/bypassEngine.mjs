@@ -6,17 +6,21 @@
  * use redirect following, dest-param unwrap, HTML extract, then public APIs.
  */
 
+import zlib from 'zlib';
 import { assertSafeFetchUrl, safeFetch } from './assertSafeFetchUrl.mjs';
 
 const UA =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36';
 const TIMEOUT_MS = 12_000;
+const URL_BUDGET_MS = 25_000;
 const MAX_HOPS = 6;
 const MAX_URLS = 8;
 const MAX_URL_LEN = 2048;
 const MAX_PASTE_CHARS = 8_000;
 
 const DEST_PARAM_KEYS = ['url', 'r', 'u', 'q', 'target', 'dest', 'destination', 'redirect', 'link', 'goto', 'out', 'to'];
+
+const JUNK_HOST_RE = /(google-analytics|googletagmanager|doubleclick|googlesyndication|googleadservices|facebook\.net|fbcdn|gstatic\.com|googleapis\.com|cloudflareinsights|scorecardresearch|hotjar|sentry\.io|newrelic|adnxs|adsystem|taboola|outbrain|quantserve)/i;
 
 /** @typedef {{ id: string, label: string, kind: 'locker'|'shortener'|'paste'|'unlock'|'generic', hosts: string[] }} BypassService */
 
@@ -39,7 +43,6 @@ export const BYPASS_SERVICES = [
       'link-hub.net',
       'lvturbo.com',
       'linkvertise.io',
-      'publisher.linkvertise.com',
     ],
   },
   { id: 'workink', label: 'Work.ink', kind: 'locker', hosts: ['work.ink', 'workink.net', 'workink.com', 'wrk.ink', 'workink.link', 'workink.to', 'pastework.ink'] },
@@ -55,14 +58,14 @@ export const BYPASS_SERVICES = [
   { id: 'bitly', label: 'Bitly', kind: 'shortener', hosts: ['bit.ly', 'bitly.com', 'j.mp'] },
   { id: 'tinyurl', label: 'TinyURL', kind: 'shortener', hosts: ['tinyurl.com', 'tiny.cc', 'tinylink.onl'] },
   { id: 'tco', label: 't.co', kind: 'shortener', hosts: ['t.co'] },
-  { id: 'googl', label: 'Google URL', kind: 'shortener', hosts: ['goo.gl', 'google.com'] },
+  { id: 'googl', label: 'Google URL', kind: 'shortener', hosts: ['goo.gl'] },
   { id: 'isgd', label: 'is.gd / v.gd', kind: 'shortener', hosts: ['is.gd', 'v.gd', 'cl.gy'] },
   { id: 'tly', label: 't.ly', kind: 'shortener', hosts: ['t.ly'] },
   { id: 'rebrandly', label: 'Rebrandly', kind: 'shortener', hosts: ['rebrand.ly'] },
   { id: 'cutty', label: 'Cutty / Shorte', kind: 'shortener', hosts: ['cutt.ly', 'cutty.net', 'shorte.st', 'shorter.me', 'shrinkme.click'] },
   { id: 'pastebin', label: 'Pastebin', kind: 'paste', hosts: ['pastebin.com'] },
   { id: 'rentry', label: 'Rentry', kind: 'paste', hosts: ['rentry.org', 'rentry.co'] },
-  { id: 'hastebin', label: 'Hastebin', kind: 'paste', hosts: ['hastebin.com', 'hastebin.skyra.pw', 'www.toptal.com'] },
+  { id: 'hastebin', label: 'Hastebin', kind: 'paste', hosts: ['hastebin.com', 'hastebin.skyra.pw'] },
   { id: 'justpaste', label: 'JustPaste', kind: 'paste', hosts: ['justpaste.it'] },
   { id: 'controlc', label: 'ControlC', kind: 'paste', hosts: ['controlc.com'] },
   { id: 'n0paste', label: 'n0paste', kind: 'paste', hosts: ['n0paste.tk', 'n0paste.com'] },
@@ -84,18 +87,30 @@ const HOST_TO_SERVICE = (() => {
 })();
 
 function apexHost(hostname) {
-  const h = String(hostname ?? '').toLowerCase().replace(/^www\./, '');
-  return h;
+  return String(hostname ?? '').toLowerCase().replace(/^www\./, '');
 }
 
 export function identifyService(urlStr) {
   try {
     const u = new URL(urlStr);
     const host = apexHost(u.hostname);
+
+    if (host === 'google.com' || host.endsWith('.google.com')) {
+      if (u.pathname.startsWith('/url')) return HOST_TO_SERVICE.get('goo.gl') ?? null;
+      return null;
+    }
+    if (host === 'toptal.com' || host.endsWith('.toptal.com')) {
+      if (u.pathname.toLowerCase().includes('hastebin')) {
+        return HOST_TO_SERVICE.get('hastebin.com') ?? null;
+      }
+      return null;
+    }
+
     if (HOST_TO_SERVICE.has(host)) return HOST_TO_SERVICE.get(host);
     const parts = host.split('.');
     if (parts.length > 2) {
       const parent = parts.slice(-2).join('.');
+      if (parent === 'google.com' || parent === 'toptal.com') return null;
       if (HOST_TO_SERVICE.has(parent)) return HOST_TO_SERVICE.get(parent);
     }
     return null;
@@ -112,6 +127,18 @@ export function catalogPublic() {
 
 function looksHttpUrl(value) {
   return /^https?:\/\/[^\s<>"']+/i.test(String(value ?? '').trim());
+}
+
+function isJunkDest(url, fromUrl) {
+  try {
+    const u = new URL(url);
+    if (JUNK_HOST_RE.test(u.hostname)) return true;
+    if (/\.(js|css|png|jpe?g|gif|svg|webp|woff2?|ico|map)(\?|$)/i.test(u.pathname)) return true;
+    if (fromUrl && sameResource(url, fromUrl)) return true;
+    return false;
+  } catch {
+    return true;
+  }
 }
 
 function tryDecodeUrlish(value) {
@@ -144,16 +171,18 @@ function unwrapQueryDest(urlStr) {
   } catch {
     return null;
   }
-  // google.com/url?q=
   if (apexHost(parsed.hostname) === 'google.com' && parsed.pathname.startsWith('/url')) {
     const q = tryDecodeUrlish(parsed.searchParams.get('q') || parsed.searchParams.get('url') || '');
-    if (q) return q;
+    if (q && !isJunkDest(q, urlStr)) return q;
   }
+  const svc = identifyService(urlStr);
+  const allow = !svc || svc.kind === 'generic' || svc.kind === 'shortener' || svc.kind === 'locker' || svc.id === 'googl';
+  if (!allow) return null;
   for (const key of DEST_PARAM_KEYS) {
     const raw = parsed.searchParams.get(key);
     if (!raw) continue;
     const dest = tryDecodeUrlish(raw);
-    if (!dest) continue;
+    if (!dest || isJunkDest(dest, urlStr)) continue;
     try {
       const d = new URL(dest);
       if (apexHost(d.hostname) === apexHost(parsed.hostname) && d.pathname === parsed.pathname) continue;
@@ -187,7 +216,8 @@ function extractDestFromHtml(html, pageUrl) {
     || text.match(/content=["'][^"']*url=([^"']+)["'][^>]*http-equiv=["']refresh["']/i);
   if (meta?.[1]) {
     try {
-      return new URL(meta[1].trim(), pageUrl).href;
+      const dest = new URL(meta[1].trim(), pageUrl).href;
+      if (looksHttpUrl(dest) && !isJunkDest(dest, pageUrl)) return dest;
     } catch { /* ignore */ }
   }
 
@@ -195,14 +225,15 @@ function extractDestFromHtml(html, pageUrl) {
     /["'](?:target|destination|dest_url|final_url|redirect_url|redirectUrl|targetUrl|out)["']\s*[:=]\s*["'](https?:[^"']+)/i,
     /(?:window|document)\.location(?:\.href)?\s*=\s*["'](https?:[^"']+)/i,
     /data-(?:url|href|target|link)=["'](https?:[^"']+)/i,
-    /rel=["']canonical["'][^>]*href=["'](https?:[^"']+)/i,
   ];
   for (const re of patterns) {
     const m = text.match(re);
     if (m?.[1] && looksHttpUrl(m[1])) {
       try {
         const dest = new URL(m[1], pageUrl).href;
-        if (apexHost(new URL(dest).hostname) !== apexHost(new URL(pageUrl).hostname)) return dest;
+        if (!isJunkDest(dest, pageUrl) && apexHost(new URL(dest).hostname) !== apexHost(new URL(pageUrl).hostname)) {
+          return dest;
+        }
       } catch { /* ignore */ }
     }
   }
@@ -212,27 +243,21 @@ function extractDestFromHtml(html, pageUrl) {
     const pageHost = apexHost(new URL(pageUrl).hostname);
     const external = urls.find((u) => {
       try {
-        return apexHost(new URL(u).hostname) !== pageHost && !identifyService(u);
+        return apexHost(new URL(u).hostname) !== pageHost
+          && !identifyService(u)
+          && !isJunkDest(u, pageUrl);
       } catch {
         return false;
       }
     });
     if (external) return external;
-    const other = urls.find((u) => {
-      try {
-        return apexHost(new URL(u).hostname) !== pageHost;
-      } catch {
-        return false;
-      }
-    });
-    if (other) return other;
   } catch { /* ignore */ }
   return null;
 }
 
 function extractJsonDest(obj, depth = 0) {
   if (obj == null || depth > 6) return null;
-  if (typeof obj === 'string' && looksHttpUrl(obj)) return obj.trim();
+  if (typeof obj === 'string' && looksHttpUrl(obj) && !isJunkDest(obj)) return obj.trim();
   if (Array.isArray(obj)) {
     for (const item of obj) {
       const d = extractJsonDest(item, depth + 1);
@@ -241,7 +266,7 @@ function extractJsonDest(obj, depth = 0) {
     return null;
   }
   if (typeof obj !== 'object') return null;
-  const prefer = ['target', 'destination', 'dest', 'url', 'link', 'redirect', 'result', 'final_url', 'paste'];
+  const prefer = ['target', 'destination', 'dest', 'result', 'final_url', 'redirect', 'paste', 'link', 'url'];
   for (const key of prefer) {
     if (obj[key] != null) {
       const d = extractJsonDest(obj[key], depth + 1);
@@ -249,33 +274,77 @@ function extractJsonDest(obj, depth = 0) {
     }
   }
   for (const value of Object.values(obj)) {
-    const d = extractJsonDest(value, depth + 1);
-    if (d) return d;
+    if (value && typeof value === 'object') {
+      const d = extractJsonDest(value, depth + 1);
+      if (d) return d;
+    }
   }
   return null;
 }
 
-async function request(url, init = {}, { timeoutMs = TIMEOUT_MS, maxRedirects = 6 } = {}) {
+function createJar() {
+  /** @type {Map<string, string>} */
+  const map = new Map();
+  return {
+    apply(headers) {
+      if (!map.size) return;
+      headers.Cookie = [...map.entries()].map(([k, v]) => `${k}=${v}`).join('; ');
+    },
+    eat(res) {
+      const list = typeof res.headers.getSetCookie === 'function'
+        ? res.headers.getSetCookie()
+        : [];
+      const single = res.headers.get('set-cookie');
+      const all = list.length ? list : (single ? [single] : []);
+      for (const c of all) {
+        const nv = String(c).split(';')[0];
+        const eq = nv.indexOf('=');
+        if (eq > 0) map.set(nv.slice(0, eq).trim(), nv.slice(eq + 1).trim());
+      }
+    },
+  };
+}
+
+async function request(url, init = {}, { timeoutMs = TIMEOUT_MS, maxRedirects } = {}) {
   const href = assertSafeFetchUrl(url);
+  const method = String(init.method ?? 'GET').toUpperCase();
   const headers = {
     'User-Agent': UA,
     Accept: 'text/html,application/json,application/xhtml+xml,*/*;q=0.8',
     'Accept-Language': 'en-US,en;q=0.9',
+    'Accept-Encoding': 'identity',
     ...(init.headers ?? {}),
   };
+  if (init.jar) init.jar.apply(headers);
+  const body = init.body;
+  if (body != null && body !== '' && !headers['Content-Length'] && !headers['content-length']) {
+    headers['Content-Length'] = String(Buffer.byteLength(String(body)));
+  }
+  const hops = maxRedirects ?? (method === 'POST' || method === 'PUT' ? 0 : 6);
   const res = await safeFetch(
     href,
-    {
-      method: init.method ?? 'GET',
-      headers,
-      body: init.body,
-    },
-    { maxRedirects, timeoutMs },
+    { method, headers, body },
+    { maxRedirects: hops, timeoutMs },
   );
-  const text = await res.text();
+  if (init.jar) init.jar.eat(res);
+
+  const encoding = String(res.headers.get('content-encoding') ?? '').toLowerCase();
+  let text;
+  if (encoding.includes('gzip') || encoding.includes('deflate')) {
+    const buf = Buffer.from(await res.arrayBuffer());
+    try {
+      text = (encoding.includes('gzip') ? zlib.gunzipSync(buf) : zlib.inflateSync(buf)).toString('utf8');
+    } catch {
+      text = buf.toString('utf8');
+    }
+  } else {
+    text = await res.text();
+  }
+
   let json = null;
   const ct = String(res.headers.get('content-type') ?? '');
-  if (ct.includes('json') || (text.startsWith('{') || text.startsWith('['))) {
+  const trimmed = text.trim();
+  if (ct.includes('json') || trimmed.startsWith('{') || trimmed.startsWith('[')) {
     try {
       json = JSON.parse(text);
     } catch { /* ignore */ }
@@ -299,24 +368,49 @@ function isLockerUrl(url) {
   return Boolean(svc && (svc.kind === 'locker' || svc.kind === 'unlock'));
 }
 
+function usableDest(dest, fromUrl) {
+  return Boolean(dest && looksHttpUrl(dest) && !isJunkDest(dest, fromUrl) && !sameResource(dest, fromUrl));
+}
+
 async function followShort(url) {
   const res = await request(url, { method: 'GET' }, { maxRedirects: 8, timeoutMs: TIMEOUT_MS });
   const hops = [];
-  if (res.url && !sameResource(res.url, url)) hops.push(res.url);
-  const q = unwrapQueryDest(res.url);
-  if (q && !sameResource(q, res.url)) return { dest: q, hops: [...hops, q], html: res.text, json: res.json, finalUrl: res.url };
-  const htmlDest = extractDestFromHtml(res.text, res.url);
-  if (htmlDest && !sameResource(htmlDest, res.url) && !sameResource(htmlDest, url)) {
-    return { dest: htmlDest, hops: [...hops, htmlDest], html: res.text, json: res.json, finalUrl: res.url };
+  const landed = res.url || url;
+  const redirected = Boolean(res.url && !sameResource(res.url, url));
+  if (redirected) hops.push(res.url);
+  const stillLocker = isLockerUrl(landed);
+  const svc = identifyService(landed);
+
+  const canUnwrap = stillLocker || svc?.kind === 'generic' || svc?.kind === 'shortener' || svc?.id === 'googl';
+  if (canUnwrap) {
+    const q = unwrapQueryDest(landed);
+    if (usableDest(q, landed)) return { dest: q, hops: [...hops, q], html: res.text, json: res.json, finalUrl: landed };
+  }
+
+  if (redirected && !stillLocker) {
+    return { dest: landed, hops, html: res.text, json: res.json, finalUrl: landed };
+  }
+
+  const htmlDest = extractDestFromHtml(res.text, landed);
+  if (usableDest(htmlDest, url) && !sameResource(htmlDest, landed)) {
+    return { dest: htmlDest, hops: [...hops, htmlDest], html: res.text, json: res.json, finalUrl: landed };
   }
   if (res.json) {
     const jd = extractJsonDest(res.json);
-    if (jd && !sameResource(jd, url)) return { dest: jd, hops: [...hops, jd], html: res.text, json: res.json, finalUrl: res.url };
+    if (usableDest(jd, url)) return { dest: jd, hops: [...hops, jd], html: res.text, json: res.json, finalUrl: landed };
   }
-  if (res.url && !sameResource(res.url, url)) {
-    return { dest: res.url, hops, html: res.text, json: res.json, finalUrl: res.url };
+  if (redirected) {
+    return { dest: landed, hops, html: res.text, json: res.json, finalUrl: landed };
   }
-  return { dest: null, hops, html: res.text, json: res.json, finalUrl: res.url };
+  return { dest: null, hops, html: res.text, json: res.json, finalUrl: landed };
+}
+
+function safeDecodeUri(value) {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
+  }
 }
 
 function lvPathFromUrl(urlStr) {
@@ -334,47 +428,68 @@ function lvPathFromUrl(urlStr) {
     let slug = parts[idIdx + 1] || '';
     slug = slug.replace(/\/+$/, '');
     if (/^(dynamic|captcha|target)$/i.test(slug)) slug = '';
-    return slug ? `${id}/${encodeURIComponent(decodeURIComponent(slug))}` : id;
+    if (!slug) return id;
+    const decoded = safeDecodeUri(slug);
+    return `${id}/${encodeURIComponent(decoded)}`;
   }
   return null;
 }
 
 function lvSerial(linkId) {
+  const n = Number(linkId);
   return Buffer.from(JSON.stringify({
     timestamp: Date.now(),
     random: '6548307',
-    link_id: Number(linkId) || linkId,
+    link_id: Number.isFinite(n) ? n : linkId,
   })).toString('base64');
 }
 
+const LV_HEADERS = {
+  Accept: 'application/json',
+  Origin: 'https://linkvertise.com',
+  Referer: 'https://linkvertise.com/',
+};
+
 async function resolveLinkvertise(url) {
   const queryDest = unwrapQueryDest(url);
-  if (queryDest && !isLockerUrl(queryDest)) return { dest: queryDest, paste: null };
+  if (usableDest(queryDest, url) && !isLockerUrl(queryDest)) return { dest: queryDest, paste: null };
 
   const path = lvPathFromUrl(url);
   if (!path) {
     const followed = await followShort(url);
-    if (followed.dest && !isLockerUrl(followed.dest)) return { dest: followed.dest, paste: null };
+    if (usableDest(followed.dest, url) && !isLockerUrl(followed.dest)) return { dest: followed.dest, paste: null };
     throw new Error('Could not parse Linkvertise URL');
   }
 
-  const staticUrl = `https://publisher.linkvertise.com/api/v1/redirect/link/static/${path}?origin=&resolution=1920x1080`;
-  const staticRes = await request(staticUrl, {
-    headers: { Accept: 'application/json', Origin: 'https://linkvertise.com', Referer: 'https://linkvertise.com/' },
-  });
-  const link = staticRes.json?.data?.link ?? staticRes.json?.link ?? null;
-  const linkId = link?.id;
-  let userToken = staticRes.json?.user_token ?? staticRes.json?.data?.user_token ?? null;
+  const jar = createJar();
+  const pathVariants = [...new Set([path, path.split('/')[0]])];
+
+  let link = null;
+  let userToken = null;
+  let staticRes = null;
+  let usedPath = path;
+
+  for (const p of pathVariants) {
+    staticRes = await request(
+      `https://publisher.linkvertise.com/api/v1/redirect/link/static/${p}?origin=&resolution=1920x1080`,
+      { headers: LV_HEADERS, jar },
+    );
+    link = staticRes.json?.data?.link ?? staticRes.json?.link ?? null;
+    userToken = staticRes.json?.user_token ?? staticRes.json?.data?.user_token ?? userToken;
+    if (link?.id) {
+      usedPath = p;
+      break;
+    }
+  }
 
   if (!userToken) {
-    const acc = await request('https://publisher.linkvertise.com/api/v1/account', {
-      headers: { Accept: 'application/json', Origin: 'https://linkvertise.com', Referer: 'https://linkvertise.com/' },
-    });
+    const acc = await request('https://publisher.linkvertise.com/api/v1/account', { headers: LV_HEADERS, jar });
     userToken = acc.json?.user_token ?? acc.json?.data?.user_token ?? null;
   }
 
   const typeRaw = String(link?.target_type ?? 'URL').toUpperCase();
   const type = typeRaw === 'PASTE' ? 'paste' : 'target';
+  const linkId = link?.id;
 
   const warmup = [
     `/captcha`,
@@ -384,43 +499,103 @@ async function resolveLinkvertise(url) {
   ];
   for (const suffix of warmup) {
     try {
-      await request(`https://publisher.linkvertise.com/api/v1/redirect/link/${path}${suffix}`, {
-        headers: { Accept: 'application/json', Origin: 'https://linkvertise.com', Referer: 'https://linkvertise.com/' },
-      }, { timeoutMs: 6_000, maxRedirects: 2 });
+      await request(
+        `https://publisher.linkvertise.com/api/v1/redirect/link/${usedPath}${suffix}`,
+        { headers: LV_HEADERS, jar },
+        { timeoutMs: 6_000, maxRedirects: 2 },
+      );
     } catch { /* warmup is best-effort */ }
   }
 
   if (linkId) {
     const serial = lvSerial(linkId);
-    const targetUrl = `https://publisher.linkvertise.com/api/v1/redirect/link/${path}/${type}${userToken ? `?X-Linkvertise-UT=${encodeURIComponent(userToken)}` : ''}`;
-    const posted = await request(targetUrl, {
-      method: 'POST',
-      headers: {
-        Accept: 'application/json',
-        'Content-Type': 'application/json',
-        Origin: 'https://linkvertise.com',
-        Referer: 'https://linkvertise.com/',
-        ...(userToken ? { 'X-Linkvertise-UT': userToken } : {}),
+    const ut = userToken ? `?X-Linkvertise-UT=${encodeURIComponent(userToken)}` : '';
+    const posted = await request(
+      `https://publisher.linkvertise.com/api/v1/redirect/link/${usedPath}/${type}${ut}`,
+      {
+        method: 'POST',
+        headers: {
+          ...LV_HEADERS,
+          'Content-Type': 'application/json',
+          ...(userToken ? { 'X-Linkvertise-UT': userToken } : {}),
+        },
+        body: JSON.stringify({ serial }),
+        jar,
       },
-      body: JSON.stringify({ serial }),
-    });
+    );
     const dest = posted.json?.data?.target || posted.json?.data?.paste || extractJsonDest(posted.json);
-    if (dest && looksHttpUrl(dest)) {
-      return { dest, paste: type === 'paste' && posted.json?.data?.paste && !looksHttpUrl(String(posted.json.data.paste)) ? String(posted.json.data.paste) : null };
+    if (usableDest(dest, url) || (dest && looksHttpUrl(dest) && !isJunkDest(dest, url))) {
+      const paste = type === 'paste' && posted.json?.data?.paste && !looksHttpUrl(String(posted.json.data.paste))
+        ? String(posted.json.data.paste)
+        : null;
+      return { dest, paste };
     }
 
     const getTarget = await request(
-      `https://publisher.linkvertise.com/api/v1/redirect/link/${path}/target?serial=${encodeURIComponent(serial)}${userToken ? `&X-Linkvertise-UT=${encodeURIComponent(userToken)}` : ''}`,
-      { headers: { Accept: 'application/json', Origin: 'https://linkvertise.com', Referer: 'https://linkvertise.com/' } },
+      `https://publisher.linkvertise.com/api/v1/redirect/link/${usedPath}/target?serial=${encodeURIComponent(serial)}${userToken ? `&X-Linkvertise-UT=${encodeURIComponent(userToken)}` : ''}`,
+      { headers: LV_HEADERS, jar },
     );
     const dest2 = getTarget.json?.data?.target || getTarget.json?.data?.paste || extractJsonDest(getTarget.json);
-    if (dest2 && looksHttpUrl(dest2)) return { dest: dest2, paste: null };
+    if (dest2 && looksHttpUrl(dest2) && !isJunkDest(dest2, url)) return { dest: dest2, paste: null };
   }
 
-  const htmlDest = extractDestFromHtml(staticRes.text, url);
-  if (htmlDest && !isLockerUrl(htmlDest)) return { dest: htmlDest, paste: null };
+  const htmlDest = staticRes ? extractDestFromHtml(staticRes.text, url) : null;
+  if (usableDest(htmlDest, url) && !isLockerUrl(htmlDest)) return { dest: htmlDest, paste: null };
 
   throw new Error('Linkvertise did not return a destination');
+}
+
+async function resolveWorkink(url) {
+  let parsed;
+  try {
+    parsed = new URL(url);
+  } catch {
+    throw new Error('Invalid work.ink URL');
+  }
+  const parts = parsed.pathname.split('/').filter(Boolean);
+  const code = parts[0] || '';
+  const apis = [];
+  if (code) {
+    apis.push(`https://work.ink/_api/v2/link/${encodeURIComponent(code)}`);
+    apis.push(`https://work.ink/api/v2/public/links/${encodeURIComponent(code)}`);
+    apis.push(`https://work.ink/_api/v1/link/${encodeURIComponent(code)}`);
+  }
+  if (parts.length >= 2) {
+    apis.push(`https://work.ink/_api/v2/link/${encodeURIComponent(parts[0])}/${encodeURIComponent(parts[1])}`);
+  }
+  for (const api of apis) {
+    try {
+      const res = await request(api, {
+        headers: { Accept: 'application/json', Referer: url, Origin: 'https://work.ink' },
+      }, { timeoutMs: 8_000, maxRedirects: 3 });
+      const dest = res.json?.destination || res.json?.data?.destination || extractJsonDest(res.json);
+      if (usableDest(dest, url) && !isLockerUrl(dest)) return { dest, paste: null };
+    } catch { /* next */ }
+  }
+  const followed = await followShort(url);
+  if (usableDest(followed.dest, url) && !isLockerUrl(followed.dest)) return { dest: followed.dest, paste: null };
+  throw new Error('Could not bypass Work.ink');
+}
+
+async function resolveAdfoc(url) {
+  let parsed;
+  try {
+    parsed = new URL(url);
+  } catch {
+    throw new Error('Invalid AdFoc URL');
+  }
+  const id = parsed.pathname.split('/').filter(Boolean)[0];
+  if (id && /^\d+$/.test(id)) {
+    for (const proto of ['https', 'http']) {
+      try {
+        const followed = await followShort(`${proto}://adfoc.us/serve/sitelinks/?id=${id}`);
+        if (usableDest(followed.dest, url) && !isLockerUrl(followed.dest)) return { dest: followed.dest, paste: null };
+      } catch { /* next */ }
+    }
+  }
+  const followed = await followShort(url);
+  if (usableDest(followed.dest, url) && !isLockerUrl(followed.dest)) return { dest: followed.dest, paste: null };
+  throw new Error('Could not bypass AdFoc.us');
 }
 
 async function resolvePaste(url, serviceId) {
@@ -451,31 +626,43 @@ async function resolvePaste(url, serviceId) {
       if (!res.ok || !lastText.trim()) continue;
       if (/<!doctype html|<html/i.test(lastText.slice(0, 400))) {
         const dest = extractDestFromHtml(lastText, res.url);
-        if (dest) return { dest, paste: null };
+        if (usableDest(dest, url)) return { dest, paste: null };
         continue;
       }
-      const urls = extractUrlsFromText(lastText);
-      if (urls.length === 1) return { dest: urls[0], paste: lastText.slice(0, MAX_PASTE_CHARS) };
-      if (urls.length > 1) return { dest: urls[0], paste: lastText.slice(0, MAX_PASTE_CHARS) };
+      const urls = extractUrlsFromText(lastText).filter((u) => !isJunkDest(u, url));
+      if (urls.length) return { dest: urls[0], paste: lastText.slice(0, MAX_PASTE_CHARS) };
       return { dest: null, paste: lastText.slice(0, MAX_PASTE_CHARS) };
     } catch { /* try next raw candidate */ }
   }
-  if (lastText.trim()) return { dest: extractDestFromHtml(lastText, url), paste: lastText.slice(0, MAX_PASTE_CHARS) };
+  if (lastText.trim()) {
+    const dest = extractDestFromHtml(lastText, url);
+    return { dest: usableDest(dest, url) ? dest : null, paste: lastText.slice(0, MAX_PASTE_CHARS) };
+  }
   throw new Error('Could not read paste');
 }
 
 async function tryPublicBypassApis(url) {
-  const endpoints = [
-    (u) => `https://api.bypass.vip/bypass?url=${encodeURIComponent(u)}`,
-    (u) => `https://bypass.bot.nu/bypass2?url=${encodeURIComponent(u)}`,
+  const tries = [
+    { href: `https://api.bypass.vip/bypass?url=${encodeURIComponent(url)}`, method: 'GET' },
+    { href: 'https://api.bypass.vip/bypass', method: 'POST', body: JSON.stringify({ url }) },
+    { href: `https://bypass.bot.nu/bypass2?url=${encodeURIComponent(url)}`, method: 'GET' },
   ];
-  for (const build of endpoints) {
+  for (const t of tries) {
     try {
-      const res = await request(build(url), { headers: { Accept: 'application/json' } }, { timeoutMs: 8_000, maxRedirects: 3 });
-      const dest = res.json?.result || res.json?.destination || res.json?.url || extractJsonDest(res.json);
-      if (dest && looksHttpUrl(dest) && !sameResource(dest, url) && !isLockerUrl(dest)) {
-        return dest;
-      }
+      const res = await request(t.href, {
+        method: t.method,
+        headers: {
+          Accept: 'application/json',
+          ...(t.body ? { 'Content-Type': 'application/json' } : {}),
+        },
+        body: t.body,
+      }, { timeoutMs: 8_000, maxRedirects: 3 });
+      const dest = res.json?.result
+        || res.json?.destination
+        || res.json?.data?.destination
+        || res.json?.data?.target
+        || extractJsonDest(res.json);
+      if (usableDest(dest, url) && !isLockerUrl(dest)) return dest;
     } catch { /* next API */ }
   }
   return null;
@@ -483,7 +670,7 @@ async function tryPublicBypassApis(url) {
 
 async function resolveKnown(url, service) {
   const q = unwrapQueryDest(url);
-  if (q && !sameResource(q, url) && identifyService(q)?.id !== service.id) {
+  if (usableDest(q, url) && identifyService(q)?.id !== service.id) {
     return { dest: q, paste: null };
   }
 
@@ -496,6 +683,16 @@ async function resolveKnown(url, service) {
       throw err;
     }
   }
+  if (service.id === 'workink') {
+    try {
+      return await resolveWorkink(url);
+    } catch (err) {
+      const apiDest = await tryPublicBypassApis(url);
+      if (apiDest) return { dest: apiDest, paste: null };
+      throw err;
+    }
+  }
+  if (service.id === 'adfoc') return resolveAdfoc(url);
   if (service.kind === 'paste') return resolvePaste(url, service.id);
   if (service.kind === 'shortener' || service.kind === 'generic') {
     const followed = await followShort(url);
@@ -503,10 +700,10 @@ async function resolveKnown(url, service) {
   }
 
   const followed = await followShort(url);
-  if (followed.dest && !sameResource(followed.dest, url)) return { dest: followed.dest, paste: null };
+  if (usableDest(followed.dest, url)) return { dest: followed.dest, paste: null };
   if (followed.json) {
     const jd = extractJsonDest(followed.json);
-    if (jd) return { dest: jd, paste: null };
+    if (usableDest(jd, url)) return { dest: jd, paste: null };
   }
 
   const apiDest = await tryPublicBypassApis(url);
@@ -514,7 +711,7 @@ async function resolveKnown(url, service) {
 
   if (followed.html) {
     const htmlDest = extractDestFromHtml(followed.html, followed.finalUrl || url);
-    if (htmlDest && !sameResource(htmlDest, url)) return { dest: htmlDest, paste: null };
+    if (usableDest(htmlDest, url)) return { dest: htmlDest, paste: null };
   }
 
   throw new Error(`Could not bypass ${service.label}`);
@@ -531,7 +728,7 @@ async function resolveChain(inputUrl) {
     const svc = identifyService(current);
     if (!svc && i > 0) {
       const extra = unwrapQueryDest(current);
-      if (extra && !sameResource(extra, current)) {
+      if (usableDest(extra, current)) {
         hops.push(extra);
         current = extra;
         continue;
@@ -545,24 +742,13 @@ async function resolveChain(inputUrl) {
       pasteText = resolved.paste;
       lastKind = 'paste';
     }
-    if (resolved.dest && looksHttpUrl(resolved.dest) && !sameResource(resolved.dest, current)) {
+    if (resolved.dest && looksHttpUrl(resolved.dest) && !sameResource(resolved.dest, current) && !isJunkDest(resolved.dest, current)) {
       hops.push(resolved.dest);
       current = resolved.dest;
       lastKind = resolved.paste && !looksHttpUrl(resolved.dest) ? 'paste' : 'url';
       const nextSvc = identifyService(current);
-      if (!nextSvc || nextSvc.kind === 'paste' && lastKind === 'paste') {
-        if (nextSvc?.kind === 'paste') {
-          try {
-            const inner = await resolvePaste(current, nextSvc.id);
-            if (inner.dest) {
-              hops.push(inner.dest);
-              current = inner.dest;
-            }
-            if (inner.paste) pasteText = inner.paste;
-          } catch { /* keep paste dest as-is */ }
-        }
-        break;
-      }
+      if (!nextSvc) break;
+      if (nextSvc.kind === 'paste' && lastKind === 'paste') break;
       continue;
     }
     if (resolved.paste) break;
@@ -570,7 +756,7 @@ async function resolveChain(inputUrl) {
   }
 
   const dest = hops[hops.length - 1];
-  if (!dest || sameResource(dest, inputUrl) && !pasteText) {
+  if (!dest || (sameResource(dest, inputUrl) && !pasteText)) {
     throw new Error('No destination found');
   }
   return {
@@ -584,10 +770,10 @@ async function resolveChain(inputUrl) {
 
 export function parseInputUrls(raw) {
   const text = String(raw ?? '');
-  const parts = text.split(/[\s,;]+/).map((s) => s.trim()).filter(Boolean);
+  const parts = text.split(/\s+/).map((s) => s.trim()).filter(Boolean);
   const urls = [];
   for (const part of parts) {
-    let candidate = part;
+    let candidate = part.replace(/[,\s]+$/g, '');
     if (!/^https?:\/\//i.test(candidate) && /^[\w.-]+\.[a-z]{2,}/i.test(candidate)) {
       candidate = `https://${candidate}`;
     }
@@ -602,6 +788,16 @@ export function parseInputUrls(raw) {
   return urls;
 }
 
+function withTimeout(promise, ms, message) {
+  let timer;
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => {
+      timer = setTimeout(() => reject(new Error(message)), ms);
+    }),
+  ]).finally(() => clearTimeout(timer));
+}
+
 export async function resolveMany(urlList) {
   const urls = Array.isArray(urlList) ? urlList.slice(0, MAX_URLS) : [];
   const results = [];
@@ -609,7 +805,7 @@ export async function resolveMany(urlList) {
     try {
       const href = assertSafeFetchUrl(input);
       if (href.length > MAX_URL_LEN) throw new Error('URL too long');
-      const resolved = await resolveChain(href);
+      const resolved = await withTimeout(resolveChain(href), URL_BUDGET_MS, 'Bypass timed out');
       results.push({
         input: href,
         service: resolved.service,
