@@ -23,6 +23,21 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '3.89.0',
+    title: 'Bypass P0 x10: SSRF dests, CRLF path, Open-to-localhost',
+    date: 'Aug 9, 2026',
+    highlight: true,
+    items: [
+      { priority: 'P0', text: 'P0 - every accepted dest runs resolveSafeFetchTarget (private IP / DNS rebind / non-http dropped).' },
+      { priority: 'P0', text: 'P0 - usableDest requires assertSafeFetchUrl + no userinfo; dest2/POST OR-clause no longer skips that gate.' },
+      { priority: 'P0', text: 'P0 - hop extra unwrap also DNS-checked before it becomes the destination.' },
+      { priority: 'P0', text: 'P0 - Linkvertise path variants: encoded + numeric id only (decoded slug CRLF/header injection closed).' },
+      { priority: 'P0', text: 'P0 - Open button uses safeBypassOpenHref: http(s) only, no credentials, no loopback/private/.local.' },
+      { priority: 'P0', text: 'P0 - client parseLocalUrls rejects credential URLs and private/loopback hosts before POST.' },
+      { priority: 'P9', text: 'P9 - Version 3.89.0; 10-round Bypass P0-only audit (every item listed).' },
+    ],
+  },
+  {
     version: '3.88.0',
     title: 'Bypass 10-round client+server audit',
     date: 'Aug 9, 2026',

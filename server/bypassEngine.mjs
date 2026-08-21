@@ -8,7 +8,7 @@
 
 import zlib from 'zlib';
 import { AsyncLocalStorage } from 'node:async_hooks';
-import { assertSafeFetchUrl, safeFetch } from './assertSafeFetchUrl.mjs';
+import { assertSafeFetchUrl, resolveSafeFetchTarget, safeFetch } from './assertSafeFetchUrl.mjs';
 
 const bypassCtx = new AsyncLocalStorage();
 function currentSignal() {
@@ -400,7 +400,32 @@ function isLockerUrl(url) {
 }
 
 function usableDest(dest, fromUrl) {
-  return Boolean(dest && looksHttpUrl(dest) && !isJunkDest(dest, fromUrl) && !sameResource(dest, fromUrl));
+  if (!dest || !looksHttpUrl(dest) || isJunkDest(dest, fromUrl) || sameResource(dest, fromUrl)) return false;
+  try {
+    const href = assertSafeFetchUrl(dest);
+    const u = new URL(href);
+    if (u.username || u.password) return false;
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** DNS-checked public http(s) dest — blocks private/literal/rebind hosts before we return them. */
+async function asPublicDest(urlStr) {
+  if (!looksHttpUrl(urlStr)) return null;
+  try {
+    const { href } = await resolveSafeFetchTarget(urlStr);
+    const u = new URL(href);
+    if (u.username || u.password) {
+      u.username = '';
+      u.password = '';
+    }
+    if (u.protocol !== 'http:' && u.protocol !== 'https:') return null;
+    return u.href;
+  } catch {
+    return null;
+  }
 }
 
 async function followShort(url) {
@@ -506,10 +531,8 @@ async function resolveLinkvertise(url) {
   }
 
   const idOnly = path.split('/')[0];
-  let rawPath = path;
-  const slash = path.indexOf('/');
-  if (slash > 0) rawPath = `${path.slice(0, slash)}/${safeDecodeUri(path.slice(slash + 1))}`;
-  const pathVariants = [...new Set([path, rawPath, idOnly])];
+  // encoded path + numeric id only — never interpolate decoded slugs (CRLF/header injection)
+  const pathVariants = [...new Set([path, idOnly])];
 
   let link = null;
   let userToken = null;
@@ -574,7 +597,7 @@ async function resolveLinkvertise(url) {
       || posted.json?.data?.paste
       || extractJsonDest(posted.json)
       || (posted.status >= 300 && posted.status < 400 && looksHttpUrl(posted.url) ? posted.url : null);
-    if (usableDest(dest, url) || (dest && looksHttpUrl(dest) && !isJunkDest(dest, url) && !isLockerUrl(dest))) {
+    if (usableDest(dest, url)) {
       const paste = type === 'paste' && posted.json?.data?.paste && !looksHttpUrl(String(posted.json.data.paste))
         ? String(posted.json.data.paste)
         : null;
@@ -586,7 +609,7 @@ async function resolveLinkvertise(url) {
       { headers: LV_HEADERS, jar },
     );
     const dest2 = getTarget.json?.data?.target || getTarget.json?.data?.paste || extractJsonDest(getTarget.json);
-    if (dest2 && looksHttpUrl(dest2) && !isJunkDest(dest2, url)) return { dest: dest2, paste: null };
+    if (usableDest(dest2, url)) return { dest: dest2, paste: null };
   }
 
   const htmlDest = staticRes ? extractDestFromHtml(staticRes.text, url) : null;
@@ -775,8 +798,10 @@ async function resolveChain(inputUrl) {
     if (!svc && i > 0) {
       const extra = unwrapQueryDest(current);
       if (usableDest(extra, current)) {
-        hops.push(extra);
-        current = extra;
+        const pub = await asPublicDest(extra);
+        if (!pub || hops.some((h) => sameHref(h, pub))) break;
+        hops.push(pub);
+        current = pub;
         continue;
       }
       break;
@@ -789,11 +814,13 @@ async function resolveChain(inputUrl) {
       lastKind = 'paste';
     }
     if (resolved.dest && looksHttpUrl(resolved.dest) && !sameResource(resolved.dest, current) && !isJunkDest(resolved.dest, current)) {
-      if (hops.some((h) => sameHref(h, resolved.dest))) {
+      const pub = await asPublicDest(resolved.dest);
+      if (!pub) throw new Error('No destination found');
+      if (hops.some((h) => sameHref(h, pub))) {
         throw new Error('No destination found');
       }
-      hops.push(resolved.dest);
-      current = resolved.dest;
+      hops.push(pub);
+      current = pub;
       lastKind = resolved.paste && !looksHttpUrl(resolved.dest) ? 'paste' : 'url';
       const nextSvc = identifyService(current);
       if (!nextSvc) break;

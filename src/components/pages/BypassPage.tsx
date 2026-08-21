@@ -5,7 +5,6 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActionButton, PageShell, TerminalTextarea, ToolCard } from './PageShell';
-import { safeHref } from '../../lib/safeHref';
 import {
   clearBypassHistory,
   fetchBypassCatalog,
@@ -14,6 +13,7 @@ import {
   parseLocalUrls,
   pushBypassHistory,
   runBypass,
+  safeBypassOpenHref,
   type BypassHistoryItem,
   type BypassResult,
   type BypassServiceInfo,
@@ -188,7 +188,7 @@ export function BypassPage() {
             <div className="flex flex-col gap-2">
               {results.map((r, i) => {
                 const dest = r.ok ? (r.destination ?? '') : '';
-                const href = dest ? safeHref(dest) : null;
+                const href = dest ? safeBypassOpenHref(dest) : null;
                 return (
                   <div
                     key={`${r.input}-${i}`}

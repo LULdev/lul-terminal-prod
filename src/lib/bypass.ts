@@ -94,6 +94,8 @@ export function parseLocalUrls(raw: string): string[] {
     try {
       const u = new URL(candidate);
       if (u.protocol !== 'http:' && u.protocol !== 'https:') continue;
+      if (u.username || u.password) continue;
+      if (isBlockedOpenHost(u.hostname)) continue;
       if (u.href.length > 2048) continue;
       if (seen.has(u.href)) continue;
       seen.add(u.href);
@@ -102,6 +104,43 @@ export function parseLocalUrls(raw: string): string[] {
     if (out.length >= 8) break;
   }
   return out;
+}
+
+function isBlockedOpenHost(host: string): boolean {
+  const h = host.replace(/^\[|\]$/g, '').toLowerCase();
+  if (!h || h === 'localhost' || h === '::1' || h === '0.0.0.0' || h.endsWith('.localhost')) return true;
+  if (h.endsWith('.local') || h.endsWith('.internal')) return true;
+  const m = /^(\d+)\.(\d+)\.(\d+)\.(\d+)$/.exec(h);
+  if (m) {
+    const a = Number(m[1]);
+    const b = Number(m[2]);
+    if (a === 10 || a === 127 || a === 0) return true;
+    if (a === 169 && b === 254) return true;
+    if (a === 172 && b >= 16 && b <= 31) return true;
+    if (a === 192 && b === 168) return true;
+    if (a === 100 && b >= 64 && b <= 127) return true;
+    if (a >= 224) return true;
+  }
+  if (h.includes(':')) {
+    if (h.startsWith('fe80:') || h.startsWith('fc') || h.startsWith('fd') || h.startsWith('ff')) return true;
+    if (h.startsWith('::ffff:')) return isBlockedOpenHost(h.slice(7));
+  }
+  return false;
+}
+
+/** http(s) only, no credentials, no loopback/private — for the Open button. */
+export function safeBypassOpenHref(href: string | null | undefined): string | null {
+  const raw = String(href ?? '').trim();
+  if (!raw || raw.startsWith('/') || raw.startsWith('\\') || raw.startsWith('//')) return null;
+  try {
+    const u = new URL(raw);
+    if (u.protocol !== 'http:' && u.protocol !== 'https:') return null;
+    if (u.username || u.password) return null;
+    if (isBlockedOpenHost(u.hostname)) return null;
+    return u.href;
+  } catch {
+    return null;
+  }
 }
 
 export function guessServiceLabel(url: string, catalog: BypassServiceInfo[]): string | null {
