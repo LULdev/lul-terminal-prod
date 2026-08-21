@@ -863,7 +863,9 @@ export function parseInputUrls(raw) {
       candidate = `https://${candidate}`;
     }
     try {
-      const href = new URL(candidate).href;
+      const parsed = new URL(candidate);
+      if (parsed.username || parsed.password) continue;
+      const href = parsed.href;
       if (href.length > MAX_URL_LEN) continue;
       assertSafeFetchUrl(href);
       if (!urls.includes(href)) urls.push(href);
@@ -879,19 +881,18 @@ export async function resolveMany(urlList) {
   for (const input of urls) {
     const ac = new AbortController();
     const timer = setTimeout(() => ac.abort(), URL_BUDGET_MS);
+    if (typeof timer.unref === 'function') timer.unref();
     try {
       const href = assertSafeFetchUrl(input);
       if (href.length > MAX_URL_LEN) throw new Error('URL too long');
       const resolved = await bypassCtx.run({ signal: ac.signal }, () => resolveChain(href));
-      const dest = resolved.pasteText && !resolved.destination
-        ? null
-        : await asPublicDest(resolved.destination);
+      const dest = resolved.destination ? await asPublicDest(resolved.destination) : null;
       if (!dest && !resolved.pasteText) throw new Error('No destination found');
       results.push({
         input: href,
         service: resolved.service,
         ok: true,
-        destination: dest || resolved.destination,
+        destination: dest,
         hops: resolved.hops,
         kind: resolved.kind,
         pasteText: resolved.pasteText || null,

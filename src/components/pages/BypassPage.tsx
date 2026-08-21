@@ -111,9 +111,11 @@ export function BypassPage() {
       if ((err instanceof DOMException || err instanceof Error) && err.name === 'AbortError') return;
       setError(err instanceof Error ? err.message : 'Bypass failed');
     } finally {
-      if (abortRef.current === ac) abortRef.current = null;
-      busyRef.current = false;
-      if (mountedRef.current) setBusy(false);
+      if (abortRef.current === ac) {
+        abortRef.current = null;
+        busyRef.current = false;
+        if (mountedRef.current) setBusy(false);
+      }
     }
   }, [input]);
 
@@ -198,15 +200,24 @@ export function BypassPage() {
                       {r.ok ? 'Ready' : 'Failed'} · {r.service}
                     </span>
                     <p className="text-[9px] font-mono text-slate-500 truncate mt-1 mb-2" title={r.input}>{r.input}</p>
-                    {r.ok && dest ? (
+                    {r.ok && (dest || r.pasteText) ? (
                       <>
-                        <code className="block text-xs font-mono text-slate-100 break-all leading-relaxed bg-black/40 border border-slate-800 rounded px-2.5 py-2">
-                          {dest}
-                        </code>
+                        {dest ? (
+                          <code className="block text-xs font-mono text-slate-100 break-all leading-relaxed bg-black/40 border border-slate-800 rounded px-2.5 py-2">
+                            {dest}
+                          </code>
+                        ) : null}
                         <div className="mt-2 flex flex-wrap gap-2">
-                          <ActionButton onClick={() => copyText(dest, r.input)} variant="emerald">
-                            {copied === r.input ? 'Copied' : 'Copy'}
-                          </ActionButton>
+                          {dest ? (
+                            <ActionButton onClick={() => copyText(dest, r.input)} variant="emerald">
+                              {copied === r.input ? 'Copied' : 'Copy'}
+                            </ActionButton>
+                          ) : null}
+                          {r.pasteText ? (
+                            <ActionButton onClick={() => copyText(r.pasteText as string, `${r.input}-paste`)} variant="cyan">
+                              {copied === `${r.input}-paste` ? 'Copied' : 'Copy paste'}
+                            </ActionButton>
+                          ) : null}
                           {href && (
                             <a
                               href={href}

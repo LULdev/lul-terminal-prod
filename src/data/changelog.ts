@@ -23,6 +23,20 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '3.91.0',
+    title: 'Bypass 10-round client+server: busy race, paste-only UI, dest fallback',
+    date: 'Aug 9, 2026',
+    highlight: true,
+    items: [
+      { priority: 'P1', text: 'P1 - overlapping Bypass runs no longer clear busy on the aborted request (restart race).' },
+      { priority: 'P1', text: 'P1 - ok:true never falls back to an unvalidated dest when asPublicDest fails.' },
+      { priority: 'P1', text: 'P1 - client drops private/unsafe dests from API results; paste-only success still shown.' },
+      { priority: 'P2', text: 'P2 - server parseInputUrls rejects userinfo URLs; abort timer unref; history input length cap.' },
+      { priority: 'P3', text: 'P3 - paste-only result card + copy paste; SessionExpiredError → Sign in required.' },
+      { priority: 'P9', text: 'P9 - Version 3.91.0; 10-round Bypass residual (every item listed).' },
+    ],
+  },
+  {
     version: '3.90.0',
     title: 'Bypass P0: Cookie CRLF, decimal-IP Open, paste dest gate',
     date: 'Aug 9, 2026',

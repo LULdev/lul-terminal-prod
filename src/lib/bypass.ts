@@ -39,6 +39,25 @@ function isAbortError(err: unknown): boolean {
   return (err instanceof DOMException || err instanceof Error) && err.name === 'AbortError';
 }
 
+function normalizeBypassResult(raw: BypassResult): BypassResult {
+  const input = typeof raw?.input === 'string' ? raw.input.slice(0, 2048) : '';
+  const dest = typeof raw?.destination === 'string' ? raw.destination.slice(0, 2048) : null;
+  const paste = typeof raw?.pasteText === 'string' ? raw.pasteText.slice(0, 8000) : null;
+  const hops = Array.isArray(raw?.hops) ? raw.hops.filter((h) => typeof h === 'string').slice(0, 8) : [];
+  const openOk = dest ? Boolean(safeBypassOpenHref(dest)) : false;
+  const ok = Boolean(raw?.ok) && (openOk || Boolean(paste));
+  return {
+    input,
+    service: typeof raw?.service === 'string' ? raw.service.slice(0, 32) : 'unknown',
+    ok,
+    destination: openOk ? dest : null,
+    hops,
+    kind: raw?.kind === 'paste' || paste ? 'paste' : 'url',
+    pasteText: paste,
+    error: ok ? null : (typeof raw?.error === 'string' ? raw.error : (dest && !openOk ? 'Destination is not allowed' : 'Bypass failed')),
+  };
+}
+
 export async function runBypass(urls: string[], signal?: AbortSignal): Promise<BypassResult[]> {
   try {
     const res = await sessionFetch(API, {
@@ -56,9 +75,10 @@ export async function runBypass(urls: string[], signal?: AbortSignal): Promise<B
       if (/permission denied|not logged|sign in/i.test(msg)) throw new Error('Sign in required');
       throw new Error(msg);
     }
-    return Array.isArray(data.results) ? data.results : [];
+    return (Array.isArray(data.results) ? data.results : []).map(normalizeBypassResult);
   } catch (err) {
     if (isAbortError(err) || signal?.aborted) throw err;
+    if (err instanceof Error && err.name === 'SessionExpiredError') throw new Error('Sign in required');
     const msg = err instanceof Error ? err.message : '';
     if (/permission denied|not logged|sign in/i.test(msg)) {
       throw new Error('Sign in required');
@@ -180,7 +200,7 @@ export function loadBypassHistory(): BypassHistoryItem[] {
     const parsed = JSON.parse(raw) as BypassHistoryItem[];
     if (!Array.isArray(parsed)) return [];
     return parsed
-      .filter((x) => x && typeof x === 'object' && typeof x.input === 'string')
+      .filter((x) => x && typeof x === 'object' && typeof x.input === 'string' && x.input.length <= 2048)
       .slice(0, HISTORY_MAX);
   } catch {
     return [];
